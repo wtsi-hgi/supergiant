@@ -6,13 +6,22 @@ import (
 )
 
 type Client struct {
-	Endpoints []string
-	kapi      etcd.KeysAPI
+	endpoints          []string
+	kapi               etcd.KeysAPI
+	EnvironmentStorage *EnvironmentStorage
+	ServiceStorage     *ServiceStorage
+}
+
+func NewClient(endpoints []string) *Client {
+	c := Client{endpoints: endpoints}
+	c.EnvironmentStorage = c.newEnvironmentStorage()
+	c.ServiceStorage = c.newServiceStorage()
+	return &c
 }
 
 func (c *Client) keysAPI() etcd.KeysAPI {
 	if c.kapi == nil {
-		cfg := etcd.Config{Endpoints: c.Endpoints}
+		cfg := etcd.Config{Endpoints: c.endpoints}
 		etcdClient, err := etcd.New(cfg)
 		if err != nil {
 			panic(err)
@@ -40,4 +49,16 @@ func (c *Client) Update(key string, value string) (*etcd.Response, error) {
 
 func (c *Client) Delete(key string) (*etcd.Response, error) {
 	return c.keysAPI().Delete(context.Background(), key, nil)
+}
+
+func (c *Client) newEnvironmentStorage() *EnvironmentStorage {
+	envStorage := EnvironmentStorage{client: c}
+	envStorage.CreateBaseDirectory()
+	return &envStorage
+}
+
+func (c *Client) newServiceStorage() *ServiceStorage {
+	svcStorage := ServiceStorage{client: c}
+	svcStorage.CreateBaseDirectory()
+	return &svcStorage
 }

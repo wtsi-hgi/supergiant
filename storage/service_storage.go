@@ -6,32 +6,32 @@ import (
 	"supergiant/core/model"
 )
 
-type Service struct {
-	Client *Client
+type ServiceStorage struct {
+	client *Client
 }
 
 // TODO
-func (store *Service) CreateBaseDirectory() {
-	if _, err := store.Client.Get("/services"); err != nil {
-		if _, err := store.Client.CreateDirectory("/services"); err != nil {
+func (store *ServiceStorage) CreateBaseDirectory() {
+	if _, err := store.client.Get("/services"); err != nil {
+		if _, err := store.client.CreateDirectory("/services"); err != nil {
 			panic(err)
 		}
 	}
 }
 
-func (store *Service) Create(environmentID string, s *model.Service) (*model.Service, error) {
+func (store *ServiceStorage) Create(environmentID string, s *model.Service) (*model.Service, error) {
 	key := fmt.Sprintf("/services/%s/%s", environmentID, s.Name)
 	value, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
-	_, err = store.Client.Create(key, string(value))
+	_, err = store.client.Create(key, string(value))
 	return s, err
 }
 
-func (store *Service) List(environmentID string) ([]*model.Service, error) {
+func (store *ServiceStorage) List(environmentID string) ([]*model.Service, error) {
 	key := fmt.Sprintf("/services/%s", environmentID)
-	resp, err := store.Client.Get(key)
+	resp, err := store.client.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +50,10 @@ func (store *Service) List(environmentID string) ([]*model.Service, error) {
 	return services, nil
 }
 
-func (store *Service) Get(environmentID string, id string) (*model.Service, error) {
+func (store *ServiceStorage) Get(environmentID string, id string) (*model.Service, error) {
 	// TODO repeated, move to method
 	key := fmt.Sprintf("/services/%s/%s", environmentID, id)
-	resp, err := store.Client.Get(key)
+	resp, err := store.client.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +68,10 @@ func (store *Service) Get(environmentID string, id string) (*model.Service, erro
 
 // No update for Service
 
-func (store *Service) Delete(environmentID string, id string) error {
+func (store *ServiceStorage) Delete(environmentID string, id string) error {
 	// TODO repeated
 	key := fmt.Sprintf("/services/%s/%s", environmentID, id)
-	_, err := store.Client.Delete(key)
+	_, err := store.client.Delete(key)
 	if err != nil {
 		return err
 	}
