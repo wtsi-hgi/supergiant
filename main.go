@@ -11,14 +11,17 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	// StrictSlash will redirect /environments to /environments/
-	// otherwise mux will simply not match /environments/
+	// StrictSlash will redirect /apps to /apps/
+	// otherwise mux will simply not match /apps/
 	router.StrictSlash(true)
 
 	db := storage.NewClient([]string{"http://localhost:2379"})
 
-	controller.NewEnvironmentController(router, db)
-	controller.NewServiceController(router, db)
+	controller.NewAppController(router, db)
+	controller.NewComponentController(router, db)
+	controller.NewDeploymentController(router, db)
+	controller.NewInstanceController(router, db)
+	controller.NewReleaseController(router, db)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }

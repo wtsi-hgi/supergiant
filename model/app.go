@@ -1,5 +1,5 @@
 package model
 
-type Environment struct {
+type App struct {
 	Name string `json:"name"`
 }
