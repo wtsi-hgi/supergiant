@@ -37,12 +37,11 @@ func (e *AppController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app, err = e.db.AppStorage.Create(app)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println(app)
 
 	out, err := json.Marshal(app)
 	if err != nil {
@@ -90,7 +89,7 @@ func (e *AppController) Show(w http.ResponseWriter, r *http.Request) {
 func (e *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 	appName := mux.Vars(r)["name"]
 	if err := e.db.AppStorage.Delete(appName); err != nil {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 

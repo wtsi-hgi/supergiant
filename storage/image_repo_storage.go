@@ -6,12 +6,12 @@ import (
 	"supergiant/core/model"
 )
 
-type AppStorage struct {
+type ImageRepoStorage struct {
 	client *Client
 }
 
-func (store *AppStorage) Create(e *model.App) (*model.App, error) {
-	key := fmt.Sprintf("/apps/%s", e.Name)
+func (store *ImageRepoStorage) Create(e *model.ImageRepo) (*model.ImageRepo, error) {
+	key := fmt.Sprintf("/repos/dockerhub/%s", e.Name)
 	value, err := json.Marshal(e)
 	if err != nil {
 		return nil, err
@@ -23,46 +23,46 @@ func (store *AppStorage) Create(e *model.App) (*model.App, error) {
 	return e, nil
 }
 
-func (store *AppStorage) List() ([]*model.App, error) {
-	key := "/apps"
+func (store *ImageRepoStorage) List() ([]*model.ImageRepo, error) {
+	key := "/repos/dockerhub"
 	resp, err := store.client.Get(key)
 	if err != nil {
 		return nil, err
 	}
 
-	apps := make([]*model.App, 0)
+	repos := make([]*model.ImageRepo, 0)
 
 	for _, node := range resp.Node.Nodes {
 		value := node.Value
-		e := new(model.App)
+		e := new(model.ImageRepo)
 		if err := json.Unmarshal([]byte(value), e); err != nil {
 			return nil, err
 		}
-		apps = append(apps, e)
+		repos = append(repos, e)
 	}
-	return apps, nil
+	return repos, nil
 }
 
-func (store *AppStorage) Get(id string) (*model.App, error) {
+func (store *ImageRepoStorage) Get(id string) (*model.ImageRepo, error) {
 	// TODO repeated, move to method
-	key := fmt.Sprintf("/apps/%s", id)
+	key := fmt.Sprintf("/repos/dockerhub/%s", id)
 	resp, err := store.client.Get(key)
 	if err != nil {
 		return nil, err
 	}
 	value := resp.Node.Value
 
-	e := new(model.App)
+	e := new(model.ImageRepo)
 	if err := json.Unmarshal([]byte(value), e); err != nil {
 		return nil, err
 	}
 	return e, nil
 }
 
-// No update for App
+// No update for ImageRepo
 
-func (store *AppStorage) Delete(id string) error {
+func (store *ImageRepoStorage) Delete(id string) error {
 	// TODO repeated
-	_, err := store.client.Delete(fmt.Sprintf("/apps/%s", id))
+	_, err := store.client.Delete(fmt.Sprintf("/repos/dockerhub/%s", id))
 	return err
 }

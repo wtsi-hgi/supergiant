@@ -1,8 +1,10 @@
 package main
 
 import (
+	"guber"
 	"log"
 	"net/http"
+	"os"
 	"supergiant/core/controller"
 	"supergiant/core/storage"
 
@@ -16,6 +18,13 @@ func main() {
 	router.StrictSlash(true)
 
 	db := storage.NewClient([]string{"http://localhost:2379"})
+
+	var (
+		kHost = os.Getenv("K_HOST")
+		kUser = os.Getenv("K_USER")
+		kPass = os.Getenv("K_PASS")
+	)
+	kube := guber.NewClient(kHost, kUser, kPass)
 
 	controller.NewAppController(router, db)
 	controller.NewComponentController(router, db)

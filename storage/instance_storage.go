@@ -10,14 +10,14 @@ type InstanceStorage struct {
 	client *Client
 }
 
-// TODO
-func (store *InstanceStorage) CreateBaseDirectory() {
-	if _, err := store.client.Get("/instances"); err != nil {
-		if _, err := store.client.CreateDirectory("/instances"); err != nil {
-			panic(err)
-		}
-	}
-}
+// // TODO
+// func (store *InstanceStorage) CreateBaseDirectory() {
+// 	if _, err := store.client.Get("/instances"); err != nil {
+// 		if _, err := store.client.CreateDirectory("/instances"); err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// }
 
 func (store *InstanceStorage) Create(deploymentID string, s *model.Instance) (*model.Instance, error) {
 	key := fmt.Sprintf("/instances/%s/%s", deploymentID, s.ID)
@@ -28,7 +28,7 @@ func (store *InstanceStorage) Create(deploymentID string, s *model.Instance) (*m
 	_, err = store.client.Create(key, string(value))
 
 	// Create all the other base dirs
-	_, err = store.client.CreateDirectory(fmt.Sprintf("/releases/%s/%s", deploymentID, s.ID))
+	// _, err = store.client.CreateDirectory(fmt.Sprintf("/releases/%s/%s", deploymentID, s.ID))
 
 	return s, err
 }

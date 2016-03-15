@@ -7,18 +7,18 @@ type Volume struct {
 }
 
 type Container struct {
-	Image        string              `json:"image"`
-	Ports        []*Port             `json:"ports"`
-	Env          []*EnvVar           `json:"env"`
-	CPU          *ResourceAllocation `json:"cpu"`
-	RAM          *ResourceAllocation `json:"ram"`
-	VolumeMounts []*VolumeMount      `json:"volume_mounts"`
+	Image  string              `json:"image"`
+	Ports  []*Port             `json:"ports"`
+	Env    []*EnvVar           `json:"env"`
+	CPU    *ResourceAllocation `json:"cpu"`
+	RAM    *ResourceAllocation `json:"ram"`
+	Mounts []*Mount            `json:"mounts"`
 }
 
 type Port struct {
 	Protocol string `json:"protocol"`
-	Public   bool   `json:"public"`
 	Number   int    `json:"number"`
+	Public   bool   `json:"public"`
 }
 
 type EnvVar struct {
@@ -31,7 +31,7 @@ type ResourceAllocation struct {
 	Max int `json:"max"`
 }
 
-type VolumeMount struct {
+type Mount struct {
 	Volume string `json:"volume"`
 	Path   string `json:"path"`
 }
@@ -42,7 +42,10 @@ type CustomDeployScript struct {
 }
 
 type Component struct {
-	Name       string       `json:"name"`
+	Name string `json:"name"`
+
+	TerminationGracePeriod int `json:"termination_grace_period"`
+
 	Instances  int          `json:"instances"`
 	Volumes    []*Volume    `json:"volumes"`
 	Containers []*Container `json:"containers"`
@@ -51,7 +54,7 @@ type Component struct {
 	// you choose a container that has the deploy file, and then reference it as a command
 	CustomDeployScript *CustomDeployScript `json:"custom_deploy_script"`
 
-	CurrentReleaseID    string `json:"current_release_id"`
+	CurrentReleaseID    int    `json:"current_release_id"`
 	ActiveDeploymentID  string `json:"active_deployment_id"`
 	StandbyDeploymentID string `json:"standby_deployment_id"`
 }

@@ -10,14 +10,14 @@ type ComponentStorage struct {
 	client *Client
 }
 
-// TODO
-func (store *ComponentStorage) CreateBaseDirectory() {
-	if _, err := store.client.Get("/components"); err != nil {
-		if _, err := store.client.CreateDirectory("/components"); err != nil {
-			panic(err)
-		}
-	}
-}
+// // TODO
+// func (store *ComponentStorage) CreateBaseDirectory() {
+// 	if _, err := store.client.Get("/components"); err != nil {
+// 		if _, err := store.client.CreateDirectory("/components"); err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// }
 
 func (store *ComponentStorage) Create(appName string, s *model.Component) (*model.Component, error) {
 	key := fmt.Sprintf("/components/%s/%s", appName, s.Name)
@@ -26,10 +26,6 @@ func (store *ComponentStorage) Create(appName string, s *model.Component) (*mode
 		return nil, err
 	}
 	_, err = store.client.Create(key, string(value))
-
-	// Create all the other base dirs
-	_, err = store.client.CreateDirectory(fmt.Sprintf("/releases/%s/%s", appName, s.Name))
-
 	return s, err
 }
 
@@ -73,6 +69,5 @@ func (store *ComponentStorage) Get(appName string, name string) (*model.Componen
 
 func (store *ComponentStorage) Delete(appName string, name string) error {
 	_, err := store.client.Delete(fmt.Sprintf("/components/%s/%s", appName, name))
-	_, err = store.client.Delete(fmt.Sprintf("/releases/%s/%s", appName, name))
 	return err
 }

@@ -8,6 +8,7 @@ import (
 	"supergiant/core/storage"
 
 	"github.com/gorilla/mux"
+	"github.com/satori/go.uuid"
 )
 
 type ComponentController struct {
@@ -46,6 +47,22 @@ func (s *ComponentController) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Create the initial Release
+	release, err := s.db.ReleaseStorage.Create(component.Name, app.Name, &model.Release{ID: 1})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	component.CurrentReleaseID = release.ID
+
+	// Create the first Deployment (active_deployment)
+	deployment, err := s.db.DeploymentStorage.Create(&model.Deployment{ID: uuid.NewV4().String()})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	component.ActiveDeploymentID = deployment.ID
 
 	component, err = s.db.ComponentStorage.Create(app.Name, component)
 	if err != nil {
@@ -115,14 +132,14 @@ func (s *ComponentController) Delete(w http.ResponseWriter, r *http.Request) {
 	urlVars := mux.Vars(r)
 	appName := urlVars["app_name"]
 	compName := urlVars["name"]
-	app, err := s.loadApp(appName)
+	_, err := s.loadApp(appName)
 	if err != nil {
 		http.Error(w, "App does not exist", http.StatusBadRequest)
 		return
 	}
 
-	if err := s.db.ComponentStorage.Delete(app.Name, compName); err != nil {
-		http.Error(w, "Not Found", http.StatusNotFound)
+	if err = s.db.ComponentStorage.Delete(appName, compName); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 

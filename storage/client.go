@@ -1,29 +1,50 @@
 package storage
 
 import (
+	"fmt"
+
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+)
+
+const (
+	baseDir = "/supergiant"
 )
 
 type Client struct {
 	endpoints         []string
 	kapi              etcd.KeysAPI
 	AppStorage        *AppStorage
+	ImageRepoStorage  *ImageRepoStorage
 	ComponentStorage  *ComponentStorage
 	DeploymentStorage *DeploymentStorage
 	InstanceStorage   *InstanceStorage
 	ReleaseStorage    *ReleaseStorage
+	JobStorage        *JobStorage
 }
 
 func NewClient(endpoints []string) *Client {
 	c := Client{endpoints: endpoints}
+
+	// c.createBaseDirectory()
+
 	c.AppStorage = c.newAppStorage()
+	c.ImageRepoStorage = c.newImageRepoStorage()
 	c.ComponentStorage = c.newComponentStorage()
 	c.DeploymentStorage = c.newDeploymentStorage()
 	c.InstanceStorage = c.newInstanceStorage()
 	c.ReleaseStorage = c.newReleaseStorage()
+	c.JobStorage = c.newJobStorage()
 	return &c
 }
+
+// func (c *Client) createBaseDirectory() {
+// 	if _, err := c.Get(""); err != nil {
+// 		if _, err := c.CreateDirectory(""); err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// }
 
 func (c *Client) keysAPI() etcd.KeysAPI {
 	if c.kapi == nil {
@@ -37,52 +58,66 @@ func (c *Client) keysAPI() etcd.KeysAPI {
 	return c.kapi
 }
 
-func (c *Client) CreateDirectory(key string) (*etcd.Response, error) {
-	return c.keysAPI().Set(context.Background(), key, "", &etcd.SetOptions{Dir: true})
+func fullKey(key string) string {
+	return fmt.Sprintf("%s%s", baseDir, key)
+}
+
+// func (c *Client) CreateDirectory(key string) (*etcd.Response, error) {
+// 	return c.keysAPI().Set(context.Background(), fullKey(key), "", &etcd.SetOptions{Dir: true})
+// }
+
+func (c *Client) CompareAndSwap(key string, prevValue string, value string) (*etcd.Response, error) {
+	return c.keysAPI().Set(context.Background(), fullKey(key), value, &etcd.SetOptions{PrevValue: prevValue})
+}
+
+func (c *Client) CreateInOrder(dir string, value string) (*etcd.Response, error) {
+	return c.keysAPI().CreateInOrder(context.Background(), fullKey(dir), value, nil)
+}
+
+func (c *Client) GetInOrder(dir string) (*etcd.Response, error) {
+	return c.keysAPI().Get(context.Background(), fullKey(dir), &etcd.GetOptions{Sort: true})
 }
 
 func (c *Client) Create(key string, value string) (*etcd.Response, error) {
-	return c.keysAPI().Create(context.Background(), key, value)
+	return c.keysAPI().Create(context.Background(), fullKey(key), value)
 }
 
 func (c *Client) Get(key string) (*etcd.Response, error) {
-	return c.keysAPI().Get(context.Background(), key, nil)
+	return c.keysAPI().Get(context.Background(), fullKey(key), nil)
 }
 
 func (c *Client) Update(key string, value string) (*etcd.Response, error) {
-	return c.keysAPI().Update(context.Background(), key, value)
+	return c.keysAPI().Update(context.Background(), fullKey(key), value)
 }
 
 func (c *Client) Delete(key string) (*etcd.Response, error) {
-	return c.keysAPI().Delete(context.Background(), key, nil)
+	return c.keysAPI().Delete(context.Background(), fullKey(key), nil)
 }
 
 func (c *Client) newAppStorage() *AppStorage {
-	appStorage := AppStorage{client: c}
-	appStorage.CreateBaseDirectory()
-	return &appStorage
+	return &AppStorage{client: c}
+}
+
+func (c *Client) newImageRepoStorage() *ImageRepoStorage {
+	return &ImageRepoStorage{client: c}
 }
 
 func (c *Client) newComponentStorage() *ComponentStorage {
-	compStorage := ComponentStorage{client: c}
-	compStorage.CreateBaseDirectory()
-	return &compStorage
+	return &ComponentStorage{client: c}
 }
 
 func (c *Client) newDeploymentStorage() *DeploymentStorage {
-	deploymentStorage := DeploymentStorage{client: c}
-	deploymentStorage.CreateBaseDirectory()
-	return &deploymentStorage
+	return &DeploymentStorage{client: c}
 }
 
 func (c *Client) newInstanceStorage() *InstanceStorage {
-	instanceStorage := InstanceStorage{client: c}
-	instanceStorage.CreateBaseDirectory()
-	return &instanceStorage
+	return &InstanceStorage{client: c}
 }
 
 func (c *Client) newReleaseStorage() *ReleaseStorage {
-	releaseStorage := ReleaseStorage{client: c}
-	releaseStorage.CreateBaseDirectory()
-	return &releaseStorage
+	return &ReleaseStorage{client: c}
+}
+
+func (c *Client) newJobStorage() *JobStorage {
+	return &JobStorage{client: c}
 }

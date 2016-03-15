@@ -10,20 +10,20 @@ type ReleaseStorage struct {
 	client *Client
 }
 
-// TODO
-func (store *ReleaseStorage) CreateBaseDirectory() {
-	if _, err := store.client.Get("/releases"); err != nil {
-		if _, err := store.client.CreateDirectory("/releases"); err != nil {
-			panic(err)
-		}
-	}
-}
+// // TODO
+// func (store *ReleaseStorage) CreateBaseDirectory() {
+// 	if _, err := store.client.Get("/releases"); err != nil {
+// 		if _, err := store.client.CreateDirectory("/releases"); err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// }
 
 func (store *ReleaseStorage) Create(appName string, compName string, s *model.Release) (*model.Release, error) {
 
 	// NOTE that controller will need to autogenerate ID
 
-	key := fmt.Sprintf("/releases/%s/%s/%s", appName, compName, s.ID)
+	key := fmt.Sprintf("/releases/%s/%s/%d", appName, compName, s.ID)
 	value, err := json.Marshal(s)
 	if err != nil {
 		return nil, err

@@ -10,14 +10,14 @@ type DeploymentStorage struct {
 	client *Client
 }
 
-// TODO
-func (store *DeploymentStorage) CreateBaseDirectory() {
-	if _, err := store.client.Get("/deployments"); err != nil {
-		if _, err := store.client.CreateDirectory("/deployments"); err != nil {
-			panic(err)
-		}
-	}
-}
+// // TODO
+// func (store *DeploymentStorage) CreateBaseDirectory() {
+// 	if _, err := store.client.Get("/deployments"); err != nil {
+// 		if _, err := store.client.CreateDirectory("/deployments"); err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// }
 
 func (store *DeploymentStorage) Create(e *model.Deployment) (*model.Deployment, error) {
 	key := fmt.Sprintf("/deployments/%s", e.ID)
@@ -29,10 +29,7 @@ func (store *DeploymentStorage) Create(e *model.Deployment) (*model.Deployment, 
 	if _, err = store.client.Create(key, string(value)); err != nil {
 		return nil, err
 	}
-
-	// Create all the other base dirs
-	_, err = store.client.CreateDirectory(fmt.Sprintf("instances/%s", e.ID))
-	return e, err
+	return e, nil
 }
 
 // func (store *DeploymentStorage) List() ([]*model.Deployment, error) {
@@ -76,6 +73,6 @@ func (store *DeploymentStorage) Get(id string) (*model.Deployment, error) {
 func (store *DeploymentStorage) Delete(id string) error {
 	// TODO repeated
 	_, err := store.client.Delete(fmt.Sprintf("/deployments/%s", id))
-	_, err = store.client.Delete(fmt.Sprintf("/instances/%s", id))
+	// _, err = store.client.Delete(fmt.Sprintf("/instances/%s", id))
 	return err
 }
