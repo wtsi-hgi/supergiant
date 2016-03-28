@@ -1,36 +1,23 @@
 package main
 
 import (
-	"guber"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"supergiant/core/controller"
-	"supergiant/core/storage"
-
-	"github.com/gorilla/mux"
+	"supergiant/api"
+	"supergiant/api/task"
+	"supergiant/core"
 )
 
 func main() {
-	router := mux.NewRouter()
-	// StrictSlash will redirect /apps to /apps/
-	// otherwise mux will simply not match /apps/
-	router.StrictSlash(true)
+	core := core.New()
 
-	db := storage.NewClient([]string{"http://localhost:2379"})
+	// TODO should probably be able to say api.New(), because we shouldn't have to import task here
+	// NOTE using pool size of 4
+	go task.NewSupervisor(core, 20).Run()
 
-	var (
-		kHost = os.Getenv("K_HOST")
-		kUser = os.Getenv("K_USER")
-		kPass = os.Getenv("K_PASS")
-	)
-	kube := guber.NewClient(kHost, kUser, kPass)
+	router := api.NewRouter(core)
 
-	controller.NewAppController(router, db)
-	controller.NewComponentController(router, db)
-	controller.NewDeploymentController(router, db)
-	controller.NewInstanceController(router, db)
-	controller.NewReleaseController(router, db)
-
+	fmt.Println("Serving API on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
