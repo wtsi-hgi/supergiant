@@ -153,7 +153,7 @@ func (r *InstanceResource) Release() *ReleaseResource {
 }
 
 func (r *InstanceResource) Volumes() (vols []*AwsVolume) {
-	for _, blueprint := range r.Release().Blueprint.Volumes {
+	for _, blueprint := range r.Release().Volumes {
 		vol := &AwsVolume{
 			core:      r.collection.core,
 			Blueprint: blueprint,
@@ -172,7 +172,7 @@ func (r *InstanceResource) kubeVolumes() (vols []*guber.Volume) {
 }
 
 func (r *InstanceResource) kubeContainers() (containers []*guber.Container) {
-	for _, blueprint := range r.Release().Blueprint.Containers {
+	for _, blueprint := range r.Release().Containers {
 		containers = append(containers, AsKubeContainer(blueprint, r))
 	}
 	return containers
@@ -234,7 +234,7 @@ func (r *InstanceResource) provisionReplicationController() error {
 					Volumes:                       r.kubeVolumes(),
 					Containers:                    r.kubeContainers(),
 					ImagePullSecrets:              imagePullSecrets,
-					TerminationGracePeriodSeconds: r.Release().Blueprint.TerminationGracePeriod,
+					TerminationGracePeriodSeconds: r.Release().TerminationGracePeriod,
 				},
 			},
 		},

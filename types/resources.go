@@ -73,21 +73,16 @@ type ResourceAllocation struct {
 	Max uint `json:"max"`
 }
 
+// Release
+//==============================================================================
 // NOTE the word Blueprint is used for Volumes and Containers, since they are
 // both "definitions" that create "instances" of the real thing
-
-type Blueprint struct {
+type Release struct {
+	ID                     string                `json:"id"`
+	InstanceCount          int                   `json:"instance_count"`
 	Volumes                []*VolumeBlueprint    `json:"volumes"`
 	Containers             []*ContainerBlueprint `json:"containers"`
 	TerminationGracePeriod int                   `json:"termination_grace_period"`
-}
-
-// Release
-//==============================================================================
-type Release struct {
-	ID            string     `json:"id"`
-	InstanceCount int        `json:"instance_count"`
-	Blueprint     *Blueprint `json:"blueprint"`
 }
 
 // Instance

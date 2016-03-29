@@ -137,7 +137,7 @@ func (r *ReleaseResource) IsStopped() bool {
 
 func (r *ReleaseResource) imageRepoNames() (repoNames []string) { // TODO convert Image into Value object w/ repo, image, version
 	uniqRepoNames := make(map[string]bool)
-	for _, container := range r.Blueprint.Containers {
+	for _, container := range r.Containers {
 		repoName := ImageRepoName(container)
 		if _, ok := uniqRepoNames[repoName]; !ok {
 			uniqRepoNames[repoName] = true
@@ -152,7 +152,7 @@ func (r *ReleaseResource) containerPorts(public bool) (ports []*types.Port) {
 
 	// TODO these will need to be unique -------------------------------------------------
 
-	for _, container := range r.Blueprint.Containers {
+	for _, container := range r.Containers {
 		for _, port := range container.Ports {
 			if port.Public == public {
 				ports = append(ports, port)
