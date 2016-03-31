@@ -1,3 +1,14 @@
+[![GoReportCard Widget]][GoReportCard] [![GoDoc Widget]][GoDoc] [![Travis Widget]][Travis] [![Coverage Status Widget]][Coverage Status]
+
+[GoReportCard Widget]: https://goreportcard.com/badge/github.com/supergiant/supergiant
+[GoReportCard]: https://goreportcard.com/report/github.com/supergiant/supergiant
+[GoDoc]: https://godoc.org/github.com/supergiant/supergiant
+[GoDoc Widget]: https://godoc.org/github.com/supergiant/supergiant?status.svg
+[Travis]: https://travis-ci.org/supergiant/supergiant
+[Travis Widget]: https://travis-ci.org/supergiant/supergiant.svg?branch=master
+[Coverage Status]: https://coveralls.io/github/supergiant/supergiant?branch=master
+[Coverage Status Widget]: https://coveralls.io/repos/github/supergiant/supergiant/badge.svg?branch=master
+
 
 # Server Options
 
