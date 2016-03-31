@@ -30,9 +30,7 @@ after_success:
  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
  - export REPO=supergiant/supergiant-api
  - export TAG=`if [ -z "$TRAVIS_TAG" ] && [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; elif [ -z "$TRAVIS_TAG" ] && [ "$TRAVIS_BRANCH" != "master" ]; then echo "unstable-${TRAVIS_BRANCH}"; else echo $TRAVIS_TAG ; fi`
- - docker build -f Dockerfile -t $REPO:$COMMIT .
- - docker tag $REPO:$COMMIT $REPO:$TAG
- - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+ - docker build -f Dockerfile -t $REPO:$TAG .
  - docker push $REPO
 
 notifications:
