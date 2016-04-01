@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"log"
 	"path"
 
 	"github.com/supergiant/supergiant/types"
@@ -119,15 +119,13 @@ func (r *ComponentResource) Delete() error {
 
 	target, err := r.TargetRelease()
 	if target != nil {
-		// TODO
-		fmt.Println(err)
+		log.Println(err)
 		target.Delete()
 	}
 
 	current, err := r.CurrentRelease()
 	if current != nil {
-		// TODO should do something more formal here...
-		fmt.Println(err)
+		log.Println(err)
 		current.Delete()
 	}
 	return r.collection.core.DB.Delete(r.collection, r.Name)

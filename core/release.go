@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"strconv"
 	"time"
@@ -229,6 +230,7 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 			Ports: svcPorts,
 		},
 	}
+	log.Printf("Creating Service %s", name)
 	return r.collection.core.K8S.Services(*r.App().Name).Create(service)
 }
 
@@ -269,9 +271,11 @@ func (r *ReleaseResource) provisionInternalService() error {
 }
 
 func (r *ReleaseResource) deleteServices() (err error) {
+	log.Printf("Deleting Service %s", r.externalServiceName())
 	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.externalServiceName()); err != nil {
 		return err
 	}
+	log.Printf("Deleting Service %s", r.internalServiceName())
 	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.internalServiceName()); err != nil {
 		return err
 	}
@@ -390,23 +394,12 @@ func (r *ReleaseResource) Provision() error {
 			return err
 		}
 	}
-	for _, vol := range r.volumes() {
-		if err := vol.WaitForAvailable(); err != nil {
-			return err
-		}
-	}
-
-	// c := make(chan error)
-	// for _, instance := range r.Instances().List().Items {
-	// 	go func(instance *InstanceResource) { // NOTE we have to pass instance here, else every goroutine hits the same instance
-	// 		c <- instance.ProvisionVolumes()
-	// 	}(instance)
-	// }
-	// for i := 0; i < r.InstanceCount; i++ {
-	// 	if err := <-c; err != nil {
+	// for _, vol := range r.volumes() {
+	// 	if err := vol.WaitForAvailable(); err != nil {
 	// 		return err
 	// 	}
 	// }
+
 	return nil
 }
 

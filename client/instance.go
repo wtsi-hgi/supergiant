@@ -103,8 +103,12 @@ func (r *InstanceResource) Stop() error {
 }
 
 func (r *InstanceResource) WaitForStarted() error {
+
+	// NOTE wait is set extremely high for instance start, since it can take a
+	// very long time for snapshots on large volumes (when resizing volumes).
+
 	desc := fmt.Sprintf("Instance start: %s", r.Name)
-	return waitFor(desc, 120*time.Second, 3*time.Second, func() (bool, error) {
+	return waitFor(desc, 4*time.Hour, 5*time.Second, func() (bool, error) {
 		if err := r.Reload(); err != nil {
 			return false, err
 		}
@@ -113,8 +117,12 @@ func (r *InstanceResource) WaitForStarted() error {
 }
 
 func (r *InstanceResource) WaitForStopped() error {
+
+	// TODO instead of an arbitrarily high timeout, this could maybe be adjusted
+	// dynamically based on the TerminationGracePeriod setting.
+
 	desc := fmt.Sprintf("Instance stop: %s", r.Name)
-	return waitFor(desc, 120*time.Second, 3*time.Second, func() (bool, error) {
+	return waitFor(desc, 10*time.Minute, 3*time.Second, func() (bool, error) {
 		if err := r.Reload(); err != nil {
 			return false, err
 		}

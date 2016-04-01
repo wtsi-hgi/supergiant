@@ -2,8 +2,9 @@ package core
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"path"
+	"strconv"
 
 	"github.com/supergiant/supergiant/types"
 )
@@ -147,7 +148,7 @@ func (r *TaskResource) Claim() error {
 }
 
 func (r *TaskResource) RecordError(err error) error {
-	fmt.Println("ERROR: ", err.Error()) // TODO
+	log.Println(err)
 
 	r.Error = err.Error()
 	if r.Attempts < r.MaxAttempts {
@@ -158,4 +159,21 @@ func (r *TaskResource) RecordError(err error) error {
 	r.Attempts++
 
 	return r.Save()
+}
+
+func (r *TaskResource) TypeName() string {
+	switch r.Type {
+	case types.TaskTypeDeleteApp:
+		return "DeleteApp"
+	case types.TaskTypeDeleteComponent:
+		return "DeleteComponent"
+	case types.TaskTypeDeployComponent:
+		return "DeployComponent"
+	case types.TaskTypeStartInstance:
+		return "StartInstance"
+	case types.TaskTypeStopInstance:
+		return "StopInstance"
+	default:
+		return strconv.Itoa(int(r.Type))
+	}
 }

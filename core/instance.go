@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -117,10 +118,8 @@ func (r *InstanceResource) Delete() (err error) {
 // The following 2 are only diff from Provision() and Delete() in that they do
 // not delete the create or delete the volumes.
 func (r *InstanceResource) Start() error {
-	for _, vol := range r.Volumes() {
-		if err := vol.WaitForAvailable(); err != nil {
-			return err
-		}
+	if err := r.prepareVolumes(); err != nil {
+		return err
 	}
 	if err := r.provisionReplicationController(); err != nil {
 		return err
@@ -159,6 +158,28 @@ func (r *InstanceResource) Volumes() (vols []*AwsVolume) {
 	return vols
 }
 
+func (r *InstanceResource) prepareVolumes() error {
+	// Resize volumes (concurrently) if needed
+	c := make(chan error)
+	// really, we should be resizing all or none. this is just so we don't wait
+	// forever below when not resizing
+	volsResizing := 0
+	for _, vol := range r.Volumes() {
+		if vol.NeedsResize() {
+			volsResizing++
+			go func(vol *AwsVolume) {
+				c <- vol.Resize()
+			}(vol)
+		}
+	}
+	for i := 0; i < volsResizing; i++ {
+		if err := <-c; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *InstanceResource) kubeVolumes() (vols []*guber.Volume) {
 	for _, vol := range r.Volumes() {
 		vols = append(vols, asKubeVolume(vol))
@@ -178,6 +199,7 @@ func (r *InstanceResource) replicationController() (*guber.ReplicationController
 }
 
 func (r *InstanceResource) waitForReplicationControllerReady() error {
+	log.Printf("Waiting for ReplicationController %s to start", r.Name)
 	start := time.Now()
 	maxWait := 5 * time.Minute
 	for {
@@ -234,6 +256,7 @@ func (r *InstanceResource) provisionReplicationController() error {
 			},
 		},
 	}
+	log.Printf("Creating ReplicationController %s", r.Name)
 	if _, err = r.collection.core.K8S.ReplicationControllers(*r.App().Name).Create(rc); err != nil {
 		return err
 	}
@@ -258,6 +281,7 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 }
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
+	log.Printf("Deleting ReplicationController %s", r.Name)
 	// TODO we call r.collection.core.K8S.ReplicationControllers(r.App().Name) enough to warrant its own method -- confusing nomenclature awaits assuredly
 	if _, err := r.collection.core.K8S.ReplicationControllers(*r.App().Name).Delete(r.Name); err != nil {
 		return err
