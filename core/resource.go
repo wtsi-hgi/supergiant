@@ -69,12 +69,10 @@ func getItemsPtrAndItemType(r interface{}) (reflect.Value, reflect.Type) {
 	// allows us to utilize the type with reflect.New().
 	itemType := itemsPtr.Type().Elem().Elem()
 
-	// fmt.Println(fmt.Sprintf("m: %#v", m))
-	// fmt.Println(fmt.Sprintf("interfaceValue: %#v", interfaceValue))
-	// fmt.Println(fmt.Sprintf("modelValue: %#v", modelValue))
-	// fmt.Println(fmt.Sprintf("itemsField: %#v", itemsField))
-	// fmt.Println(fmt.Sprintf("itemsPtr: %#v", itemsPtr))
-	// fmt.Println(fmt.Sprintf("itemType: %#v", itemType))
+	// This initializes the empty items slice, so that we don't return null in API
+	itemPtrType := reflect.PtrTo(itemType)
+	emptyItems := reflect.MakeSlice(reflect.SliceOf(itemPtrType), 0, 0)
+	itemsPtr.Set(emptyItems)
 
 	return itemsPtr, itemType
 }

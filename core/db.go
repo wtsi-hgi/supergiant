@@ -79,11 +79,11 @@ func (db *DB) CreateDir(key string) (*etcd.Response, error) {
 func decodeList(r Collection, resp *etcd.Response, out interface{}) error {
 	itemsPtr, itemType := getItemsPtrAndItemType(out)
 
-	// NOTE this this is not working, because we're not getting the right
-	// underlying element *type (with pointer).
-	//
-	// emptyItems := reflect.MakeSlice(reflect.SliceOf(itemType), 0, 0)
-	// itemsPtr.Set(emptyItems)
+	// TODO we do this here, because the above method will initialize the Items
+	// slice for us. Needs work.
+	if resp == nil {
+		return nil
+	}
 
 	for _, node := range resp.Node.Nodes {
 		// Interface() is called to convert the new item Value into an interface
@@ -102,6 +102,11 @@ func decodeList(r Collection, resp *etcd.Response, out interface{}) error {
 // TODO feel like there's a DRYer or cleaner way to do this
 func decodeOrderedList(r Collection, resp *etcd.Response, out interface{}) error { /// ------------------- just changed to Resource from OrderedResource
 	itemsPtr, itemType := getItemsPtrAndItemType(out)
+
+	if resp == nil {
+		return nil
+	}
+
 	for _, node := range resp.Node.Nodes {
 		// Interface() is called to convert the new item Value into an interface
 		// (that we can unmarshal to. The interface{} is then cast to Resource type.
@@ -120,10 +125,18 @@ func decodeOrderedList(r Collection, resp *etcd.Response, out interface{}) error
 	return nil
 }
 
+func isNotFoundError(err error) bool {
+	etcdErr, ok := err.(etcd.Error)
+	return ok && etcdErr.Code == etcd.ErrorCodeKeyNotFound
+}
+
 func (db *DB) List(r Collection, out interface{}) error {
 	key := r.EtcdKey(nil)
 	resp, err := db.get(key)
-	if err != nil {
+	if err != nil && !isNotFoundError(err) {
+		// When listing, if it's key not found, it just means the dir has not been
+		// created yet (which happens automatically when creating the first child
+		// key). Here we return err ONLY if it's not that error
 		return err
 	}
 	return decodeList(r, resp, out)
@@ -177,7 +190,7 @@ func (db *DB) Delete(r Collection, id types.ID) error {
 func (db *DB) ListInOrder(r Collection, out interface{}) error {
 	key := r.EtcdKey(nil)
 	resp, err := db.getInOrder(key)
-	if err != nil {
+	if err != nil && !isNotFoundError(err) {
 		return err
 	}
 	return decodeOrderedList(r, resp, out)
