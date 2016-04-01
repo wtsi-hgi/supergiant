@@ -117,17 +117,18 @@ func (r *ComponentResource) Delete() error {
 
 	// TODO we should really be going through and deleting all instances... it would just be a lot of requests
 
-	current, err := r.CurrentRelease()
-	if current != nil {
-		// TODO should do something more formal here...
-		fmt.Println(err)
-		current.Delete()
-	}
 	target, err := r.TargetRelease()
 	if target != nil {
 		// TODO
 		fmt.Println(err)
 		target.Delete()
+	}
+
+	current, err := r.CurrentRelease()
+	if current != nil {
+		// TODO should do something more formal here...
+		fmt.Println(err)
+		current.Delete()
 	}
 	return r.collection.core.DB.Delete(r.collection, r.Name)
 }
