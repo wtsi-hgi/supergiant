@@ -114,19 +114,26 @@ func (r *ComponentResource) Save() error {
 //
 // TODO this should somehow stop any ongoing tasks related to the Component.
 func (r *ComponentResource) Delete() error {
-
-	// TODO we should really be going through and deleting all instances... it would just be a lot of requests
-
+	// NOTE we delete target and current releases first; the order matters -- they
+	// may be the ones controlling volumes and such.
 	target, err := r.TargetRelease()
 	if target != nil {
 		log.Println(err)
 		target.Delete()
 	}
-
 	current, err := r.CurrentRelease()
 	if current != nil {
 		log.Println(err)
 		current.Delete()
+	}
+	releases, err := r.Releases().List()
+	if err != nil {
+		return err
+	}
+	for _, release := range releases.Items {
+		if err := release.Delete(); err != nil {
+			return err
+		}
 	}
 	return r.collection.core.DB.Delete(r.collection, r.Name)
 }

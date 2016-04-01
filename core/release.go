@@ -112,28 +112,34 @@ func (r *ReleaseResource) PersistableObject() interface{} {
 	return r.Release
 }
 
+// Save saves the Release in etcd through an update.
+func (r *ReleaseResource) Save() error {
+	return r.collection.core.DB.Update(r.collection, r.Timestamp, r)
+}
+
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in
 // etcd.
 func (r *ReleaseResource) Delete() error {
-	if err := r.deleteServices(); err != nil {
-		return err
-	}
-	if err := r.removeExternalPortsFromEntrypoint(); err != nil {
-		return err
-	}
-
-	c := make(chan error)
-	for _, instance := range r.Instances().List().Items {
-		go func(instance *InstanceResource) {
-			c <- instance.Delete()
-		}(instance)
-	}
-	for i := 0; i < r.InstanceCount; i++ {
-		if err := <-c; err != nil {
+	if !r.Retired {
+		if err := r.deleteServices(); err != nil {
 			return err
 		}
-	}
+		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
+			return err
+		}
 
+		c := make(chan error)
+		for _, instance := range r.Instances().List().Items {
+			go func(instance *InstanceResource) {
+				c <- instance.Delete()
+			}(instance)
+		}
+		for i := 0; i < r.InstanceCount; i++ {
+			if err := <-c; err != nil {
+				return err
+			}
+		}
+	}
 	return r.collection.core.DB.Delete(r.collection, r.Timestamp)
 }
 

@@ -78,6 +78,11 @@ func (j DeployComponent) Perform(data []byte) error {
 		}
 	}
 
+	if currentRelease != nil {
+		currentRelease.Retired = true
+		currentRelease.Save()
+	}
+
 	// If we're all good, we set target to current, and remove target.
 	// Also, set the deploy task ID to nil.
 	// TODO we should use *string so we can just set to nil

@@ -133,6 +133,10 @@ type Release struct {
 	Containers             []*ContainerBlueprint `json:"containers"`
 	TerminationGracePeriod int                   `json:"termination_grace_period"`
 
+	// Retired defines whether or not a Release still has active assets, like pods
+	// or services. When retired is true, we skip attempting to delete assets.
+	Retired bool `json:"retired"`
+
 	*Meta
 }
 
