@@ -54,6 +54,11 @@ func asKubeContainer(m *types.ContainerBlueprint, instance *InstanceResource) *g
 		},
 		VolumeMounts: kubeVolumeMounts(m),
 		Ports:        kubeContainerPorts(m),
+
+		// TODO this should be an option, enabled by default with volumes
+		SecurityContext: &guber.SecurityContext{
+			Privileged: true,
+		},
 	}
 }
 
@@ -79,7 +84,7 @@ func asKubeVolume(m *AwsVolume) *guber.Volume {
 	return &guber.Volume{
 		Name: *m.Blueprint.Name, // NOTE this is not the physical volume name
 		AwsElasticBlockStore: &guber.AwsElasticBlockStore{
-			VolumeID: m.id(),
+			VolumeID: *m.id(),
 			FSType:   "ext4",
 		},
 	}

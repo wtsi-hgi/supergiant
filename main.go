@@ -58,7 +58,7 @@ func main() {
 		router := api.NewRouter(core)
 
 		log.Println("INFO: Serving API on port :8080")
-		log.Fatal(http.ListenAndServe(":8080", router))
+		log.Println(http.ListenAndServe(":8080", router))
 	}
 
 	app.Flags = []cli.Flag{

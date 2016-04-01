@@ -1,8 +1,7 @@
 package task
 
 import (
-	"encoding/json"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/supergiant/supergiant/core"
@@ -34,18 +33,17 @@ func (_ *worker) work(ch <-chan *directive) {
 		if err := task.Claim(); err != nil {
 			// TODO the error here is presumed to be a CompareAndSwap error; if so,
 			// we should just return. If it's another error, then this is not good.
-			fmt.Println(err)
+			log.Println(err)
 			continue
 		}
 
-		// TODO
-		taskstr, _ := json.Marshal(task)
-		fmt.Println(fmt.Sprintf("Starting task: %s", taskstr))
-
+		log.Printf("Starting %s task with ID %s", task.TypeName(), *task.ID)
 		if err := performer.Perform(task.Data); err != nil {
 			recordError(task, err)
 			continue
 		}
+
+		log.Printf("Completed %s task with ID %s", task.TypeName(), *task.ID)
 		task.Delete() // Task is successful, delete from Queue
 	}
 }
@@ -71,8 +69,6 @@ func (s *Supervisor) Run() {
 
 	ticker := time.NewTicker(interval)
 	for _ = range ticker.C {
-		// TODO printing just to show we're alive
-		fmt.Print(".")
 
 		tasks, err := s.c.Tasks().List()
 		if err != nil {

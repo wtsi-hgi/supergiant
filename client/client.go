@@ -61,7 +61,7 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		return false, err
 	}
 
-	fmt.Println(*req)
+	// fmt.Println(*req)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

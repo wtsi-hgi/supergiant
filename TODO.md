@@ -16,9 +16,11 @@
 
 ## v0.3.x
 
-* special release changes: service updates, load balancer port removal
+* ~~volume resizing~~
 
-* volume resizing
+* delete releases on component delete (bugfix)
+
+* special release changes: service updates, load balancer port removal
 
 * use AWS meta endpoint to get required info
 

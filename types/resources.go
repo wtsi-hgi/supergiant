@@ -18,13 +18,12 @@ func NewMeta() *Meta {
 }
 
 type App struct {
-	*Meta
 	Name ID `json:"name"`
+	*Meta
 }
 
 // see note in core/resource.go about PersistableObject()
 type PersistableComponent struct {
-	*Meta
 	Name ID `json:"name"`
 	// TODO kinda weird,
 	// you choose a container that has the deploy file, and then reference it as a command
@@ -37,6 +36,8 @@ type PersistableComponent struct {
 	// We should just store the DeployTaskID but actually should render the task
 	// when showing it in HTTP.
 	DeployTaskID ID `json:"deploy_task_id"`
+
+	*Meta
 }
 
 type Component struct {
@@ -125,13 +126,14 @@ type ResourceAllocation struct {
 // NOTE the word Blueprint is used for Volumes and Containers, since they are
 // both "definitions" that create "instances" of the real thing
 type Release struct {
-	*Meta
 	// NOTE Timestamp here does not use the Timestamp type.
 	Timestamp              ID                    `json:"timestamp"`
 	InstanceCount          int                   `json:"instance_count"`
 	Volumes                []*VolumeBlueprint    `json:"volumes"`
 	Containers             []*ContainerBlueprint `json:"containers"`
 	TerminationGracePeriod int                   `json:"termination_grace_period"`
+
+	*Meta
 }
 
 // Instance
@@ -158,12 +160,13 @@ type Instance struct {
 // Entrypoint
 //==============================================================================
 type Entrypoint struct {
-	*Meta
 	Domain  ID     `json:"domain"`  // e.g. blog.qbox.io
 	Address string `json:"address"` // the ELB address
 
 	// NOTE we actually don't need this -- we can always attach the policy, and enable per port
 	// IPWhitelistEnabled bool   `json:"ip_whitelist_enabled"`
+
+	*Meta
 }
 
 // Task
@@ -180,19 +183,21 @@ const (
 )
 
 type Task struct {
-	*Meta
 	Type        TaskType `json:"type"`
 	Data        []byte   `json:"data"`
 	Status      string   `json:"status"`
 	Attempts    int      `json:"attempts"`
 	MaxAttempts int      `json:"max_attempts"` // this is static; config-level
 	Error       string   `json:"error"`
+
+	*Meta
 }
 
 // ImageRepo
 //==============================================================================
 type ImageRepo struct {
-	*Meta
 	Name ID     `json:"name"`
 	Key  string `json:"key"`
+
+	*Meta
 }
