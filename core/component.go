@@ -1,7 +1,7 @@
 package core
 
 import (
-	"log"
+	"fmt"
 	"path"
 
 	"github.com/supergiant/supergiant/types"
@@ -85,16 +85,11 @@ func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
 //==============================================================================
 
 func (r *ComponentResource) decorate() error {
-	release, err := r.CurrentRelease()
-	if err != nil {
-		return err
-	}
-	if release == nil {
-		return nil
-	}
-	r.Addresses = &types.ComponentAddresses{
-		External: release.ExternalAddresses(),
-		Internal: release.InternalAddresses(),
+	if r.CurrentReleaseTimestamp != nil {
+		r.Addresses = &types.ComponentAddresses{
+			External: r.externalAddresses(),
+			Internal: r.internalAddresses(),
+		}
 	}
 	return nil
 }
@@ -114,27 +109,27 @@ func (r *ComponentResource) Save() error {
 //
 // TODO this should somehow stop any ongoing tasks related to the Component.
 func (r *ComponentResource) Delete() error {
-	// NOTE we delete target and current releases first; the order matters -- they
-	// may be the ones controlling volumes and such.
-	target, err := r.TargetRelease()
-	if target != nil {
-		log.Println(err)
-		target.Delete()
-	}
-	current, err := r.CurrentRelease()
-	if current != nil {
-		log.Println(err)
-		current.Delete()
-	}
 	releases, err := r.Releases().List()
 	if err != nil {
 		return err
 	}
+
+	// NOTE we delete releases concurrently, because when target and current both
+	// exist (i.e. a deploy was still running), then one may hang waiting on the
+	// other to release an asset like volumes.
+
+	c := make(chan error)
 	for _, release := range releases.Items {
-		if err := release.Delete(); err != nil {
+		go func(release *ReleaseResource) {
+			c <- release.Delete()
+		}(release)
+	}
+	for i := 0; i < len(releases.Items); i++ {
+		if err := <-c; err != nil {
 			return err
 		}
 	}
+
 	return r.collection.core.DB.Delete(r.collection, r.Name)
 }
 
@@ -149,18 +144,38 @@ func (r *ComponentResource) Releases() *ReleaseCollection {
 	}
 }
 
-// TODO starting to think this should return err if it doesn't exist. We should
-// expect the user to have checked if the ID is present.
-func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {
-	if r.CurrentReleaseTimestamp == nil { // not yet released
-		return nil, nil
+func (r *ComponentResource) CurrentRelease() *ReleaseResource {
+	if r.CurrentReleaseTimestamp == nil {
+		panic(fmt.Errorf("CurrentReleaseTimestamp is nil for Component %s", *r.Name))
 	}
-	return r.Releases().Get(r.CurrentReleaseTimestamp)
+	release, err := r.Releases().Get(r.CurrentReleaseTimestamp)
+	if err != nil {
+		panic(err)
+	}
+	return release
 }
 
-func (r *ComponentResource) TargetRelease() (*ReleaseResource, error) {
-	if r.TargetReleaseTimestamp == nil { // something probably went wrong...
-		return nil, nil
+func (r *ComponentResource) TargetRelease() *ReleaseResource {
+	if r.TargetReleaseTimestamp == nil {
+		panic(fmt.Errorf("TargettReleaseTimestamp is nil for Component %s", *r.Name))
 	}
-	return r.Releases().Get(r.TargetReleaseTimestamp)
+	release, err := r.Releases().Get(r.TargetReleaseTimestamp)
+	if err != nil {
+		panic(err)
+	}
+	return release
+}
+
+func (r *ComponentResource) externalAddresses() (addrs []*types.PortAddress) {
+	for _, port := range r.CurrentRelease().ExternalPorts() {
+		addrs = append(addrs, port.Address())
+	}
+	return addrs
+}
+
+func (r *ComponentResource) internalAddresses() (addrs []*types.PortAddress) {
+	for _, port := range r.CurrentRelease().InternalPorts() {
+		addrs = append(addrs, port.Address())
+	}
+	return addrs
 }

@@ -35,19 +35,20 @@ func (j DeployComponent) Perform(data []byte) error {
 
 	var currentRelease *core.ReleaseResource
 	if component.CurrentReleaseTimestamp != nil {
-		currentRelease, err = component.CurrentRelease()
-		if err != nil {
-			return err
-		}
+		currentRelease = component.CurrentRelease()
 	}
 	// There should always be a target release at this point
-	targetRelease, err := component.TargetRelease()
-	if err != nil {
+	targetRelease := component.TargetRelease()
+
+	// This sets up all the necessary dependencies (the only thing needed past the
+	// first release is volumes for new instances)
+	if err := targetRelease.Provision(); err != nil {
 		return err
 	}
 
-	// This provisions services, secrets, volumes, etc.
-	targetRelease.Provision() // TODO this does not yet handle updating services when changed, or volume resizing
+	if currentRelease != nil {
+		targetRelease.AddNewPorts(currentRelease)
+	}
 
 	// This goes to the deploy/ folder which uses the client package.
 	if err := deploy.Deploy(app.Name, component.Name); err != nil {
@@ -57,7 +58,6 @@ func (j DeployComponent) Perform(data []byte) error {
 	// Make sure old release (current) has been fully stopped, and the new release
 	// (target) has been fully started.
 	// It doesn't matter on the first deploy, though.
-
 	if currentRelease != nil {
 		if !currentRelease.IsStopped() {
 			return fmt.Errorf("Current Release for Component %s:%s is not completely stopped.", *app.Name, *component.Name)
@@ -79,6 +79,8 @@ func (j DeployComponent) Perform(data []byte) error {
 	}
 
 	if currentRelease != nil {
+		targetRelease.RemoveOldPorts(currentRelease)
+
 		currentRelease.Retired = true
 		currentRelease.Save()
 	}

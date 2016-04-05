@@ -97,7 +97,8 @@ func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
 		return err // TODO an error here means we create a hanging volume, since it does not get named
 	}
 	m.awsVol = awsVol
-	return nil
+
+	return m.WaitForAvailable()
 }
 
 func (m *AwsVolume) createSnapshot() (*ec2.Snapshot, error) {

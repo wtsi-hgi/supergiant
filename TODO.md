@@ -18,11 +18,9 @@
 
 * ~~volume resizing~~
 
-* delete releases on component delete (bugfix)
+* ~~delete releases on component delete (bugfix)~~
 
-* special release changes: service updates, load balancer port removal
-
-* use AWS meta endpoint to get required info
+* ~~special release changes: service updates, load balancer port removal~~
 
 ## v0.4.x
 
@@ -35,6 +33,8 @@
 ## v0.6.x
 
 *will probably use this release to organize some docs / tests*
+
+* use AWS meta endpoint to get required info
 
 * show resource types on all API responses
 
