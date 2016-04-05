@@ -1,6 +1,7 @@
 package core
 
 import (
+	"log"
 	"path"
 	"strings"
 
@@ -131,6 +132,9 @@ func (r *EntrypointResource) AddPort(elbPort int, instancePort int) error {
 			},
 		},
 	}
+
+	log.Printf("Adding port %d:%d to ELB %s", elbPort, instancePort, *r.awsName())
+
 	_, err := r.collection.core.ELB.CreateLoadBalancerListeners(params)
 	return err
 }
@@ -143,6 +147,9 @@ func (r *EntrypointResource) RemovePort(elbPort int) error {
 			aws.Int64(int64(elbPort)),
 		},
 	}
+
+	log.Printf("Removing port %d from ELB %s", elbPort, *r.awsName())
+
 	_, err := r.collection.core.ELB.DeleteLoadBalancerListeners(params)
 	return err
 }

@@ -1,10 +1,9 @@
 package core
 
 import (
-	"fmt"
 	"log"
 	"path"
-	"strconv"
+	"reflect"
 	"time"
 
 	"github.com/supergiant/guber"
@@ -21,10 +20,11 @@ type ReleaseResource struct {
 	*types.Release
 
 	// TODO these are shared between releases, it's kinda funky right now
-	externalService *guber.Service
-	internalService *guber.Service
-	imageRepos      []*ImageRepoResource
-	entrypoints     map[string]*EntrypointResource // a map for quick lookup
+	ExternalService *guber.Service `json:"-"`
+	InternalService *guber.Service `json:"-"`
+
+	imageRepos  []*ImageRepoResource
+	entrypoints map[string]*EntrypointResource // a map for quick lookup
 }
 
 type ReleaseList struct {
@@ -49,17 +49,17 @@ func (c *ReleaseCollection) InitializeResource(r Resource) {
 	// We do this here because this is called when pulling from the DB. If it's
 	// being pulled from the DB, it can be assumed to have services.
 	// Still really sloppy, since there could be an error.
-	svc, err := resource.getService(resource.externalServiceName())
+	svc, err := resource.getService(resource.ExternalServiceName())
 	if err != nil {
 		panic(err)
 	}
-	resource.externalService = svc
+	resource.ExternalService = svc
 
-	svc, err = resource.getService(resource.internalServiceName())
+	svc, err = resource.getService(resource.InternalServiceName())
 	if err != nil {
 		panic(err)
 	}
-	resource.internalService = svc
+	resource.InternalService = svc
 
 	repos, err := resource.getImageRepos()
 	if err != nil {
@@ -240,11 +240,11 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 	return r.collection.core.K8S.Services(*r.App().Name).Create(service)
 }
 
-func (r *ReleaseResource) externalServiceName() string {
+func (r *ReleaseResource) ExternalServiceName() string {
 	return *r.Component().Name + "-public"
 }
 
-func (r *ReleaseResource) internalServiceName() string {
+func (r *ReleaseResource) InternalServiceName() string {
 	return *r.Component().Name
 }
 
@@ -253,12 +253,12 @@ func (r *ReleaseResource) provisionExternalService() error {
 	for _, port := range r.containerPorts(true) {
 		ports = append(ports, asKubeServicePort(port))
 	}
-	svc, err := r.provisionService(r.externalServiceName(), "NodePort", ports)
+	svc, err := r.provisionService(r.ExternalServiceName(), "NodePort", ports)
 	if err != nil {
 		return err
 	}
 	// TODO repeated in initialization
-	r.externalService = svc
+	r.ExternalService = svc
 	return nil
 }
 
@@ -267,22 +267,22 @@ func (r *ReleaseResource) provisionInternalService() error {
 	for _, port := range r.containerPorts(false) {
 		ports = append(ports, asKubeServicePort(port))
 	}
-	svc, err := r.provisionService(r.internalServiceName(), "ClusterIP", ports)
+	svc, err := r.provisionService(r.InternalServiceName(), "ClusterIP", ports)
 	if err != nil {
 		return err
 	}
 	// TODO repeated in initialization
-	r.internalService = svc
+	r.InternalService = svc
 	return nil
 }
 
 func (r *ReleaseResource) deleteServices() (err error) {
-	log.Printf("Deleting Service %s", r.externalServiceName())
-	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.externalServiceName()); err != nil {
+	log.Printf("Deleting Service %s", r.ExternalServiceName())
+	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.ExternalServiceName()); err != nil {
 		return err
 	}
-	log.Printf("Deleting Service %s", r.internalServiceName())
-	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.internalServiceName()); err != nil {
+	log.Printf("Deleting Service %s", r.InternalServiceName())
+	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.InternalServiceName()); err != nil {
 		return err
 	}
 	return nil
@@ -298,33 +298,38 @@ func (r *ReleaseResource) provisionSecrets() error {
 	return nil
 }
 
-func (r *ReleaseResource) nodePortFor(number int) (p int) {
-	for _, port := range r.externalService.Spec.Ports {
-		if port.Port == number {
-			p = port.NodePort
-		}
+func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {
+	if r.InternalService == nil {
+		return ports
 	}
-	return p
+	for _, port := range r.containerPorts(false) {
+		ports = append(ports, NewInternalPort(port, r))
+	}
+	return ports
 }
 
-func (r *ReleaseResource) elbPortFor(port *types.Port) (elbPort int) {
-	if port.PreserveNumber {
-		elbPort = port.Number
-	} else {
-		elbPort = r.nodePortFor(port.Number)
+func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
+	if r.ExternalService == nil {
+		return ports
 	}
-	return elbPort
+	for _, port := range r.containerPorts(true) {
+		entrypoint := r.entrypoints[*port.EntrypointDomain]
+		ports = append(ports, NewExternalPort(port, r, entrypoint))
+	}
+	return ports
 }
 
 func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
-	// TODO repeated, move to Port class
-	for _, port := range r.containerPorts(true) {
-		if port.EntrypointDomain != nil {
-			nodePort := r.nodePortFor(port.Number)
-			elbPort := r.elbPortFor(port)
-			entrypoint := r.entrypoints[*port.EntrypointDomain]
-			if err := entrypoint.AddPort(elbPort, nodePort); err != nil {
-				return err
+	// NOTE we find from the service so that we don't try to add not-yet serviced
+	// ports to the ELB
+	ports := r.ExternalPorts()
+	for _, svcPort := range r.ExternalService.Spec.Ports {
+		for _, port := range ports {
+			if port.Number == svcPort.Port {
+				if err := port.AddToELB(); err != nil {
+					return err
+				}
+				return nil
 			}
 		}
 	}
@@ -332,45 +337,169 @@ func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
 }
 
 func (r *ReleaseResource) removeExternalPortsFromEntrypoint() error {
-	// TODO repeated, move to Port class
-	for _, port := range r.containerPorts(true) {
-		if port.EntrypointDomain != nil {
-			// nodePort := r.nodePortFor(port.Number)
-			elbPort := r.elbPortFor(port)
-			entrypoint := r.entrypoints[*port.EntrypointDomain]
-			if err := entrypoint.RemovePort(elbPort); err != nil {
-				return err
-			}
+	for _, port := range r.ExternalPorts() {
+		if err := port.RemoveFromELB(); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (r *ReleaseResource) ExternalAddresses() (pAddrs []*types.PortAddress) {
-	for _, port := range r.containerPorts(true) {
-		entrypoint := r.entrypoints[*port.EntrypointDomain]
-		pAddr := &types.PortAddress{
-			Port:    strconv.Itoa(port.Number), // TODO repeated all over the place
-			Address: fmt.Sprintf("%s:%d", entrypoint.Address, r.elbPortFor(port)),
+// AddNewPorts adds any new ports defined in containers to the existing
+// Services. This is used as a part of the deployment process, and is used in
+// conjunction with RemoveOldPorts.
+// We use the config returned from the services themselves, as opposed to just
+// updating the config, because auto-assigned ports need to be preserved.
+func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
+	newRInternalPorts := newR.InternalPorts()
+	oldRInternalPorts := oldR.InternalPorts()
+	var newInternalPorts []*InternalPort
+	for _, np := range newRInternalPorts {
+		new := true
+		for _, op := range oldRInternalPorts {
+			if reflect.DeepEqual(*np.Port, *op.Port) {
+				new = false
+				break
+			}
 		}
-		pAddrs = append(pAddrs, pAddr)
+		if new {
+			newInternalPorts = append(newInternalPorts, np)
+		}
 	}
-	return pAddrs
+
+	newRExternalPorts := newR.ExternalPorts()
+	oldRExternalPorts := oldR.ExternalPorts()
+	var newExternalPorts []*ExternalPort
+	for _, np := range newRExternalPorts {
+		new := true
+		for _, op := range oldRExternalPorts {
+			if reflect.DeepEqual(*np.Port, *op.Port) {
+				new = false
+				break
+			}
+		}
+		if new {
+			newExternalPorts = append(newExternalPorts, np)
+		}
+	}
+
+	if len(newInternalPorts) > 0 {
+		svc := newR.InternalService
+		log.Printf("Adding new ports to Service %s", svc.Metadata.Name)
+
+		for _, port := range newInternalPorts {
+			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
+		}
+
+		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		if err != nil {
+			return err
+		}
+		newR.InternalService = svc
+	}
+
+	if len(newExternalPorts) > 0 {
+		svc := newR.ExternalService
+		log.Printf("Adding new ports to Service %s", svc.Metadata.Name)
+
+		for _, port := range newExternalPorts {
+			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
+		}
+
+		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		if err != nil {
+			return err
+		}
+		newR.ExternalService = svc
+
+		for _, port := range newExternalPorts {
+			if err := port.AddToELB(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
-func (r *ReleaseResource) InternalAddresses() (pAddrs []*types.PortAddress) {
-	for _, port := range r.containerPorts(false) {
-
-		// TODO this should be a method in Guber
-		svcDNS := fmt.Sprintf("%s.%s.svc.cluster.local", r.internalServiceName(), *r.App().Name)
-
-		pAddr := &types.PortAddress{
-			Port:    strconv.Itoa(port.Number), // TODO repeated all over the place
-			Address: fmt.Sprintf("%s:%d", svcDNS, port.Number),
+func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
+	newRInternalPorts := newR.InternalPorts()
+	oldRInternalPorts := oldR.InternalPorts()
+	var oldInternalPorts []*InternalPort
+	for _, op := range oldRInternalPorts {
+		old := true
+		for _, np := range newRInternalPorts {
+			if reflect.DeepEqual(*np.Port, *op.Port) {
+				old = false
+				break
+			}
 		}
-		pAddrs = append(pAddrs, pAddr)
+		if old {
+			oldInternalPorts = append(oldInternalPorts, op)
+		}
 	}
-	return pAddrs
+	newRExternalPorts := newR.ExternalPorts()
+	oldRExternalPorts := oldR.ExternalPorts()
+	var oldExternalPorts []*ExternalPort
+	for _, op := range oldRExternalPorts {
+		old := true
+		for _, np := range newRExternalPorts {
+			if reflect.DeepEqual(*np.Port, *op.Port) {
+				old = false
+				break
+			}
+		}
+		if old {
+			oldExternalPorts = append(oldExternalPorts, op)
+		}
+	}
+
+	if len(oldInternalPorts) > 0 {
+		svc := newR.InternalService
+		log.Printf("Removing old ports from Service %s", svc.Metadata.Name)
+
+		for _, port := range oldInternalPorts {
+			for i, svcPort := range svc.Spec.Ports {
+				// remove ports from Service spec
+				if svcPort.Port == port.Number {
+					svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
+				}
+			}
+		}
+		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		if err != nil {
+			return err
+		}
+		newR.InternalService = svc
+	}
+
+	if len(oldExternalPorts) > 0 {
+		svc := newR.ExternalService
+		log.Printf("Removing old ports from Service %s", svc.Metadata.Name)
+
+		for _, port := range oldExternalPorts {
+			for i, svcPort := range svc.Spec.Ports {
+				// remove ports from Service spec
+				if svcPort.Port == port.Number {
+					svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
+				}
+			}
+		}
+
+		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		if err != nil {
+			return err
+		}
+		newR.ExternalService = svc
+
+		for _, port := range oldExternalPorts {
+			if err := port.RemoveFromELB(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Provision creates needed assets for all instances. It does not actually

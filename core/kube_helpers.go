@@ -80,14 +80,15 @@ func asKubeEnvVar(m *types.EnvVar, instance *InstanceResource) *guber.EnvVar {
 
 // Volume
 //==============================================================================
-func asKubeVolume(m *AwsVolume) *guber.Volume {
-	return &guber.Volume{
+func asKubeVolume(m *AwsVolume) (*guber.Volume, error) {
+	vol := &guber.Volume{
 		Name: *m.Blueprint.Name, // NOTE this is not the physical volume name
 		AwsElasticBlockStore: &guber.AwsElasticBlockStore{
 			VolumeID: *m.id(),
 			FSType:   "ext4",
 		},
 	}
+	return vol, nil
 }
 
 // Mount
