@@ -49,7 +49,7 @@ func main() {
 		log.Println("INFO: ETCD hosts,", c.StringSlice("etcd-host"))
 		log.Println("INFO: Kubernetes Host,", core.K8sHost)
 
-		core := core.New()
+		core := core.New(c.Bool("https-mode"))
 
 		// TODO should probably be able to say api.New(), because we shouldn't have to import task here
 		// NOTE using pool size of 4
@@ -115,6 +115,11 @@ func main() {
 			Usage:       "AWS Subnet ID in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_SUBNET_ID",
 			Destination: &core.AwsSubnetID,
+		},
+		cli.BoolFlag{
+			Name:   "https-mode",
+			Usage:  "Enable https mode for guber client when running outside a kube.",
+			EnvVar: "HTTPS_MODE",
 		},
 	}
 
