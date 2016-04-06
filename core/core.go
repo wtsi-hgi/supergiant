@@ -30,10 +30,10 @@ var (
 	AwsSubnetID string
 )
 
-func New() *Core {
+func New(httpsMode bool) *Core {
 	c := Core{}
 	c.DB = NewDB(EtcdEndpoints)
-	c.K8S = guber.NewClient(K8sHost, K8sUser, K8sPass)
+	c.K8S = guber.NewClient(K8sHost, K8sUser, K8sPass, httpsMode)
 	// NOTE / TODO AWS is configured through a file in ~
 	awsConf := &aws.Config{Region: aws.String(AwsRegion)}
 	c.EC2 = ec2.New(session.New(), awsConf)
