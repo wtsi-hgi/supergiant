@@ -40,7 +40,7 @@ func (c *ReleaseCollection) New(m *Release) *ReleaseResource {
 
 func (c *ReleaseCollection) List() (*ReleaseList, error) {
 	list := new(ReleaseList)
-	if _, err := c.client.Get(c.path(), list); err != nil {
+	if err := c.client.Get(c.path(), list); err != nil {
 		return nil, err
 	}
 	// see TODO in instance.go
@@ -50,30 +50,28 @@ func (c *ReleaseCollection) List() (*ReleaseList, error) {
 	return list, nil
 }
 
-// func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
-// 	r := c.New(m)
-// 	if err := c.client.Post(c.path(), m, r.Release); err != nil {
-// 		return nil, err
-// 	}
-// 	return r, nil
-// }
+func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
+	r := c.New(m)
+	if err := c.client.Post(c.path(), m, r.Release); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
 
 func (c *ReleaseCollection) Get(timestamp types.ID) (*ReleaseResource, error) {
 	m := &Release{
 		Timestamp: timestamp,
 	}
 	r := c.New(m)
-	if found, err := c.client.Get(r.path(), r.Release); err != nil {
+	if err := c.client.Get(r.path(), r.Release); err != nil {
 		return nil, err
-	} else if !found {
-		return nil, nil
 	}
 	return r, nil
 }
 
 // Resource-level
 //==============================================================================
-func (r *ReleaseResource) Delete() (bool, error) {
+func (r *ReleaseResource) Delete() error {
 	return r.collection.client.Delete(r.path())
 }
 

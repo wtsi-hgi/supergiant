@@ -41,7 +41,7 @@ func (c *ReleaseCollection) EtcdKey(timestamp types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *ReleaseCollection) InitializeResource(r Resource) {
+func (c *ReleaseCollection) InitializeResource(r Resource) error {
 	resource := r.(*ReleaseResource)
 	resource.collection = c
 
@@ -51,23 +51,28 @@ func (c *ReleaseCollection) InitializeResource(r Resource) {
 	// Still really sloppy, since there could be an error.
 	svc, err := resource.getService(resource.ExternalServiceName())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	resource.ExternalService = svc
 
 	svc, err = resource.getService(resource.InternalServiceName())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	resource.InternalService = svc
 
 	repos, err := resource.getImageRepos()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	resource.imageRepos = repos
 
-	resource.entrypoints = resource.getEntrypoints()
+	resource.entrypoints, err = resource.getEntrypoints()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // List returns an ReleaseList.
@@ -188,7 +193,7 @@ func (r *ReleaseResource) imageRepoNames() (repoNames []string) { // TODO conver
 	return uniqStrs(repoNames)
 }
 
-func (r *ReleaseResource) getEntrypoints() map[string]*EntrypointResource { // TODO convert Image into Value object w/ repo, image, version
+func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, error) { // TODO convert Image into Value object w/ repo, image, version
 	entrypoints := make(map[string]*EntrypointResource)
 	for _, port := range r.containerPorts(true) {
 		if port.EntrypointDomain == nil {
@@ -196,11 +201,11 @@ func (r *ReleaseResource) getEntrypoints() map[string]*EntrypointResource { // T
 		}
 		entrypoint, err := r.collection.core.Entrypoints().Get(port.EntrypointDomain)
 		if err != nil {
-			panic(err) // TODO
+			return nil, err
 		}
 		entrypoints[*port.EntrypointDomain] = entrypoint
 	}
-	return entrypoints
+	return entrypoints, nil
 }
 
 func (r *ReleaseResource) containerPorts(public bool) (ports []*types.Port) {
@@ -525,15 +530,19 @@ func (r *ReleaseResource) Provision() error {
 	// which is not actually concurrent... just sends all requests, and then
 	// loops waiting, which prevents concurrently polling while waiting.
 	for _, vol := range r.volumes() {
-		if err := vol.Provision(); err != nil {
+		if ok, err := vol.Exists(); err != nil {
+			return err
+		} else if !ok {
+			if err = vol.Create(); err != nil {
+				return err
+			}
+		}
+	}
+	for _, vol := range r.volumes() {
+		if err := vol.WaitForAvailable(); err != nil {
 			return err
 		}
 	}
-	// for _, vol := range r.volumes() {
-	// 	if err := vol.WaitForAvailable(); err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	return nil
 }

@@ -180,11 +180,15 @@ func (r *InstanceResource) prepareVolumes() error {
 	return nil
 }
 
-func (r *InstanceResource) kubeVolumes() (vols []*guber.Volume) {
+func (r *InstanceResource) kubeVolumes() (vols []*guber.Volume, err error) {
 	for _, vol := range r.Volumes() {
-		vols = append(vols, asKubeVolume(vol))
+		kubeVol, err := asKubeVolume(vol)
+		if err != nil {
+			return nil, err
+		}
+		vols = append(vols, kubeVol)
 	}
-	return vols
+	return vols, nil
 }
 
 func (r *InstanceResource) kubeContainers() (containers []*guber.Container) {
@@ -230,6 +234,11 @@ func (r *InstanceResource) provisionReplicationController() error {
 		return err
 	}
 
+	kubeVolumes, err := r.kubeVolumes()
+	if err != nil {
+		return err
+	}
+
 	rc := &guber.ReplicationController{
 		Metadata: &guber.Metadata{
 			Name: r.Name,
@@ -248,7 +257,7 @@ func (r *InstanceResource) provisionReplicationController() error {
 					},
 				},
 				Spec: &guber.PodSpec{
-					Volumes:                       r.kubeVolumes(),
+					Volumes:                       kubeVolumes,
 					Containers:                    r.kubeContainers(),
 					ImagePullSecrets:              imagePullSecrets,
 					TerminationGracePeriodSeconds: r.Release().TerminationGracePeriod,

@@ -44,7 +44,7 @@ func (c *InstanceCollection) New(m *Instance) *InstanceResource {
 
 func (c *InstanceCollection) List() (*InstanceList, error) {
 	list := new(InstanceList)
-	if _, err := c.client.Get(c.path(), list); err != nil {
+	if err := c.client.Get(c.path(), list); err != nil {
 		return nil, err
 	}
 
@@ -90,8 +90,7 @@ func (c *InstanceCollection) Get(id types.ID) (*InstanceResource, error) {
 // }
 
 func (r *InstanceResource) Reload() error {
-	_, err := r.collection.client.Get(r.path(), r.Instance)
-	return err
+	return r.collection.client.Get(r.path(), r.Instance)
 }
 
 func (r *InstanceResource) Start() error {

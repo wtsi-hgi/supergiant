@@ -2,10 +2,9 @@ package deploy
 
 import (
 	"github.com/supergiant/supergiant/client"
-	"github.com/supergiant/supergiant/types"
 )
 
-func Deploy(appName types.ID, componentName types.ID) error {
+func Deploy(appName *string, componentName *string) error {
 
 	sg := client.New("http://localhost:8080/v0", "", "", true)
 
@@ -19,9 +18,12 @@ func Deploy(appName types.ID, componentName types.ID) error {
 		return err
 	}
 
-	currentRelease, err := component.CurrentRelease()
-	if err != nil {
-		return err
+	var currentRelease *client.ReleaseResource
+	if component.CurrentReleaseTimestamp != nil {
+		currentRelease, err = component.CurrentRelease()
+		if err != nil {
+			return err
+		}
 	}
 
 	targetRelease, err := component.TargetRelease()

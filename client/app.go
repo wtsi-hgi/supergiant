@@ -37,7 +37,7 @@ func (c *AppCollection) New(m *App) *AppResource {
 
 func (c *AppCollection) List() (*AppList, error) {
 	list := new(AppList)
-	if _, err := c.client.Get(c.path(), list); err != nil {
+	if err := c.client.Get(c.path(), list); err != nil {
 		return nil, err
 	}
 	// see TODO in instance.go
@@ -60,10 +60,8 @@ func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
 		Name: name,
 	}
 	r := c.New(m)
-	if found, err := c.client.Get(r.path(), r.App); err != nil {
+	if err := c.client.Get(r.path(), r.App); err != nil {
 		return nil, err
-	} else if !found {
-		return nil, nil
 	}
 	return r, nil
 }
@@ -74,7 +72,7 @@ func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
 //   r.collection.client.
 // }
 
-func (r *AppResource) Delete() (bool, error) {
+func (r *AppResource) Delete() error {
 	return r.collection.client.Delete(r.path())
 }
 

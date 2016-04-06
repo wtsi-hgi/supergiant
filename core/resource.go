@@ -14,7 +14,7 @@ type Collection interface {
 
 	// InitializeResource is called when unmarshalling objects from etcd.
 	// Primarily, it sets a pointer to the Collection on the Resource.
-	InitializeResource(r Resource)
+	InitializeResource(r Resource) error
 }
 
 // Resource is an interface used mainly for generalized marshalling purposes for

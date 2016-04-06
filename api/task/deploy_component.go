@@ -35,10 +35,16 @@ func (j DeployComponent) Perform(data []byte) error {
 
 	var currentRelease *core.ReleaseResource
 	if component.CurrentReleaseTimestamp != nil {
-		currentRelease = component.CurrentRelease()
+		currentRelease, err = component.CurrentRelease()
+		if err != nil {
+			return err
+		}
 	}
 	// There should always be a target release at this point
-	targetRelease := component.TargetRelease()
+	targetRelease, err := component.TargetRelease()
+	if err != nil {
+		return err
+	}
 
 	// This sets up all the necessary dependencies (the only thing needed past the
 	// first release is volumes for new instances)
