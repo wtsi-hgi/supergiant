@@ -50,13 +50,13 @@ func (c *ReleaseCollection) List() (*ReleaseList, error) {
 	return list, nil
 }
 
-// func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
-// 	r := c.New(m)
-// 	if err := c.client.Post(c.path(), m, r.Release); err != nil {
-// 		return nil, err
-// 	}
-// 	return r, nil
-// }
+func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
+	r := c.New(m)
+	if err := c.client.Post(c.path(), m, r.Release); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
 
 func (c *ReleaseCollection) Get(timestamp types.ID) (*ReleaseResource, error) {
 	m := &Release{

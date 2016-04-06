@@ -104,3 +104,7 @@ func (c *Client) Delete(path string) error {
 func (c *Client) Apps() *AppCollection {
 	return &AppCollection{c}
 }
+
+func (c *Client) Entrypoints() *EntrypointCollection {
+	return &EntrypointCollection{c}
+}
