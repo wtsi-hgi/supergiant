@@ -22,23 +22,17 @@ func (m *AwsVolume) name() string {
 	return fmt.Sprintf("%s-%s", m.Instance.BaseName, *m.Blueprint.Name)
 }
 
-func (m *AwsVolume) id() *string {
-	vol := m.awsVolume()
-	if vol == nil {
-		panic(fmt.Errorf("Trying to access ID of nil volume %#v", m))
-	}
-	return vol.VolumeId
-}
-
 // simple memoization of aws vol record
-func (m *AwsVolume) awsVolume() *ec2.Volume {
+func (m *AwsVolume) awsVolume() (*ec2.Volume, error) {
 	if m.awsVol == nil {
-		m.loadAwsVolume()
+		if err := m.loadAwsVolume(); err != nil {
+			return nil, err
+		}
 	}
-	return m.awsVol
+	return m.awsVol, nil
 }
 
-func (m *AwsVolume) loadAwsVolume() {
+func (m *AwsVolume) loadAwsVolume() error {
 	input := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -61,13 +55,14 @@ func (m *AwsVolume) loadAwsVolume() {
 	}
 	resp, err := m.core.EC2.DescribeVolumes(input)
 	if err != nil {
-		panic(err) // TODO this isn't a 404, so we need to figure out what could happen; probably implement retry
+		return err
 	}
 
 	if len(resp.Volumes) > 0 {
 		m.awsVol = resp.Volumes[0]
 	}
 	// Volume does not exist otherwise and that's fine
+	return nil
 }
 
 func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
@@ -98,13 +93,18 @@ func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
 	}
 	m.awsVol = awsVol
 
-	return m.WaitForAvailable()
+	return nil
 }
 
 func (m *AwsVolume) createSnapshot() (*ec2.Snapshot, error) {
+	vol, err := m.awsVolume()
+	if err != nil {
+		return nil, err
+	}
+
 	input := &ec2.CreateSnapshotInput{
 		Description: aws.String(m.name() + "-" + *m.Instance.Release().Timestamp),
-		VolumeId:    m.id(),
+		VolumeId:    vol.VolumeId,
 	}
 	snapshot, err := m.core.EC2.CreateSnapshot(input)
 	if err != nil {
@@ -127,21 +127,31 @@ func (m *AwsVolume) deleteSnapshot(snapshot *ec2.Snapshot) error {
 	return err
 }
 
-func (m *AwsVolume) Provision() error {
-	if m.awsVolume() == nil {
-		log.Printf("Creating EBS volume %s", m.name())
-		return m.createAwsVolume(nil)
+func (m *AwsVolume) Exists() (bool, error) {
+	vol, err := m.awsVolume()
+	if err != nil {
+		return false, err
 	}
-	return nil
+	return vol != nil, nil
+}
+
+func (m *AwsVolume) Create() error {
+	log.Printf("Creating EBS volume %s", m.name())
+	return m.createAwsVolume(nil)
 }
 
 func (m *AwsVolume) WaitForAvailable() error {
+	vol, err := m.awsVolume()
+	if err != nil {
+		return err
+	}
+
 	input := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name: aws.String("volume-id"),
 				Values: []*string{
-					m.id(),
+					vol.VolumeId,
 				},
 			},
 		},
@@ -152,14 +162,18 @@ func (m *AwsVolume) WaitForAvailable() error {
 
 // Delete deletes the EBS volume on AWS.
 func (m *AwsVolume) Delete() error {
-	if m.awsVolume() == nil { // || *m.awsVolume().State == "deleting" {
+	vol, err := m.awsVolume()
+	if err != nil {
+		return err
+	}
+	if vol == nil {
 		return nil
 	}
 	if err := m.WaitForAvailable(); err != nil {
 		return err
 	}
 	input := &ec2.DeleteVolumeInput{
-		VolumeId: m.id(),
+		VolumeId: vol.VolumeId,
 	}
 	log.Printf("Deleting EBS volume %s", m.name())
 	if _, err := m.core.EC2.DeleteVolume(input); err != nil {
@@ -171,10 +185,11 @@ func (m *AwsVolume) Delete() error {
 
 // NeedsResize returns true if the actual EBS size does not match the blueprint.
 func (m *AwsVolume) NeedsResize() bool {
-	if m.awsVolume() == nil {
+	vol, _ := m.awsVolume()
+	if vol == nil {
 		return false
 	}
-	return int64(m.Blueprint.Size) != *m.awsVolume().Size
+	return int64(m.Blueprint.Size) != *vol.Size
 }
 
 // Resize snapshots the volume, creates a new volume from the snapshot, deletes

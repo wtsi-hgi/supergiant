@@ -39,7 +39,7 @@ func (c *ComponentCollection) New(m *Component) *ComponentResource {
 
 func (c *ComponentCollection) List() (*ComponentList, error) {
 	list := new(ComponentList)
-	if _, err := c.client.Get(c.path(), list); err != nil {
+	if err := c.client.Get(c.path(), list); err != nil {
 		return nil, err
 	}
 	// see TODO in instance.go
@@ -64,10 +64,8 @@ func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
 		},
 	}
 	r := c.New(m)
-	if found, err := c.client.Get(r.path(), r.Component); err != nil {
+	if err := c.client.Get(r.path(), r.Component); err != nil {
 		return nil, err
-	} else if !found {
-		return nil, nil
 	}
 	return r, nil
 }
@@ -78,7 +76,7 @@ func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
 //   r.collection.client.
 // }
 
-func (r *ComponentResource) Delete() (bool, error) {
+func (r *ComponentResource) Delete() error {
 	return r.collection.client.Delete(r.path())
 }
 
@@ -92,15 +90,9 @@ func (r *ComponentResource) Releases() *ReleaseCollection {
 }
 
 func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {
-	if r.CurrentReleaseTimestamp == nil { // will be empty on first release
-		return nil, nil
-	}
 	return r.Releases().Get(r.CurrentReleaseTimestamp)
 }
 
 func (r *ComponentResource) TargetRelease() (*ReleaseResource, error) {
-	if r.TargetReleaseTimestamp == nil {
-		return nil, nil
-	}
 	return r.Releases().Get(r.TargetReleaseTimestamp)
 }

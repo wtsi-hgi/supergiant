@@ -31,9 +31,10 @@ func (c *ImageRepoCollection) EtcdKey(name types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *ImageRepoCollection) InitializeResource(r Resource) {
+func (c *ImageRepoCollection) InitializeResource(r Resource) error {
 	resource := r.(*ImageRepoResource)
 	resource.collection = c
+	return nil
 }
 
 // List returns an ImageRepoList.

@@ -42,9 +42,10 @@ func (c *TaskCollection) EtcdKey(id types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *TaskCollection) InitializeResource(r Resource) {
+func (c *TaskCollection) InitializeResource(r Resource) error {
 	resource := r.(*TaskResource)
 	resource.collection = c
+	return nil
 }
 
 // List returns an TaskList.

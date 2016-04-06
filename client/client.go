@@ -50,56 +50,52 @@ func (c *Client) url(path string) string {
 	return c.baseURL + "/" + path
 }
 
-func (c *Client) request(method string, path string, in interface{}, out interface{}) (bool, error) {
+func (c *Client) request(method string, path string, in interface{}, out interface{}) error {
 	body := new(bytes.Buffer)
 	if in != nil {
 		buff, err := serialize(in)
 		if err != nil {
-			return false, err
+			return err
 		}
 		body = buff
 	}
 
 	req, err := http.NewRequest(method, c.url(path), body)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	req.SetBasicAuth(c.Username, c.Password)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	// TODO this is only really needed on GETs, might should break into more methods
-	if resp.StatusCode == 404 {
-		return false, nil
-	} else if status := resp.Status; status[:2] != "20" {
-		return false, fmt.Errorf("Request failed with status %s", status)
+	if status := resp.Status; status[:2] != "20" {
+		return fmt.Errorf("Request failed with status %s", status)
 	}
 
 	if out != nil {
 		if err = deserialize(resp.Body, out); err != nil {
-			return false, err
+			return err
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 // Request methods
 //==============================================================================
-func (c *Client) Get(path string, out interface{}) (bool, error) {
+func (c *Client) Get(path string, out interface{}) error {
 	return c.request("GET", path, nil, out)
 }
 
 func (c *Client) Post(path string, in interface{}, out interface{}) error {
-	_, err := c.request("POST", path, in, out)
-	return err
+	return c.request("POST", path, in, out)
 }
 
-func (c *Client) Delete(path string) (bool, error) {
+func (c *Client) Delete(path string) error {
 	return c.request("DELETE", path, nil, nil)
 }
 

@@ -37,9 +37,10 @@ func (c *EntrypointCollection) EtcdKey(domain types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *EntrypointCollection) InitializeResource(r Resource) {
+func (c *EntrypointCollection) InitializeResource(r Resource) error {
 	resource := r.(*EntrypointResource)
 	resource.collection = c
+	return nil
 }
 
 // List returns an EntrypointList.
@@ -69,13 +70,13 @@ func (c *EntrypointCollection) Create(r *EntrypointResource) (*EntrypointResourc
 	// utilize a Status field
 	address, err := r.createELB()
 	if err != nil {
-		panic(err) // TODO
+		return nil, err
 	}
 	if err := r.attachELBToScalingGroups(); err != nil {
-		panic(err) // TODO
+		return nil, err
 	}
 	if err := r.configureELBHealthCheck(); err != nil {
-		panic(err) // TODO
+		return nil, err
 	}
 
 	r.Address = *address

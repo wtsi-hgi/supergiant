@@ -31,9 +31,10 @@ func (c *AppCollection) EtcdKey(name types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *AppCollection) InitializeResource(r Resource) {
+func (c *AppCollection) InitializeResource(r Resource) error {
 	resource := r.(*AppResource)
 	resource.collection = c
+	return nil
 }
 
 // List returns an AppList.
@@ -62,7 +63,7 @@ func (c *AppCollection) Create(r *AppResource) (*AppResource, error) {
 	// TODO for error handling and retries, we may want to do this in a task and
 	// utilize a Status field
 	if err := r.createNamespace(); err != nil {
-		panic(err)
+		return nil, err
 	}
 	return r, nil
 }

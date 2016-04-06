@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"path"
 
 	"github.com/supergiant/supergiant/types"
@@ -31,7 +30,7 @@ func (c *ComponentCollection) EtcdKey(name types.ID) string {
 }
 
 // InitializeResource implements the Collection interface.
-func (c *ComponentCollection) InitializeResource(r Resource) {
+func (c *ComponentCollection) InitializeResource(r Resource) error {
 	resource := r.(*ComponentResource)
 	resource.collection = c
 
@@ -40,9 +39,7 @@ func (c *ComponentCollection) InitializeResource(r Resource) {
 	// Component.
 	// However, it's rare a Component is loaded out of the context of its
 	// Release. We will change this when we see issues.
-	if err := resource.decorate(); err != nil {
-		panic(err)
-	}
+	return resource.decorate()
 }
 
 // List returns an ComponentList.
@@ -85,12 +82,24 @@ func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
 //==============================================================================
 
 func (r *ComponentResource) decorate() error {
-	if r.CurrentReleaseTimestamp != nil {
-		r.Addresses = &types.ComponentAddresses{
-			External: r.externalAddresses(),
-			Internal: r.internalAddresses(),
-		}
+	if r.CurrentReleaseTimestamp == nil {
+		return nil
 	}
+
+	externalAddrs, err := r.externalAddresses()
+	if err != nil {
+		return err
+	}
+	internalAddrs, err := r.internalAddresses()
+	if err != nil {
+		return err
+	}
+
+	r.Addresses = &types.ComponentAddresses{
+		External: externalAddrs,
+		Internal: internalAddrs,
+	}
+
 	return nil
 }
 
@@ -144,38 +153,32 @@ func (r *ComponentResource) Releases() *ReleaseCollection {
 	}
 }
 
-func (r *ComponentResource) CurrentRelease() *ReleaseResource {
-	if r.CurrentReleaseTimestamp == nil {
-		panic(fmt.Errorf("CurrentReleaseTimestamp is nil for Component %s", *r.Name))
-	}
-	release, err := r.Releases().Get(r.CurrentReleaseTimestamp)
-	if err != nil {
-		panic(err)
-	}
-	return release
+func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {
+	return r.Releases().Get(r.CurrentReleaseTimestamp)
 }
 
-func (r *ComponentResource) TargetRelease() *ReleaseResource {
-	if r.TargetReleaseTimestamp == nil {
-		panic(fmt.Errorf("TargettReleaseTimestamp is nil for Component %s", *r.Name))
-	}
-	release, err := r.Releases().Get(r.TargetReleaseTimestamp)
-	if err != nil {
-		panic(err)
-	}
-	return release
+func (r *ComponentResource) TargetRelease() (*ReleaseResource, error) {
+	return r.Releases().Get(r.TargetReleaseTimestamp)
 }
 
-func (r *ComponentResource) externalAddresses() (addrs []*types.PortAddress) {
-	for _, port := range r.CurrentRelease().ExternalPorts() {
+func (r *ComponentResource) externalAddresses() (addrs []*types.PortAddress, err error) {
+	release, err := r.CurrentRelease()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range release.ExternalPorts() {
 		addrs = append(addrs, port.Address())
 	}
-	return addrs
+	return addrs, nil
 }
 
-func (r *ComponentResource) internalAddresses() (addrs []*types.PortAddress) {
-	for _, port := range r.CurrentRelease().InternalPorts() {
+func (r *ComponentResource) internalAddresses() (addrs []*types.PortAddress, err error) {
+	release, err := r.CurrentRelease()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range release.InternalPorts() {
 		addrs = append(addrs, port.Address())
 	}
-	return addrs
+	return addrs, nil
 }

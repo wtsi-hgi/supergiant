@@ -127,8 +127,12 @@ type ResourceAllocation struct {
 // both "definitions" that create "instances" of the real thing
 type Release struct {
 	// NOTE Timestamp here does not use the Timestamp type.
-	Timestamp              ID                    `json:"timestamp"`
-	InstanceCount          int                   `json:"instance_count"`
+	Timestamp ID `json:"timestamp"`
+
+	InstanceCount int `json:"instance_count"`
+
+	// These attributes, when changed from last Release, indicate a restart is
+	// needed (or just new instances through other means).
 	Volumes                []*VolumeBlueprint    `json:"volumes"`
 	Containers             []*ContainerBlueprint `json:"containers"`
 	TerminationGracePeriod int                   `json:"termination_grace_period"`

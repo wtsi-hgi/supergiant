@@ -26,6 +26,8 @@
 
 * custom deployments
 
+* add flag to release to indicate whether restart is needed (if instance config has changed)
+
 ## v0.5.x
 
 * show instance metrics
