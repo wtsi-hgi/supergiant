@@ -54,7 +54,7 @@ func (c *InstanceController) Start(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = c.core.Tasks().Start(types.TaskTypeStartInstance, msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (c *InstanceController) Stop(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = c.core.Tasks().Start(types.TaskTypeStopInstance, msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -13,7 +13,7 @@ type TaskController struct {
 func (c *TaskController) Index(w http.ResponseWriter, r *http.Request) {
 	tasks, err := c.core.Tasks().List()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -21,7 +21,7 @@ func (c *AppController) Create(w http.ResponseWriter, r *http.Request) {
 
 	app, err := c.core.Apps().Create(app)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -35,7 +35,7 @@ func (c *AppController) Create(w http.ResponseWriter, r *http.Request) {
 func (c *AppController) Index(w http.ResponseWriter, r *http.Request) {
 	apps, err := c.core.Apps().List()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (c *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 	msg := &task.DeleteAppMessage{AppName: app.Name}
 	_, err = c.core.Tasks().Start(types.TaskTypeDeleteApp, msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 

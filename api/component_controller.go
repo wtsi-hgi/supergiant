@@ -25,7 +25,7 @@ func (c *ComponentController) Create(w http.ResponseWriter, r *http.Request) {
 
 	component, err = app.Components().Create(component)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (c *ComponentController) Index(w http.ResponseWriter, r *http.Request) {
 
 	components, err := app.Components().List()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -80,7 +80,7 @@ func (c *ComponentController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = c.core.Tasks().Start(types.TaskTypeDeleteComponent, msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
