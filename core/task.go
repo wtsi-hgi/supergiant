@@ -94,14 +94,12 @@ func (c *TaskCollection) Start(t types.TaskType, msg interface{}) (*TaskResource
 		return nil, err
 	}
 
-	task := &TaskResource{
-		Task: &types.Task{
-			Type:        t,
-			Data:        data,
-			Status:      statusQueued,
-			MaxAttempts: 20, // TODO may want to expose this as an arg
-		},
-	}
+	task := c.New()
+	task.Type = t
+	task.Data = data
+	task.Status = statusQueued
+	task.MaxAttempts = 20
+
 	return c.Create(task)
 }
 

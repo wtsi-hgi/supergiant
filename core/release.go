@@ -201,6 +201,13 @@ func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, erro
 		}
 		entrypoint, err := r.collection.core.Entrypoints().Get(port.EntrypointDomain)
 		if err != nil {
+
+			// TODO
+			if isNotFoundError(err) {
+				log.Printf("Entrypoint %s does not exist", *port.EntrypointDomain)
+				continue
+			}
+
 			return nil, err
 		}
 		entrypoints[*port.EntrypointDomain] = entrypoint
@@ -318,7 +325,13 @@ func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
 		return ports
 	}
 	for _, port := range r.containerPorts(true) {
-		entrypoint := r.entrypoints[*port.EntrypointDomain]
+		entrypoint, ok := r.entrypoints[*port.EntrypointDomain]
+
+		if !ok {
+			log.Printf("Entrypoint %s does not exist", *port.EntrypointDomain)
+			continue
+		}
+
 		ports = append(ports, NewExternalPort(port, r, entrypoint))
 	}
 	return ports
