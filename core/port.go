@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/types"
@@ -37,7 +38,7 @@ func (ip *InternalPort) Address() *types.PortAddress {
 	host := fmt.Sprintf("%s.%s.svc.cluster.local", svcMeta.Name, svcMeta.Namespace)
 	return &types.PortAddress{
 		Port:    ip.name(),
-		Address: fmt.Sprintf("%s:%d", host, ip.Number),
+		Address: fmt.Sprintf("%s://%s:%d", strings.ToLower(ip.Protocol), host, ip.Number),
 	}
 }
 
@@ -93,7 +94,7 @@ func (ep *ExternalPort) Address() *types.PortAddress {
 	// entrypoint.
 	return &types.PortAddress{
 		Port:    ep.name(),
-		Address: fmt.Sprintf("%s:%d", ep.entrypoint.Address, ep.elbPort()),
+		Address: fmt.Sprintf("%s://%s:%d", strings.ToLower(ep.Protocol), ep.entrypoint.Address, ep.elbPort()),
 	}
 }
 
