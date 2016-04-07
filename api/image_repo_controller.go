@@ -19,7 +19,7 @@ func (c *ImageRepoController) Create(w http.ResponseWriter, r *http.Request) {
 
 	repo, err := c.core.ImageRepos().Create(repo)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -36,7 +36,7 @@ func (c *ImageRepoController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = repo.Delete(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 

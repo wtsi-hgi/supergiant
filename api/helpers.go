@@ -10,13 +10,27 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type errorMessage struct {
+	Status int    `json:"status"`
+	Error  string `json:"error"`
+}
+
+func renderError(w http.ResponseWriter, err error, status int) {
+	msg := &errorMessage{status, err.Error()}
+	body, err := json.MarshalIndent(msg, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	http.Error(w, string(body), status)
+}
+
 // loadApp loads an App resource from URL params, or renders an HTTP Not Found
 // error.
 func loadApp(core *core.Core, w http.ResponseWriter, r *http.Request) (*core.AppResource, error) {
 	name := mux.Vars(r)["app_name"]
 	app, err := core.Apps().Get(&name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -34,7 +48,7 @@ func loadComponent(core *core.Core, w http.ResponseWriter, r *http.Request) (*co
 	name := mux.Vars(r)["comp_name"]
 	component, err := app.Components().Get(&name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -52,7 +66,7 @@ func loadRelease(core *core.Core, w http.ResponseWriter, r *http.Request) (*core
 	timestamp := mux.Vars(r)["release_timestamp"]
 	release, err := component.Releases().Get(&timestamp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -73,7 +87,7 @@ func loadInstance(core *core.Core, w http.ResponseWriter, r *http.Request) (*cor
 	}
 	instance, err := release.Instances().Get(&id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -86,7 +100,7 @@ func loadImageRepo(core *core.Core, w http.ResponseWriter, r *http.Request) (*co
 	name := mux.Vars(r)["name"]
 	repo, err := core.ImageRepos().Get(&name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -99,7 +113,7 @@ func loadEntrypoint(core *core.Core, w http.ResponseWriter, r *http.Request) (*c
 	domain := mux.Vars(r)["domain"]
 	entrypoint, err := core.Entrypoints().Get(&domain)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -112,7 +126,7 @@ func loadTask(core *core.Core, w http.ResponseWriter, r *http.Request) (*core.Ta
 	id := mux.Vars(r)["id"]
 	task, err := core.Tasks().Get(&id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		renderError(w, err, http.StatusNotFound)
 		return nil, err
 	}
 
@@ -125,7 +139,7 @@ func unmarshalBodyInto(w http.ResponseWriter, r *http.Request, out interface{}) 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(out)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		renderError(w, err, http.StatusBadRequest)
 		return err
 	}
 	return nil
@@ -137,7 +151,7 @@ func marshalBody(w http.ResponseWriter, in interface{}) (string, error) {
 	out, err := json.MarshalIndent(in, "", "  ")
 	// out, err := json.Marshal(in)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return "", err
 	}
 	return string(out) + "\n", nil

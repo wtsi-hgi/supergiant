@@ -25,7 +25,7 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 
 	release, err = component.Releases().Create(release)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -35,7 +35,7 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	task, err := c.core.Tasks().Start(types.TaskTypeDeployComponent, msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 	// Set the task ID of the deploy on Component
 	component.DeployTaskID = task.ID
 	if err := component.Save(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (c *ReleaseController) Index(w http.ResponseWriter, r *http.Request) {
 
 	releases, err := component.Releases().List()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 

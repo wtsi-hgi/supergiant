@@ -19,7 +19,7 @@ func (c *EntrypointController) Create(w http.ResponseWriter, r *http.Request) {
 
 	entrypoint, err := c.core.Entrypoints().Create(entrypoint)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (c *EntrypointController) Create(w http.ResponseWriter, r *http.Request) {
 func (c *EntrypointController) Index(w http.ResponseWriter, r *http.Request) {
 	entrypoints, err := c.core.Entrypoints().List()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (c *EntrypointController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = entrypoint.Delete(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
 
