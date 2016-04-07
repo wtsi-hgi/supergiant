@@ -558,6 +558,15 @@ func (r *ReleaseResource) getImageRepos() (repos []*ImageRepoResource, err error
 	for _, repoName := range r.imageRepoNames() {
 		repo, err := r.collection.core.ImageRepos().Get(&repoName)
 		if err != nil {
+
+			// TODO this method is ambiguously named
+			if isNotFoundError(err) {
+				// if there is no repo, we can assume this is a public repo (though it
+				// may not be) -- this represents a TODO on how to report errors from
+				// Kubernetes
+				continue
+			}
+
 			return nil, err
 		}
 		repos = append(repos, repo)
