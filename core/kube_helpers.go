@@ -38,20 +38,30 @@ func ImageRepoName(m *types.ContainerBlueprint) string {
 }
 
 func asKubeContainer(m *types.ContainerBlueprint, instance *InstanceResource) *guber.Container { // NOTE how instance must be passed here
+	// TODO
+	resources := new(guber.Resources)
+	if m.RAM != nil {
+		if m.RAM.Min != 0 {
+			resources.Requests.Memory = types.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
+		}
+		if m.RAM.Max != 0 {
+			resources.Limits.Memory = types.BytesFromMiB(m.RAM.Max).ToKubeMebibytes()
+		}
+	}
+	if m.CPU != nil {
+		if m.CPU.Min != 0 {
+			resources.Requests.CPU = types.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
+		}
+		if m.CPU.Max != 0 {
+			resources.Limits.CPU = types.CoresFromMillicores(m.CPU.Max).ToKubeMillicores()
+		}
+	}
+
 	return &guber.Container{
-		Name:  "container", // TODO this will fail with multiple containers ------------------------------------ TODO
-		Image: m.Image,
-		Env:   interpolatedEnvVars(m, instance),
-		Resources: &guber.Resources{
-			Requests: &guber.ResourceValues{
-				Memory: types.BytesFromMiB(m.RAM.Min).ToKubeMebibytes(),
-				CPU:    types.CoresFromMillicores(m.CPU.Min).ToKubeMillicores(),
-			},
-			Limits: &guber.ResourceValues{
-				Memory: types.BytesFromMiB(m.RAM.Max).ToKubeMebibytes(),
-				CPU:    types.CoresFromMillicores(m.CPU.Max).ToKubeMillicores(),
-			},
-		},
+		Name:         "container", // TODO this will fail with multiple containers ------------------------------------ TODO
+		Image:        m.Image,
+		Env:          interpolatedEnvVars(m, instance),
+		Resources:    resources,
 		VolumeMounts: kubeVolumeMounts(m),
 		Ports:        kubeContainerPorts(m),
 
