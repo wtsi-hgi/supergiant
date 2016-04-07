@@ -49,7 +49,11 @@ func main() {
 		log.Println("INFO: ETCD hosts,", c.StringSlice("etcd-host"))
 		log.Println("INFO: Kubernetes Host,", core.K8sHost)
 
-		core := core.New(c.Bool("https-mode"))
+		core := core.New(
+			c.Bool("https-mode"),   // Tells the api if it needs to connect to Kuberntes over TLS or not.
+			c.String("access-key"), // AWS Access Key
+			c.String("secret-key"), // AWS Secret Key
+		)
 
 		// TODO should probably be able to say api.New(), because we shouldn't have to import task here
 		// NOTE using pool size of 4
@@ -115,6 +119,16 @@ func main() {
 			Usage:       "AWS Subnet ID in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_SUBNET_ID",
 			Destination: &core.AwsSubnetID,
+		},
+		cli.StringFlag{
+			Name:  "access-key",
+			Value: "",
+			Usage: "AWS Access key.",
+		},
+		cli.StringFlag{
+			Name:  "secret-key",
+			Value: "",
+			Usage: "AWS Secret key.",
 		},
 		cli.BoolFlag{
 			Name:   "https-mode",
