@@ -343,6 +343,10 @@ func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
 }
 
 func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
+	if r.ExternalService == nil {
+		return nil
+	}
+
 	// NOTE we find from the service so that we don't try to add not-yet serviced
 	// ports to the ELB
 	ports := r.ExternalPorts()
