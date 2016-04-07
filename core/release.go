@@ -232,6 +232,11 @@ func (r *ReleaseResource) getService(name string) (*guber.Service, error) {
 }
 
 func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts []*guber.ServicePort) (*guber.Service, error) {
+	// doing this here so I don't have to repeat in both external and internal provision methods
+	if len(svcPorts) == 0 {
+		return nil, nil
+	}
+
 	if service, _ := r.getService(name); service != nil {
 		return service, nil // already created
 	}

@@ -32,6 +32,8 @@
 
 * show instance metrics
 
+* internal ELBs
+
 ## v0.6.x
 
 *will probably use this release to organize some docs / tests*
