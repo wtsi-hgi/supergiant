@@ -4,7 +4,7 @@ import (
 	"path"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
 type AppCollection struct {
@@ -13,17 +13,17 @@ type AppCollection struct {
 
 type AppResource struct {
 	collection *AppCollection
-	*types.App
+	*common.App
 }
 
-// NOTE this does not inherit from types like model does; all we need is a List
+// NOTE this does not inherit from common like model does; all we need is a List
 // object, internally, that has a slice of our composed model above.
 type AppList struct {
 	Items []*AppResource `json:"items"`
 }
 
 // EtcdKey implements the Collection interface.
-func (c *AppCollection) EtcdKey(name types.ID) string {
+func (c *AppCollection) EtcdKey(name common.ID) string {
 	if name == nil {
 		return "/apps"
 	}
@@ -47,8 +47,8 @@ func (c *AppCollection) List() (*AppList, error) {
 // New initializes an App with a pointer to the Collection.
 func (c *AppCollection) New() *AppResource {
 	return &AppResource{
-		App: &types.App{
-			Meta: types.NewMeta(),
+		App: &common.App{
+			Meta: common.NewMeta(),
 		},
 	}
 }
@@ -69,7 +69,7 @@ func (c *AppCollection) Create(r *AppResource) (*AppResource, error) {
 }
 
 // Get takes a name and returns an AppResource if it exists.
-func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
+func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 	r := c.New()
 	if err := c.core.DB.Get(c, name, r); err != nil {
 		return nil, err
@@ -80,9 +80,9 @@ func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
 // Resource-level
 //==============================================================================
 
-// PersistableObject satisfies the Resource interface
-func (r *AppResource) PersistableObject() interface{} {
-	return r.App
+// Save saves the App in etcd through an update.
+func (r *AppResource) Save() error {
+	return r.collection.core.DB.Update(r.collection, r.Name, r)
 }
 
 // Delete cascades deletes to all Components, deletes the Kube Namespace, and
@@ -128,7 +128,7 @@ func (r *AppResource) deleteNamespace() error {
 
 func (r *AppResource) ProvisionSecret(repo *ImageRepoResource) error {
 	// TODO not sure i've been consistent with error handling -- this strategy is
-	// useful when there could be multiple types of errors, alongside the
+	// useful when there could be multiple common of errors, alongside the
 	// expectation of an error when something doesn't exist
 	secret, err := r.collection.core.K8S.Secrets(*r.Name).Get(*repo.Name)
 

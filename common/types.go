@@ -1,4 +1,4 @@
-package types
+package common
 
 // Tags is a meta field for holding unstructued key/val info.
 type Tags map[string]string
@@ -22,8 +22,7 @@ type App struct {
 	*Meta
 }
 
-// see note in core/resource.go about PersistableObject()
-type PersistableComponent struct {
+type Component struct {
 	Name ID `json:"name"`
 	// TODO kinda weird,
 	// you choose a container that has the deploy file, and then reference it as a command
@@ -35,14 +34,11 @@ type PersistableComponent struct {
 	TargetReleaseTimestamp  ID `json:"target_release_id"`
 	// We should just store the DeployTaskID but actually should render the task
 	// when showing it in HTTP.
-	DeployTaskID ID `json:"deploy_task_id"`
+	// DeployTaskID ID `json:"deploy_task_id"`
 
 	*Meta
-}
 
-type Component struct {
-	*PersistableComponent
-	Addresses *ComponentAddresses `json:"addresses"`
+	Addresses *ComponentAddresses `json:"addresses,omitempty" db:"-"`
 }
 
 type PortAddress struct {
@@ -55,10 +51,10 @@ type ComponentAddresses struct {
 	Internal []*PortAddress `json:"internal"`
 }
 
-// TODO implement...
 type CustomDeployScript struct {
-	Image   string `json:"image"`
-	Command string `json:"command"`
+	Image   string   `json:"image"`
+	Command []string `json:"command"`
+	Timeout uint     `json:"timeout"`
 }
 
 // Volume
@@ -72,12 +68,14 @@ type VolumeBlueprint struct {
 // Container
 //==============================================================================
 type ContainerBlueprint struct {
-	Image  string              `json:"image"`
-	Ports  []*Port             `json:"ports"`
-	Env    []*EnvVar           `json:"env"`
-	CPU    *ResourceAllocation `json:"cpu"`
-	RAM    *ResourceAllocation `json:"ram"`
-	Mounts []*Mount            `json:"mounts"`
+	Image   string              `json:"image"`
+	Name    string              `json:"name,omitempty"`
+	Command []string            `json:"command,omitempty"`
+	Ports   []*Port             `json:"ports"`
+	Env     []*EnvVar           `json:"env"`
+	CPU     *ResourceAllocation `json:"cpu"`
+	RAM     *ResourceAllocation `json:"ram"`
+	Mounts  []*Mount            `json:"mounts,omitempty"`
 }
 
 // EnvVar
@@ -98,20 +96,17 @@ type Mount struct {
 //==============================================================================
 type Port struct {
 	Protocol string `json:"protocol"`
-	Number   int    `json:"number"` // should be uint
+	Number   int    `json:"number"`
 	Public   bool   `json:"public"`
 
 	// EntrypointDomain specifies which Entrypoint this Port is added to. Does not
 	// apply when Public is false.
 	EntrypointDomain ID `json:"entrypoint_domain,omitempty"`
 
-	// PreserveNumber instructs the Entrypoint to set the actual Port number
+	// ExternalNumber instructs the Entrypoint to set the actual Port number
 	// specified as the external load balancer port. Does not apply when
 	// EntrypointDomain is nil.
-	//
-	// NOTE we may want to replace this with something like ExternalNumber so that
-	// it is more flexible / obvious.
-	PreserveNumber bool `json:"preserve_number"`
+	ExternalNumber int `json:"external_number"`
 }
 
 // ResourceAllocation
@@ -140,6 +135,9 @@ type Release struct {
 	// Retired defines whether or not a Release still has active assets, like pods
 	// or services. When retired is true, we skip attempting to delete assets.
 	Retired bool `json:"retired"`
+
+	// Committed defines whether or not a Release is being / has been deployed.
+	Committed bool `json:"committed"`
 
 	*Meta
 }
@@ -191,6 +189,8 @@ const (
 )
 
 type Task struct {
+	ID ID `json:"id,omitempty" db:"-"`
+
 	Type        TaskType `json:"type"`
 	Data        []byte   `json:"data"`
 	Status      string   `json:"status"`

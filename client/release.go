@@ -3,10 +3,10 @@ package client
 import (
 	"path"
 
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
-type Release types.Release
+type Release common.Release
 
 type ReleaseCollection struct {
 	client *Client
@@ -58,7 +58,7 @@ func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
 	return r, nil
 }
 
-func (c *ReleaseCollection) Get(timestamp types.ID) (*ReleaseResource, error) {
+func (c *ReleaseCollection) Get(timestamp common.ID) (*ReleaseResource, error) {
 	m := &Release{
 		Timestamp: timestamp,
 	}
@@ -69,8 +69,20 @@ func (c *ReleaseCollection) Get(timestamp types.ID) (*ReleaseResource, error) {
 	return r, nil
 }
 
+func (c *ReleaseCollection) Update(timestamp common.ID, m *Release) (*ReleaseResource, error) {
+	r := c.New(&Release{Timestamp: timestamp})
+	if err := c.client.Put(r.path(), m, r.Release); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
 // Resource-level
 //==============================================================================
+func (r *ReleaseResource) Save() (*ReleaseResource, error) {
+	return r.collection.Update(r.Timestamp, r.Release)
+}
+
 func (r *ReleaseResource) Delete() error {
 	return r.collection.client.Delete(r.path())
 }

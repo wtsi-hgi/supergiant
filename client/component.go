@@ -3,10 +3,10 @@ package client
 import (
 	"path"
 
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
-type Component types.Component
+type Component common.Component
 
 type ComponentCollection struct {
 	client *Client
@@ -57,11 +57,9 @@ func (c *ComponentCollection) Create(m *Component) (*ComponentResource, error) {
 	return r, nil
 }
 
-func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
+func (c *ComponentCollection) Get(name common.ID) (*ComponentResource, error) {
 	m := &Component{
-		PersistableComponent: &types.PersistableComponent{ // TODO any way to not make this so weird?
-			Name: name,
-		},
+		Name: name,
 	}
 	r := c.New(m)
 	if err := c.client.Get(r.path(), r.Component); err != nil {
@@ -70,14 +68,29 @@ func (c *ComponentCollection) Get(name types.ID) (*ComponentResource, error) {
 	return r, nil
 }
 
+func (c *ComponentCollection) Update(name common.ID, m *Component) (*ComponentResource, error) {
+	mm := &Component{
+		Name: name,
+	}
+	r := c.New(mm)
+	if err := c.client.Put(r.path(), m, r.Component); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
 // Resource-level
 //==============================================================================
-// func (r *ComponentResource) Update(m *Component) (*ComponentResource, error) {
-//   r.collection.client.
-// }
+func (r *ComponentResource) Save() (*ComponentResource, error) {
+	return r.collection.Update(r.Name, r.Component)
+}
 
 func (r *ComponentResource) Delete() error {
 	return r.collection.client.Delete(r.path())
+}
+
+func (r *ComponentResource) Deploy() error {
+	return r.collection.client.Post(r.path()+"/deploy", nil, nil)
 }
 
 // Relations

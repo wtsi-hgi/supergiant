@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -57,17 +58,47 @@ func loadComponent(core *core.Core, w http.ResponseWriter, r *http.Request) (*co
 
 // loadRelease loads an Release resource from URL params, or renders an HTTP
 // Not Found error.
-func loadRelease(core *core.Core, w http.ResponseWriter, r *http.Request) (*core.ReleaseResource, error) {
-	component, err := loadComponent(core, w, r)
+func loadRelease(c *core.Core, w http.ResponseWriter, r *http.Request) (*core.ReleaseResource, error) {
+	component, err := loadComponent(c, w, r)
 	if err != nil {
 		return nil, err
 	}
 
-	timestamp := mux.Vars(r)["release_timestamp"]
-	release, err := component.Releases().Get(&timestamp)
-	if err != nil {
-		renderError(w, err, http.StatusNotFound)
-		return nil, err
+	// TODO
+	var release *core.ReleaseResource
+	releaseIdentifier := mux.Vars(r)["release_timestamp"]
+
+	switch releaseIdentifier {
+	case "current":
+		if component.CurrentReleaseTimestamp == nil {
+			err = errors.New("No current release")
+			renderError(w, err, http.StatusNotFound)
+			return nil, err
+		}
+		release, err = component.CurrentRelease()
+		if err != nil {
+			renderError(w, err, http.StatusInternalServerError)
+			return nil, err
+		}
+
+	case "target":
+		if component.TargetReleaseTimestamp == nil {
+			err = errors.New("No target release")
+			renderError(w, err, http.StatusNotFound)
+			return nil, err
+		}
+		release, err = component.TargetRelease()
+		if err != nil {
+			renderError(w, err, http.StatusInternalServerError)
+			return nil, err
+		}
+
+	default:
+		release, err = component.Releases().Get(&releaseIdentifier)
+		if err != nil {
+			renderError(w, err, http.StatusNotFound)
+			return nil, err
+		}
 	}
 
 	return release, nil

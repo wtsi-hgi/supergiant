@@ -3,10 +3,10 @@ package client
 import (
 	"path"
 
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
-type App types.App
+type App common.App
 
 type AppCollection struct {
 	client *Client
@@ -55,7 +55,7 @@ func (c *AppCollection) Create(m *App) (*AppResource, error) {
 	return r, nil
 }
 
-func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
+func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 	m := &App{
 		Name: name,
 	}
@@ -66,11 +66,19 @@ func (c *AppCollection) Get(name types.ID) (*AppResource, error) {
 	return r, nil
 }
 
+func (c *AppCollection) Update(name common.ID, m *App) (*AppResource, error) {
+	r := c.New(&App{Name: name})
+	if err := c.client.Put(r.path(), m, r.App); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
 // Resource-level
 //==============================================================================
-// func (r *AppResource) Update(m *App) (*AppResource, error) {
-//   r.collection.client.
-// }
+func (r *AppResource) Save() (*AppResource, error) {
+	return r.collection.Update(r.Name, r.App)
+}
 
 func (r *AppResource) Delete() error {
 	return r.collection.client.Delete(r.path())
