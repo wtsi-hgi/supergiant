@@ -1,64 +1,75 @@
 package core
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
 // kube_helpers.go is a collection of helper methods that convert a Supergiant
 // resource definition into a Kubernetes resource defition.
 // (and some other assorted things that should maybe be moved out...)
 
-func kubeVolumeMounts(m *types.ContainerBlueprint) (volMounts []*guber.VolumeMount) {
+func kubeVolumeMounts(m *common.ContainerBlueprint) (volMounts []*guber.VolumeMount) {
 	for _, mount := range m.Mounts {
 		volMounts = append(volMounts, asKubeVolumeMount(mount))
 	}
 	return volMounts
 }
 
-func kubeContainerPorts(m *types.ContainerBlueprint) (cPorts []*guber.ContainerPort) {
+func kubeContainerPorts(m *common.ContainerBlueprint) (cPorts []*guber.ContainerPort) {
 	for _, port := range m.Ports {
 		cPorts = append(cPorts, asKubeContainerPort(port))
 	}
 	return cPorts
 }
 
-func interpolatedEnvVars(m *types.ContainerBlueprint, instance *InstanceResource) (envVars []*guber.EnvVar) {
+func interpolatedEnvVars(m *common.ContainerBlueprint, instance *InstanceResource) (envVars []*guber.EnvVar) {
 	for _, envVar := range m.Env {
 		envVars = append(envVars, asKubeEnvVar(envVar, instance))
 	}
 	return envVars
 }
 
-func ImageRepoName(m *types.ContainerBlueprint) string {
+func ImageRepoName(m *common.ContainerBlueprint) string {
 	return strings.Split(m.Image, "/")[0]
 }
 
-func asKubeContainer(m *types.ContainerBlueprint, instance *InstanceResource) *guber.Container { // NOTE how instance must be passed here
+func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *guber.Container { // NOTE how instance must be passed here
 	// TODO
-	resources := new(guber.Resources)
+	resources := &guber.Resources{
+		Requests: new(guber.ResourceValues),
+		Limits:   new(guber.ResourceValues),
+	}
 	if m.RAM != nil {
 		if m.RAM.Min != 0 {
-			resources.Requests.Memory = types.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
+			resources.Requests.Memory = common.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
 		}
 		if m.RAM.Max != 0 {
-			resources.Limits.Memory = types.BytesFromMiB(m.RAM.Max).ToKubeMebibytes()
+			resources.Limits.Memory = common.BytesFromMiB(m.RAM.Max).ToKubeMebibytes()
 		}
 	}
 	if m.CPU != nil {
 		if m.CPU.Min != 0 {
-			resources.Requests.CPU = types.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
+			resources.Requests.CPU = common.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
 		}
 		if m.CPU.Max != 0 {
-			resources.Limits.CPU = types.CoresFromMillicores(m.CPU.Max).ToKubeMillicores()
+			resources.Limits.CPU = common.CoresFromMillicores(m.CPU.Max).ToKubeMillicores()
 		}
 	}
 
-	return &guber.Container{
-		Name:         "container", // TODO this will fail with multiple containers ------------------------------------ TODO
+	// TODO
+	containerName := m.Name
+	if m.Name == "" {
+		rxp, _ := regexp.Compile("[^A-Za-z0-9]")
+		containerName = rxp.ReplaceAllString(m.Image, "-")
+	}
+
+	container := &guber.Container{
+		Name:         containerName,
 		Image:        m.Image,
 		Env:          interpolatedEnvVars(m, instance),
 		Resources:    resources,
@@ -70,18 +81,24 @@ func asKubeContainer(m *types.ContainerBlueprint, instance *InstanceResource) *g
 			Privileged: true,
 		},
 	}
+
+	if m.Command != nil {
+		container.Command = m.Command
+	}
+
+	return container
 }
 
 // EnvVar
 //==============================================================================
-func interpolatedValue(m *types.EnvVar, instance *InstanceResource) string {
+func interpolatedValue(m *common.EnvVar, instance *InstanceResource) string {
 	r := strings.NewReplacer(
 		"{{ instance_id }}", *instance.ID,
 		"{{ other_stuff }}", "TODO")
 	return r.Replace(m.Value)
 }
 
-func asKubeEnvVar(m *types.EnvVar, instance *InstanceResource) *guber.EnvVar {
+func asKubeEnvVar(m *common.EnvVar, instance *InstanceResource) *guber.EnvVar {
 	return &guber.EnvVar{
 		Name:  m.Name,
 		Value: interpolatedValue(m, instance),
@@ -107,7 +124,7 @@ func asKubeVolume(m *AwsVolume) (*guber.Volume, error) {
 
 // Mount
 //==============================================================================
-func asKubeVolumeMount(m *types.Mount) *guber.VolumeMount {
+func asKubeVolumeMount(m *common.Mount) *guber.VolumeMount {
 	return &guber.VolumeMount{
 		Name:      *m.Volume,
 		MountPath: m.Path,
@@ -116,17 +133,17 @@ func asKubeVolumeMount(m *types.Mount) *guber.VolumeMount {
 
 // Port
 //==============================================================================
-func portName(m *types.Port) string {
+func portName(m *common.Port) string {
 	return strconv.Itoa(m.Number)
 }
 
-func asKubeContainerPort(m *types.Port) *guber.ContainerPort {
+func asKubeContainerPort(m *common.Port) *guber.ContainerPort {
 	return &guber.ContainerPort{
 		ContainerPort: m.Number,
 	}
 }
 
-func asKubeServicePort(m *types.Port) *guber.ServicePort {
+func asKubeServicePort(m *common.Port) *guber.ServicePort {
 	return &guber.ServicePort{
 		Name:     portName(m),
 		Port:     m.Number,

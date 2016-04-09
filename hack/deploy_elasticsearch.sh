@@ -1,22 +1,32 @@
-curl -XPOST localhost:8080/v0/registries/dockerhub/repos -d '{
+curl -XPOST $HOST/v0/registries/dockerhub/repos -d '{
   "name": "qbox",
   "key": "'$QBOX_DOCKERHUB_KEY'"
-}'
+}' || true
 
-curl -XPOST localhost:8080/v0/entrypoints -d '{
+curl -XPOST $HOST/v0/entrypoints -d '{
   "domain": "example.com"
-}'
+}' || true
 
-curl -XPOST localhost:8080/v0/apps -d '{
+curl -XPOST $HOST/v0/apps -d '{
   "name": "test"
 }'
 
-curl -XPOST localhost:8080/v0/apps/test/components -d '{
-  "name": "elasticsearch"
+curl -XPOST $HOST/v0/apps/test/components -d '{
+  "name": "elasticsearch",
+  "custom_deploy_script": {
+    "image": "supergiant/deploy-elasticsearch:latest",
+    "command": [
+      "/deploy-elasticsearch",
+      "--app-name",
+      "test",
+      "--component-name",
+      "elasticsearch"
+    ]
+  }
 }'
 
-curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
-  "instance_count": 3,
+curl -XPOST $HOST/v0/apps/test/components/elasticsearch/releases -d '{
+  "instance_count": 1,
   "termination_grace_period": 10,
   "volumes": [
     {
@@ -30,11 +40,11 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
       "image": "qbox/qbox-docker:2.1.1",
       "cpu": {
         "min": 0,
-        "max": 500
+        "max": 250
       },
       "ram": {
-        "min": 2048,
-        "max": 2048
+        "min": 1024,
+        "max": 1024
       },
       "mounts": [
         {
@@ -78,7 +88,7 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
         },
         {
           "name": "MIN_MASTER_NODES",
-          "value": "2"
+          "value": "1"
         },
         {
           "name": "CORES",
@@ -101,4 +111,4 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
   ]
 }'
 
-curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/deploy
+curl -XPOST $HOST/v0/apps/test/components/elasticsearch/deploy

@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
@@ -26,10 +27,7 @@ func NewDB(endpoints []string) *DB {
 		panic(err)
 	}
 	db := DB{etcd.NewKeysAPI(etcdClient)}
-
-	// TODO
-	db.CreateDir(baseDir)
-
+	db.createDir(baseDir)
 	return &db
 }
 
@@ -65,8 +63,7 @@ func (db *DB) getInOrder(key string) (*etcd.Response, error) {
 	return db.kapi.Get(context.Background(), fullKey(key), &etcd.GetOptions{Sort: true})
 }
 
-// TODO
-func (db *DB) CreateDir(key string) (*etcd.Response, error) {
+func (db *DB) createDir(key string) (*etcd.Response, error) {
 	return db.kapi.Set(context.Background(), key, "", &etcd.SetOptions{Dir: true})
 }
 
@@ -146,7 +143,7 @@ func (db *DB) List(r Collection, out interface{}) error {
 	return decodeList(r, resp, out)
 }
 
-func (db *DB) Create(r Collection, id types.ID, m Resource) error {
+func (db *DB) Create(r Collection, id common.ID, m Resource) error {
 	key := r.EtcdKey(id)
 
 	setCreatedTimestamp(m)
@@ -165,7 +162,7 @@ func (db *DB) Create(r Collection, id types.ID, m Resource) error {
 	return r.InitializeResource(m)
 }
 
-func (db *DB) Get(r Collection, id types.ID, out Resource) error {
+func (db *DB) Get(r Collection, id common.ID, out Resource) error {
 	key := r.EtcdKey(id)
 	resp, err := db.get(key)
 	if err != nil {
@@ -174,7 +171,7 @@ func (db *DB) Get(r Collection, id types.ID, out Resource) error {
 	return unmarshalNodeInto(r, resp.Node, out)
 }
 
-func (db *DB) Update(r Collection, id types.ID, m Resource) error {
+func (db *DB) Update(r Collection, id common.ID, m Resource) error {
 	key := r.EtcdKey(id)
 
 	setUpdatedTimestamp(m)
@@ -191,7 +188,7 @@ func (db *DB) Update(r Collection, id types.ID, m Resource) error {
 	return r.InitializeResource(m)
 }
 
-func (db *DB) Delete(r Collection, id types.ID) error {
+func (db *DB) Delete(r Collection, id common.ID) error {
 	key := r.EtcdKey(id)
 	_, err := db.delete(key)
 	return err
@@ -228,7 +225,7 @@ func (db *DB) CreateInOrder(r Collection, m OrderedResource) error {
 
 //------------------------------------------------------------------------------
 
-func (db *DB) CompareAndSwap(r Collection, id types.ID, old Resource, new Resource) error {
+func (db *DB) CompareAndSwap(r Collection, id common.ID, old Resource, new Resource) error {
 	key := r.EtcdKey(id)
 
 	oldVal, err := marshalResource(old)
@@ -244,8 +241,40 @@ func (db *DB) CompareAndSwap(r Collection, id types.ID, old Resource, new Resour
 	return err
 }
 
+// This zeros out field values with db:"-" tag, and omitsempty with JSON.
+func stripNonDbFields(m Resource) interface{} { // we return a copy here so we don't strip fields on the actual object
+	rv := reflect.ValueOf(m).Elem()
+
+	rxp, _ := regexp.Compile("(.+)Resource")
+	typeName := rxp.FindStringSubmatch(rv.Type().Name())[1]
+
+	oldT := rv.FieldByName(typeName).Elem()
+	newT := reflect.New(oldT.Type())
+	newT.Elem().Set(oldT)
+
+	out := newT.Interface()
+
+	val := reflect.ValueOf(out).Elem()
+	val.Set(newT.Elem())
+
+	t := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		tag := string(t.Field(i).Tag)
+
+		if strings.Contains(tag, "db:\"-\"") {
+			field := val.Field(i)
+			field.Set(reflect.Zero(field.Type()))
+		}
+	}
+
+	return out
+}
+
 func marshalResource(m Resource) (string, error) {
-	out, err := json.Marshal(m.PersistableObject())
+	t := stripNonDbFields(m)
+
+	out, err := json.Marshal(t)
 	if err != nil {
 		return "", err
 	}
@@ -266,7 +295,7 @@ func unmarshalNodeInto(r Collection, node *etcd.Node, m Resource) error {
 // /home/dir/filename.txt
 //
 // and decided that "filename.txt" was the "base name".
-func lastKeySegment(key string) types.ID {
+func lastKeySegment(key string) common.ID {
 	strs := strings.Split(key, "/")
 	segment := strs[len(strs)-1]
 	return &segment

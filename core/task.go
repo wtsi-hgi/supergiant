@@ -6,7 +6,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
 type TaskCollection struct {
@@ -15,12 +15,10 @@ type TaskCollection struct {
 
 type TaskResource struct {
 	collection *TaskCollection
-	*types.Task
-
-	ID types.ID `json:"id"`
+	*common.Task
 }
 
-// NOTE this does not inherit from types like model does; all we need is a List
+// NOTE this does not inherit from common like model does; all we need is a List
 // object, internally, that has a slice of our composed model above.
 type TaskList struct {
 	Items []*TaskResource `json:"items"`
@@ -33,7 +31,7 @@ const (
 )
 
 // EtcdKey implements the Collection interface.
-func (c *TaskCollection) EtcdKey(id types.ID) string {
+func (c *TaskCollection) EtcdKey(id common.ID) string {
 	key := "/tasks"
 	if id != nil {
 		key = path.Join(key, *id)
@@ -58,8 +56,8 @@ func (c *TaskCollection) List() (*TaskList, error) {
 // New initializes an Task with a pointer to the Collection.
 func (c *TaskCollection) New() *TaskResource {
 	return &TaskResource{
-		Task: &types.Task{
-			Meta: types.NewMeta(),
+		Task: &common.Task{
+			Meta: common.NewMeta(),
 		},
 	}
 }
@@ -74,7 +72,7 @@ func (c *TaskCollection) Create(r *TaskResource) (*TaskResource, error) {
 }
 
 // Get takes a name and returns an TaskResource if it exists.
-func (c *TaskCollection) Get(id types.ID) (*TaskResource, error) {
+func (c *TaskCollection) Get(id common.ID) (*TaskResource, error) {
 	r := c.New()
 	if err := c.core.DB.Get(c, id, r); err != nil {
 		return nil, err
@@ -88,7 +86,7 @@ func (c *TaskCollection) Get(id types.ID) (*TaskResource, error) {
 }
 
 // NOTE kinda like a New().Save()
-func (c *TaskCollection) Start(t types.TaskType, msg interface{}) (*TaskResource, error) {
+func (c *TaskCollection) Start(t common.TaskType, msg interface{}) (*TaskResource, error) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -106,11 +104,6 @@ func (c *TaskCollection) Start(t types.TaskType, msg interface{}) (*TaskResource
 // Resource-level
 //==============================================================================
 
-// PersistableObject satisfies the Resource interface
-func (r *TaskResource) PersistableObject() interface{} {
-	return r.Task
-}
-
 // Delete deletes the Task in etcd.
 func (r *TaskResource) Delete() error {
 	return r.collection.core.DB.Delete(r.collection, r.ID)
@@ -122,7 +115,7 @@ func (r *TaskResource) Save() error {
 }
 
 // Implements OrderedModel interface
-func (r *TaskResource) SetID(id types.ID) {
+func (r *TaskResource) SetID(id common.ID) {
 	r.ID = id
 }
 
@@ -133,9 +126,8 @@ func (r *TaskResource) IsQueued() bool {
 // Claim updates the Task status to "RUNNING" and returns nil. CompareAndSwap is
 // used to prevent a race condition and ensure only one worker performs the task.
 func (r *TaskResource) Claim() error {
-	prev := r
-	// next := *r
-	// next.Status = statusRunning
+	// NOTE we de-ref the task because the DB will strip the ID (maybe a TODO)
+	prev := *r
 
 	// NOTE we have to do this instead of the above, because nested pointers are
 	// not de-referenced.
@@ -143,7 +135,7 @@ func (r *TaskResource) Claim() error {
 	t.Status = statusRunning
 	next := &TaskResource{Task: &t}
 
-	return r.collection.core.DB.CompareAndSwap(r.collection, r.ID, prev, next)
+	return r.collection.core.DB.CompareAndSwap(r.collection, r.ID, &prev, next)
 }
 
 func (r *TaskResource) RecordError(err error) error {
@@ -162,15 +154,15 @@ func (r *TaskResource) RecordError(err error) error {
 
 func (r *TaskResource) TypeName() string {
 	switch r.Type {
-	case types.TaskTypeDeleteApp:
+	case common.TaskTypeDeleteApp:
 		return "DeleteApp"
-	case types.TaskTypeDeleteComponent:
+	case common.TaskTypeDeleteComponent:
 		return "DeleteComponent"
-	case types.TaskTypeDeployComponent:
+	case common.TaskTypeDeployComponent:
 		return "DeployComponent"
-	case types.TaskTypeStartInstance:
+	case common.TaskTypeStartInstance:
 		return "StartInstance"
-	case types.TaskTypeStopInstance:
+	case common.TaskTypeStopInstance:
 		return "StopInstance"
 	default:
 		return strconv.Itoa(int(r.Type))

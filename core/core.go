@@ -53,9 +53,9 @@ func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string)
 
 	awsConf := aws.NewConfig().WithRegion(AwsRegion).WithCredentials(creds)
 
-	c.EC2 = ec2.New(session.New(), awsConf.WithLogLevel(aws.LogDebug))
-	c.ELB = elb.New(session.New(), awsConf.WithLogLevel(aws.LogDebug))
-	c.AutoScaling = autoscaling.New(session.New(), awsConf.WithLogLevel(aws.LogDebug))
+	c.EC2 = ec2.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
+	c.ELB = elb.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
+	c.AutoScaling = autoscaling.New(session.New(), awsConf) // awsConf.WithLogLevel(aws.LogDebug)
 	return &c
 }
 

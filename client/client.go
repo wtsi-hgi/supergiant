@@ -60,6 +60,26 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		body = buff
 	}
 
+	// TODO
+	formattedIn, err := json.Marshal(in)
+	if err != nil {
+		panic(err)
+	}
+	obj := struct {
+		Method string
+		URL    string
+		Body   string
+	}{
+		method,
+		c.url(path),
+		string(formattedIn),
+	}
+	formattedObj, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	Log.Debug(string(formattedObj))
+
 	req, err := http.NewRequest(method, c.url(path), body)
 	if err != nil {
 		return err
@@ -80,6 +100,24 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		if err = deserialize(resp.Body, out); err != nil {
 			return err
 		}
+
+		// TODO
+		formattedOut, err := json.Marshal(out)
+		if err != nil {
+			panic(err)
+		}
+		obj := struct {
+			Status int
+			Body   string
+		}{
+			resp.StatusCode,
+			string(formattedOut),
+		}
+		formattedObj, err := json.MarshalIndent(obj, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+		Log.Debug(string(formattedObj))
 	}
 
 	return nil
@@ -93,6 +131,10 @@ func (c *Client) Get(path string, out interface{}) error {
 
 func (c *Client) Post(path string, in interface{}, out interface{}) error {
 	return c.request("POST", path, in, out)
+}
+
+func (c *Client) Put(path string, in interface{}, out interface{}) error {
+	return c.request("PUT", path, in, out)
 }
 
 func (c *Client) Delete(path string) error {

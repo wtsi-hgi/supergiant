@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/api/task"
+	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/core"
-	"github.com/supergiant/supergiant/types"
 )
 
 type AppController struct {
@@ -59,6 +59,28 @@ func (c *AppController) Show(w http.ResponseWriter, r *http.Request) {
 	renderWithStatusOK(w, body)
 }
 
+func (c *AppController) Update(w http.ResponseWriter, r *http.Request) {
+	app, err := loadApp(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	if err := unmarshalBodyInto(w, r, app); err != nil {
+		return
+	}
+
+	if err := app.Save(); err != nil {
+		renderError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	body, err := marshalBody(w, app)
+	if err != nil {
+		return
+	}
+	renderWithStatusAccepted(w, body)
+}
+
 func (c *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 	app, err := loadApp(c.core, w, r)
 	if err != nil {
@@ -66,7 +88,7 @@ func (c *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := &task.DeleteAppMessage{AppName: app.Name}
-	_, err = c.core.Tasks().Start(types.TaskTypeDeleteApp, msg)
+	_, err = c.core.Tasks().Start(common.TaskTypeDeleteApp, msg)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return

@@ -33,16 +33,21 @@ func NewRouter(core *core.Core) *mux.Router {
 	s.HandleFunc("/apps", apps.Create).Methods("POST")
 	s.HandleFunc("/apps", apps.Index).Methods("GET")
 	s.HandleFunc("/apps/{app_name}", apps.Show).Methods("GET")
+	s.HandleFunc("/apps/{app_name}", apps.Update).Methods("PUT")
 	s.HandleFunc("/apps/{app_name}", apps.Delete).Methods("DELETE")
 
 	s.HandleFunc("/apps/{app_name}/components", components.Create).Methods("POST")
 	s.HandleFunc("/apps/{app_name}/components", components.Index).Methods("GET")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}", components.Show).Methods("GET")
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}", components.Update).Methods("PUT")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}", components.Delete).Methods("DELETE")
 
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases", releases.Create).Methods("POST")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases", releases.Index).Methods("GET")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}", releases.Show).Methods("GET")
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}", releases.Update).Methods("PUT")
+
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}/deploy", components.Deploy).Methods("POST")
 
 	// Integration
 
@@ -51,6 +56,8 @@ func NewRouter(core *core.Core) *mux.Router {
 
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}/instances/{instance_id}/start", instances.Start).Methods("POST")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}/instances/{instance_id}/stop", instances.Stop).Methods("POST")
+
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}/instances/{instance_id}/log", instances.Log).Methods("GET")
 
 	// Misc
 

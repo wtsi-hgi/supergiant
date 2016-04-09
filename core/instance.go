@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/types"
+	"github.com/supergiant/supergiant/common"
 )
 
 type InstanceCollection struct {
@@ -17,7 +17,7 @@ type InstanceCollection struct {
 
 type InstanceResource struct {
 	collection *InstanceCollection
-	*types.Instance
+	*common.Instance
 }
 
 type InstanceList struct {
@@ -44,10 +44,10 @@ func (c *InstanceCollection) List() *InstanceList {
 }
 
 // New initializes an Instance with a pointer to the Collection.
-func (c *InstanceCollection) New(id types.ID) *InstanceResource {
+func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 	r := &InstanceResource{
 		collection: c,
-		Instance: &types.Instance{
+		Instance: &common.Instance{
 			ID: id,
 		},
 	}
@@ -59,7 +59,7 @@ func (c *InstanceCollection) New(id types.ID) *InstanceResource {
 }
 
 // Get takes an id and returns an InstanceResource if it exists.
-func (c *InstanceCollection) Get(id types.ID) (*InstanceResource, error) {
+func (c *InstanceCollection) Get(id common.ID) (*InstanceResource, error) {
 	index, err := strconv.Atoi(*id)
 	if err != nil {
 		return nil, err
@@ -87,21 +87,19 @@ func (r *InstanceResource) setStatus() {
 	if err != nil {
 		panic(err) // TODO
 	}
-	if pod != nil {
-		if pod.Status.Phase == "Running" {
-			r.Status = types.InstanceStatusStarted
-			return
-		}
+	if pod != nil && pod.IsReady() {
+		r.Status = common.InstanceStatusStarted
+		return
 	}
-	r.Status = types.InstanceStatusStopped
+	r.Status = common.InstanceStatusStopped
 }
 
 func (r *InstanceResource) IsStarted() bool {
-	return r.Status == types.InstanceStatusStarted
+	return r.Status == common.InstanceStatusStarted
 }
 
 func (r *InstanceResource) IsStopped() bool {
-	return r.Status == types.InstanceStatusStopped
+	return r.Status == common.InstanceStatusStopped
 }
 
 // Delete tears down the instance
@@ -140,6 +138,18 @@ func (r *InstanceResource) Stop() error {
 	// TODO need a wait in here (optional) for the pod to be deleted
 
 	return nil
+}
+
+func (r *InstanceResource) Log() (string, error) {
+	pod, err := r.pod()
+	if err != nil {
+		return "", err
+	}
+
+	// TODO we need a better way of initializing defaults on sub-resources
+	containerName := asKubeContainer(r.Release().Containers[0], r).Name
+
+	return pod.Log(containerName)
 }
 
 func (r *InstanceResource) Release() *ReleaseResource {
@@ -261,6 +271,9 @@ func (r *InstanceResource) provisionReplicationController() error {
 					Containers:                    r.kubeContainers(),
 					ImagePullSecrets:              imagePullSecrets,
 					TerminationGracePeriodSeconds: r.Release().TerminationGracePeriod,
+
+					// TODO
+					ImagePullPolicy: "Always",
 				},
 			},
 		},
