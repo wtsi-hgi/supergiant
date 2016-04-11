@@ -44,6 +44,7 @@ func SetLogLevel(level string) {
 
 func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string) *Core {
 
+	checkForAWSMeta()
 	// If you're working with temporary security credentials,
 	// you can also keep the session token in AWS_SESSION_TOKEN.
 	// TODO: We need to set this up when we have more timez
