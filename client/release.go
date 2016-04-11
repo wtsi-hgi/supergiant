@@ -58,6 +58,14 @@ func (c *ReleaseCollection) Create(m *Release) (*ReleaseResource, error) {
 	return r, nil
 }
 
+func (c *ReleaseCollection) MergeCreate(m *Release) (*ReleaseResource, error) {
+	r := c.New(m)
+	if err := c.client.Patch(c.path(), m, r.Release); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
 func (c *ReleaseCollection) Get(timestamp common.ID) (*ReleaseResource, error) {
 	m := &Release{
 		Timestamp: timestamp,

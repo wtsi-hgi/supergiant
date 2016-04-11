@@ -16,7 +16,7 @@ curl -XPOST localhost:8080/v0/apps/test/components -d '{
 }'
 
 curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
-  "instance_count": 3,
+  "instance_count": 1,
   "termination_grace_period": 10,
   "volumes": [
     {
@@ -78,7 +78,7 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
         },
         {
           "name": "MIN_MASTER_NODES",
-          "value": "2"
+          "value": "1"
         },
         {
           "name": "CORES",

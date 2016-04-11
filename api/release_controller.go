@@ -28,11 +28,26 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	component.TargetReleaseTimestamp = release.Timestamp
-	// (this may should be elsewhere)
-	// Set the task ID of the deploy on Component
-	// component.DeployTaskID = task.ID
-	if err := component.Save(); err != nil {
+	body, err := marshalBody(w, release)
+	if err != nil {
+		return
+	}
+	renderWithStatusCreated(w, body)
+}
+
+func (c *ReleaseController) MergeCreate(w http.ResponseWriter, r *http.Request) {
+	component, err := loadComponent(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	release := component.Releases().New()
+	if err := unmarshalBodyInto(w, r, release); err != nil {
+		return
+	}
+
+	release, err = component.Releases().MergeCreate(release)
+	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -103,6 +118,18 @@ func (c *ReleaseController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renderWithStatusAccepted(w, body)
+}
+
+func (c *ReleaseController) Delete(w http.ResponseWriter, r *http.Request) {
+	release, err := loadRelease(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	if err = release.Delete(); err != nil {
+		renderError(w, err, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (c *ReleaseController) Current(w http.ResponseWriter, r *http.Request) {

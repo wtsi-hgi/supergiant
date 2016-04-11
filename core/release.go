@@ -1,10 +1,12 @@
 package core
 
 import (
+	"errors"
 	"path"
 	"reflect"
 	"time"
 
+	"github.com/imdario/mergo"
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 )
@@ -92,11 +94,51 @@ func (c *ReleaseCollection) New() *ReleaseResource {
 
 // Create takes an Release and creates it in etcd.
 func (c *ReleaseCollection) Create(r *ReleaseResource) (*ReleaseResource, error) {
+	if c.Component.TargetReleaseTimestamp != nil {
+		return nil, errors.New("Component already has a target Release")
+	}
+
 	r.Timestamp = newReleaseTimestamp()
+	if r.InstanceGroup == nil {
+		r.InstanceGroup = r.Timestamp
+	} else if *r.InstanceGroup != *r.Timestamp && *r.InstanceGroup != *c.Component.CurrentReleaseTimestamp {
+		return nil, errors.New("Release InstanceGroup field can only be set to either the current or target Release's Timestamp value.")
+	}
+
 	if err := c.core.DB.Create(c, r.Timestamp, r); err != nil {
 		return nil, err
 	}
+
+	c.Component.TargetReleaseTimestamp = r.Timestamp
+	if err := c.Component.Save(); err != nil {
+		return nil, err
+	}
+
 	return r, nil
+}
+
+// MergeCreate creates a Release by taking a new Release and merging it with the
+// Component's current Release.
+func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) (*ReleaseResource, error) {
+	if c.Component.CurrentReleaseTimestamp == nil {
+		return nil, errors.New("Attempting MergeCreate with no current Release")
+	}
+
+	current, err := c.Component.CurrentRelease()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := mergo.Merge(r, *current); err != nil {
+		return nil, err
+	}
+
+	// TODO
+	r.Committed = false
+	r.Created = nil
+	r.Updated = nil
+
+	return c.Create(r)
 }
 
 // Get takes an id and returns an ReleaseResource if it exists.
@@ -119,7 +161,7 @@ func (r *ReleaseResource) Save() error {
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in
 // etcd.
 func (r *ReleaseResource) Delete() error {
-	if !r.Retired {
+	if r.Committed && !r.Retired {
 		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
 			return err
 		}

@@ -20,6 +20,9 @@ type Collection interface {
 // Resource is an interface used mainly for generalized marshalling purposes for
 // resource common.
 type Resource interface {
+	// // ToApiObj allows for each resource to return a stripped or embellished
+	// // version of itself for rendering in API responses.
+	// ToApiObj() Resource
 }
 
 // OrderedResource is similar to Resource, but provides a SetID() method to
@@ -59,7 +62,7 @@ func getItemsPtrAndItemType(r interface{}) (reflect.Value, reflect.Type) {
 
 	// Must first get the pointer of the slice with Addr(), so we can then call
 	// Elem() to make it settable.
-	itemsPtr := itemsField //.Addr() //.Interface()
+	itemsPtr := itemsField
 	// Type() returns the underlying element type of the slice, and Elem()
 	// allows us to utilize the type with reflect.New().
 	itemType := itemsPtr.Type().Elem().Elem()
@@ -72,14 +75,6 @@ func getItemsPtrAndItemType(r interface{}) (reflect.Value, reflect.Type) {
 	return itemsPtr, itemType
 }
 
-// TODO all the following stuff should be better documented.
-
-// // used to initialize Meta object primarily
-// func initResource(r Resource) {
-// 	meta := reflect.ValueOf(common.NewMeta()).Elem()
-// 	getFieldValue(r.PersistableObject(), "Meta").Set(meta)
-// }
-
 func getFieldValue(r Resource, f string) reflect.Value {
 	field := reflect.ValueOf(r).Elem().FieldByName(f)
 	if !field.IsValid() {
@@ -89,7 +84,7 @@ func getFieldValue(r Resource, f string) reflect.Value {
 }
 
 func newTimestampValue() reflect.Value {
-	return reflect.ValueOf(common.NewTimestamp()) //.Elem()
+	return reflect.ValueOf(common.NewTimestamp())
 }
 
 func setCreatedTimestamp(r Resource) {

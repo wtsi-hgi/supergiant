@@ -133,6 +133,10 @@ func (c *Client) Post(path string, in interface{}, out interface{}) error {
 	return c.request("POST", path, in, out)
 }
 
+func (c *Client) Patch(path string, in interface{}, out interface{}) error {
+	return c.request("PATCH", path, in, out)
+}
+
 func (c *Client) Put(path string, in interface{}, out interface{}) error {
 	return c.request("PUT", path, in, out)
 }

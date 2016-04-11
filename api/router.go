@@ -23,6 +23,8 @@ func NewRouter(core *core.Core) *mux.Router {
 	tasks := &TaskController{core}
 
 	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Create).Methods("POST")
+	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Index).Methods("GET")
+	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Show).Methods("GET")
 	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Delete).Methods("DELETE")
 
 	s.HandleFunc("/entrypoints", entrypoints.Create).Methods("POST")
@@ -43,9 +45,11 @@ func NewRouter(core *core.Core) *mux.Router {
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}", components.Delete).Methods("DELETE")
 
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases", releases.Create).Methods("POST")
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases", releases.MergeCreate).Methods("PATCH")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases", releases.Index).Methods("GET")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}", releases.Show).Methods("GET")
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}", releases.Update).Methods("PUT")
+	s.HandleFunc("/apps/{app_name}/components/{comp_name}/releases/{release_timestamp}", releases.Delete).Methods("DELETE")
 
 	s.HandleFunc("/apps/{app_name}/components/{comp_name}/deploy", components.Deploy).Methods("POST")
 

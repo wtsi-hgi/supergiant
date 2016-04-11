@@ -52,7 +52,7 @@ func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 	}
 	// TODO not consistent with the setter approach
 	r.BaseName = common.StringID(r.Component().Name) + "-" + common.StringID(r.ID)
-	r.Name = r.BaseName + common.StringID(r.Release().Timestamp)
+	r.Name = r.BaseName + common.StringID(r.Release().InstanceGroup)
 	r.setStatus()
 	return r
 }

@@ -70,7 +70,7 @@ func (j DeployComponent) Perform(data []byte) error {
 	// Make sure old release (current) has been fully stopped, and the new release
 	// (target) has been fully started.
 	// It doesn't matter on the first deploy, though.
-	if currentRelease != nil {
+	if currentRelease != nil && *currentRelease.InstanceGroup != *targetRelease.InstanceGroup {
 		if !currentRelease.IsStopped() {
 			return fmt.Errorf("Current Release for Component %s:%s is not completely stopped.", common.StringID(app.Name), common.StringID(component.Name))
 		}
