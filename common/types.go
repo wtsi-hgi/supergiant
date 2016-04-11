@@ -124,6 +124,12 @@ type Release struct {
 	// NOTE Timestamp here does not use the Timestamp type.
 	Timestamp ID `json:"timestamp"`
 
+	// InstanceGroup is used as a labeling mechanism for instances. If nil,
+	// InstanceGroup is set equal to the release's Timestamp. If a value is
+	// supplied by the user, it MUST be the current (previous) Release's
+	// Timestamp.
+	InstanceGroup ID `json:"instance_group"`
+
 	InstanceCount int `json:"instance_count"`
 
 	// These attributes, when changed from last Release, indicate a restart is
@@ -205,7 +211,7 @@ type Task struct {
 //==============================================================================
 type ImageRepo struct {
 	Name ID     `json:"name"`
-	Key  string `json:"key"`
+	Key  string `json:"key,omitempty"`
 
 	*Meta
 }

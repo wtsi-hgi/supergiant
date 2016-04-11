@@ -83,6 +83,10 @@ func Deploy(appName *string, componentName *string) error {
 
 	// update instances
 
+	if currentRelease.InstanceGroup == targetRelease.InstanceGroup {
+		return nil // no need to update restart instances
+	}
+
 	// NOTE we only want to update the minimum of (target, current) instance
 	// counts. When adding instances, we wouldn't want to use target instance
 	// count because we would restart new instances. When removing instances, we
