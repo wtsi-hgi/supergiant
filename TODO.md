@@ -28,9 +28,9 @@
 
 * ~~custom deployments~~
 
-* release MergeCreate
+* ~~release MergeCreate~~
 
-* add flag to release to indicate whether restart is needed (if instance config has changed)
+* ~~instance groups / optional instance restart between releases~~
 
 ## v0.5.x
 
