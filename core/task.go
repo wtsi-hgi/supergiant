@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/json"
-	"log"
 	"path"
 	"strconv"
 
@@ -34,7 +33,7 @@ const (
 func (c *TaskCollection) EtcdKey(id common.ID) string {
 	key := "/tasks"
 	if id != nil {
-		key = path.Join(key, *id)
+		key = path.Join(key, common.StringID(id))
 	}
 	return key
 }
@@ -139,7 +138,7 @@ func (r *TaskResource) Claim() error {
 }
 
 func (r *TaskResource) RecordError(err error) error {
-	log.Println(err)
+	Log.Error(err)
 
 	r.Error = err.Error()
 	if r.Attempts < r.MaxAttempts {

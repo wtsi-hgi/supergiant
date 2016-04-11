@@ -25,11 +25,11 @@ type ReleaseList struct {
 }
 
 func (c *ReleaseCollection) path() string {
-	return path.Join("apps", *c.App.Name, "components", *c.Component.Name, "releases")
+	return path.Join("apps", common.StringID(c.App.Name), "components", common.StringID(c.Component.Name), "releases")
 }
 
 func (r *ReleaseResource) path() string {
-	return path.Join(r.collection.path(), *r.Timestamp)
+	return path.Join(r.collection.path(), common.StringID(r.Timestamp))
 }
 
 // Collection-level

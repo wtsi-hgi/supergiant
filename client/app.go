@@ -26,7 +26,7 @@ func (c *AppCollection) path() string {
 }
 
 func (r *AppResource) path() string {
-	return path.Join("apps", *r.Name)
+	return path.Join("apps", common.StringID(r.Name))
 }
 
 // Collection-level

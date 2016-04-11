@@ -20,3 +20,10 @@ func WaitFor(desc string, d time.Duration, i time.Duration, fn func() (bool, err
 		time.Sleep(i)
 	}
 }
+
+func StringID(id ID) string {
+	if id == nil {
+		panic("Attempting pointer dereference on nil Resource ID field")
+	}
+	return *id
+}

@@ -80,6 +80,9 @@ func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *
 		SecurityContext: &guber.SecurityContext{
 			Privileged: true,
 		},
+
+		// TODO option
+		ImagePullPolicy: "Always",
 	}
 
 	if m.Command != nil {
@@ -93,7 +96,7 @@ func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *
 //==============================================================================
 func interpolatedValue(m *common.EnvVar, instance *InstanceResource) string {
 	r := strings.NewReplacer(
-		"{{ instance_id }}", *instance.ID,
+		"{{ instance_id }}", common.StringID(instance.ID),
 		"{{ other_stuff }}", "TODO")
 	return r.Replace(m.Value)
 }
@@ -114,7 +117,7 @@ func asKubeVolume(m *AwsVolume) (*guber.Volume, error) {
 	}
 
 	return &guber.Volume{
-		Name: *m.Blueprint.Name, // NOTE this is not the physical volume name
+		Name: common.StringID(m.Blueprint.Name), // NOTE this is not the physical volume name
 		AwsElasticBlockStore: &guber.AwsElasticBlockStore{
 			VolumeID: *vol.VolumeId,
 			FSType:   "ext4",
@@ -155,14 +158,14 @@ func asKubeServicePort(m *common.Port) *guber.ServicePort {
 //==============================================================================
 func asKubeImagePullSecret(m *ImageRepoResource) *guber.ImagePullSecret {
 	return &guber.ImagePullSecret{
-		Name: *m.Name,
+		Name: common.StringID(m.Name),
 	}
 }
 
 func asKubeSecret(m *ImageRepoResource) *guber.Secret {
 	return &guber.Secret{
 		Metadata: &guber.Metadata{
-			Name: *m.Name,
+			Name: common.StringID(m.Name),
 		},
 		Type: "kubernetes.io/dockercfg",
 		Data: map[string]string{

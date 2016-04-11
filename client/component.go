@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"path"
 
 	"github.com/supergiant/supergiant/common"
@@ -24,11 +25,11 @@ type ComponentList struct {
 }
 
 func (c *ComponentCollection) path() string {
-	return path.Join("apps", *c.App.Name, "components")
+	return path.Join("apps", common.StringID(c.App.Name), "components")
 }
 
 func (r *ComponentResource) path() string {
-	return path.Join(r.collection.path(), *r.Name)
+	return path.Join(r.collection.path(), common.StringID(r.Name))
 }
 
 // Collection-level
@@ -103,9 +104,15 @@ func (r *ComponentResource) Releases() *ReleaseCollection {
 }
 
 func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {
+	if r.CurrentReleaseTimestamp == nil {
+		return nil, errors.New("Component has no CurrentReleaseTimestamp")
+	}
 	return r.Releases().Get(r.CurrentReleaseTimestamp)
 }
 
 func (r *ComponentResource) TargetRelease() (*ReleaseResource, error) {
+	if r.TargetReleaseTimestamp == nil {
+		return nil, errors.New("Component has no TargetReleaseTimestamp")
+	}
 	return r.Releases().Get(r.TargetReleaseTimestamp)
 }

@@ -27,7 +27,7 @@ func (c *AppCollection) EtcdKey(name common.ID) string {
 	if name == nil {
 		return "/apps"
 	}
-	return path.Join("/apps", *name)
+	return path.Join("/apps", common.StringID(name))
 }
 
 // InitializeResource implements the Collection interface.
@@ -92,13 +92,13 @@ func (r *AppResource) Delete() error {
 	if err != nil {
 		return err
 	}
+	if err := r.deleteNamespace(); err != nil {
+		return err
+	}
 	for _, component := range components.Items {
 		if err := component.Delete(); err != nil {
 			return err
 		}
-	}
-	if err := r.deleteNamespace(); err != nil {
-		return err
 	}
 	return r.collection.core.DB.Delete(r.collection, r.Name)
 }
@@ -114,7 +114,7 @@ func (r *AppResource) Components() *ComponentCollection {
 func (r *AppResource) createNamespace() error {
 	namespace := &guber.Namespace{
 		Metadata: &guber.Metadata{
-			Name: *r.Name,
+			Name: common.StringID(r.Name),
 		},
 	}
 	_, err := r.collection.core.K8S.Namespaces().Create(namespace)
@@ -122,7 +122,7 @@ func (r *AppResource) createNamespace() error {
 }
 
 func (r *AppResource) deleteNamespace() error {
-	_, err := r.collection.core.K8S.Namespaces().Delete(*r.Name)
+	_, err := r.collection.core.K8S.Namespaces().Delete(common.StringID(r.Name))
 	return err
 }
 
@@ -130,13 +130,13 @@ func (r *AppResource) ProvisionSecret(repo *ImageRepoResource) error {
 	// TODO not sure i've been consistent with error handling -- this strategy is
 	// useful when there could be multiple common of errors, alongside the
 	// expectation of an error when something doesn't exist
-	secret, err := r.collection.core.K8S.Secrets(*r.Name).Get(*repo.Name)
+	secret, err := r.collection.core.K8S.Secrets(common.StringID(r.Name)).Get(common.StringID(repo.Name))
 
 	if err != nil {
 		return err
 	} else if secret != nil {
 		return nil
 	}
-	_, err = r.collection.core.K8S.Secrets(*r.Name).Create(asKubeSecret(repo))
+	_, err = r.collection.core.K8S.Secrets(common.StringID(r.Name)).Create(asKubeSecret(repo))
 	return err
 }

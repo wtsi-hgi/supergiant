@@ -1,7 +1,6 @@
 package task
 
 import (
-	"log"
 	"time"
 
 	"github.com/supergiant/supergiant/common"
@@ -33,17 +32,24 @@ func (_ *worker) work(ch <-chan *directive) {
 		if err := task.Claim(); err != nil {
 			// TODO the error here is presumed to be a CompareAndSwap error; if so,
 			// we should just return. If it's another error, then this is not good.
-			log.Println(err)
+			core.Log.Error(err)
 			continue
 		}
 
-		log.Printf("Starting %s task with ID %s", task.TypeName(), *task.ID)
+		// TODO
+		defer func() {
+			if err := recover(); err != nil {
+				recordError(task, err.(error))
+			}
+		}()
+
+		core.Log.Infof("Starting %s task with ID %s", task.TypeName(), common.StringID(task.ID))
 		if err := performer.Perform(task.Data); err != nil {
 			recordError(task, err)
 			continue
 		}
 
-		log.Printf("Completed %s task with ID %s", task.TypeName(), *task.ID)
+		core.Log.Infof("Completed %s task with ID %s", task.TypeName(), common.StringID(task.ID))
 		task.Delete() // Task is successful, delete from Queue
 	}
 }

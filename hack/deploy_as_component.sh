@@ -15,7 +15,7 @@ curl -XPOST localhost:8080/v0/apps/supergiant/components/api/releases -d '{
   "containers": [
     {
       "name": "api",
-      "image": "supergiant/supergiant-api:latest",
+      "image": "supergiant/supergiant-api:unstable-custom_deploy_fix",
       "command": [
         "/supergiant-api",
         "--etcd-host",

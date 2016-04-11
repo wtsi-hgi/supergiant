@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -17,52 +15,52 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "supergiant-api"
 	app.Usage = "The Supergiant api server."
-	app.Action = func(c *cli.Context) {
+	app.Action = func(ctx *cli.Context) {
 
 		// Check the args. The ones we don't have default values for...
 		if core.K8sUser == "<Kubernetes api userID>" {
-			fmt.Println("ERROR: Kubernetes userID required...")
-			cli.ShowCommandHelp(c, "")
+			core.Log.Error("Kubernetes userID required...")
+			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
 		if core.K8sPass == "<Kubernetes api password>" {
-			fmt.Println("ERROR: Kubernetes Password required...")
-			cli.ShowCommandHelp(c, "")
+			core.Log.Error("Kubernetes Password required...")
+			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
 		if core.AwsRegion == "<AWS Region>" {
-			fmt.Println("ERROR: AWS Region required...")
-			cli.ShowCommandHelp(c, "")
+			core.Log.Error("AWS Region required...")
+			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
 		if core.AwsAZ == "<AWS Availability Zone>" {
-			fmt.Println("ERROR: AWS Availability Zone required...")
-			cli.ShowCommandHelp(c, "")
+			core.Log.Error("AWS Availability Zone required...")
+			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
-		core.EtcdEndpoints = c.StringSlice("etcd-host")
+		core.EtcdEndpoints = ctx.StringSlice("etcd-host")
 		if len(core.EtcdEndpoints) < 0 {
 			core.EtcdEndpoints = []string{"http://etcd:2379"}
 		}
 
 		// Log args that have default values.
-		log.Println("INFO: ETCD hosts,", c.StringSlice("etcd-host"))
-		log.Println("INFO: Kubernetes Host,", core.K8sHost)
+		core.Log.Info("ETCD hosts,", ctx.StringSlice("etcd-host"))
+		core.Log.Info("Kubernetes Host,", core.K8sHost)
 
-		core := core.New(
-			c.Bool("https-mode"),   // Tells the api if it needs to connect to Kuberntes over TLS or not.
-			c.String("access-key"), // AWS Access Key
-			c.String("secret-key"), // AWS Secret Key
+		c := core.New(
+			ctx.Bool("https-mode"),   // Tells the api if it needs to connect to Kuberntes over TLS or not.
+			ctx.String("access-key"), // AWS Access Key
+			ctx.String("secret-key"), // AWS Secret Key
 		)
 
 		// TODO should probably be able to say api.New(), because we shouldn't have to import task here
 		// NOTE using pool size of 4
-		go task.NewSupervisor(core, 20).Run()
+		go task.NewSupervisor(c, 20).Run()
 
-		router := api.NewRouter(core)
+		router := api.NewRouter(c)
 
-		log.Println("INFO: Serving API on port :8080")
-		log.Println(http.ListenAndServe(":8080", router))
+		core.Log.Info("Serving API on port :8080")
+		core.Log.Info(http.ListenAndServe(":8080", router))
 	}
 
 	app.Flags = []cli.Flag{

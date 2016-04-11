@@ -96,7 +96,7 @@ curl -XPOST $HOST/v0/apps/test/components/elasticsearch/releases -d '{
         },
         {
           "name": "ES_HEAP_SIZE",
-          "value": "1024m"
+          "value": "512m"
         },
         {
           "name": "INDEX_NUMBER_OF_SHARDS",

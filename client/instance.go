@@ -28,12 +28,12 @@ type InstanceList struct {
 }
 
 func (c *InstanceCollection) path() string {
-	return path.Join("apps", *c.App.Name, "components", *c.Component.Name, "releases", *c.Release.Timestamp, "instances")
+	return path.Join("apps", common.StringID(c.App.Name), "components", common.StringID(c.Component.Name), "releases", common.StringID(c.Release.Timestamp), "instances")
 }
 
 func (r *InstanceResource) path() string {
 	// TODO instance ID should probably just be a string
-	return path.Join(r.collection.path(), *r.ID)
+	return path.Join(r.collection.path(), common.StringID(r.ID))
 }
 
 // Collection-level
