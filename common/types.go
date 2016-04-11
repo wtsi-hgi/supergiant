@@ -166,7 +166,7 @@ type Instance struct {
 // Entrypoint
 //==============================================================================
 type Entrypoint struct {
-	Domain  ID     `json:"domain"`  // e.g. blog.qbox.io
+	Domain  ID     `json:"domain"`  // e.g. test.example.com
 	Address string `json:"address"` // the ELB address
 
 	// NOTE we actually don't need this -- we can always attach the policy, and enable per port

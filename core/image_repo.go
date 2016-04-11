@@ -25,7 +25,7 @@ type ImageRepoList struct {
 func (c *ImageRepoCollection) EtcdKey(name common.ID) string {
 	key := "/image_repos/dockerhub"
 	if name != nil {
-		key = path.Join(key, *name)
+		key = path.Join(key, common.StringID(name))
 	}
 	return key
 }

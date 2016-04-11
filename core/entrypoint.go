@@ -1,7 +1,6 @@
 package core
 
 import (
-	"log"
 	"path"
 	"strings"
 
@@ -31,7 +30,7 @@ type EntrypointList struct {
 func (c *EntrypointCollection) EtcdKey(domain common.ID) string {
 	key := "/entrypoints"
 	if domain != nil {
-		key = path.Join(key, *domain)
+		key = path.Join(key, common.StringID(domain))
 	}
 	return key
 }
@@ -129,7 +128,7 @@ func (r *EntrypointResource) AddPort(elbPort int, instancePort int) error {
 		},
 	}
 
-	log.Printf("Adding port %d:%d to ELB %s", elbPort, instancePort, *r.awsName())
+	Log.Infof("Adding port %d:%d to ELB %s", elbPort, instancePort, *r.awsName())
 
 	_, err := r.collection.core.ELB.CreateLoadBalancerListeners(params)
 	return err
@@ -144,7 +143,7 @@ func (r *EntrypointResource) RemovePort(elbPort int) error {
 		},
 	}
 
-	log.Printf("Removing port %d from ELB %s", elbPort, *r.awsName())
+	Log.Infof("Removing port %d from ELB %s", elbPort, *r.awsName())
 
 	_, err := r.collection.core.ELB.DeleteLoadBalancerListeners(params)
 	return err
@@ -154,7 +153,7 @@ func (r *EntrypointResource) awsName() *string {
 	// TODO add a unique cloud ID, load instead of return from func
 	// Also this is just really crazy. Should probably just specify name/domain
 	// separately.
-	suffix := strings.Replace(*r.Domain, ".", "-", -1)
+	suffix := strings.Replace(common.StringID(r.Domain), ".", "-", -1)
 	return aws.String("supergiant-" + suffix)
 }
 

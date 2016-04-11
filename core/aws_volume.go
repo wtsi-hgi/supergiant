@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/supergiant/supergiant/common"
 
@@ -19,7 +18,7 @@ type AwsVolume struct {
 }
 
 func (m *AwsVolume) name() string {
-	return fmt.Sprintf("%s-%s", m.Instance.BaseName, *m.Blueprint.Name)
+	return fmt.Sprintf("%s-%s", m.Instance.BaseName, common.StringID(m.Blueprint.Name))
 }
 
 // simple memoization of aws vol record
@@ -103,7 +102,7 @@ func (m *AwsVolume) createSnapshot() (*ec2.Snapshot, error) {
 	}
 
 	input := &ec2.CreateSnapshotInput{
-		Description: aws.String(m.name() + "-" + *m.Instance.Release().Timestamp),
+		Description: aws.String(m.name() + "-" + common.StringID(m.Instance.Release().Timestamp)),
 		VolumeId:    vol.VolumeId,
 	}
 	snapshot, err := m.core.EC2.CreateSnapshot(input)
@@ -136,7 +135,7 @@ func (m *AwsVolume) Exists() (bool, error) {
 }
 
 func (m *AwsVolume) Create() error {
-	log.Printf("Creating EBS volume %s", m.name())
+	Log.Infof("Creating EBS volume %s", m.name())
 	return m.createAwsVolume(nil)
 }
 
@@ -156,7 +155,7 @@ func (m *AwsVolume) WaitForAvailable() error {
 			},
 		},
 	}
-	log.Printf("Waiting for EBS volume %s to be available", m.name())
+	Log.Infof("Waiting for EBS volume %s to be available", m.name())
 	return m.core.EC2.WaitUntilVolumeAvailable(input)
 }
 
@@ -175,7 +174,7 @@ func (m *AwsVolume) Delete() error {
 	input := &ec2.DeleteVolumeInput{
 		VolumeId: vol.VolumeId,
 	}
-	log.Printf("Deleting EBS volume %s", m.name())
+	Log.Infof("Deleting EBS volume %s", m.name())
 	if _, err := m.core.EC2.DeleteVolume(input); err != nil {
 		return err
 	}
@@ -195,7 +194,7 @@ func (m *AwsVolume) NeedsResize() bool {
 // Resize snapshots the volume, creates a new volume from the snapshot, deletes
 // the old volume, and renames the new volume to have the old name.
 func (m *AwsVolume) Resize() error {
-	log.Printf("Resizing EBS volume %s", m.name())
+	Log.Infof("Resizing EBS volume %s", m.name())
 	snapshot, err := m.createSnapshot()
 	if err != nil {
 		return err
@@ -207,7 +206,7 @@ func (m *AwsVolume) Resize() error {
 		return err
 	}
 	if err := m.deleteSnapshot(snapshot); err != nil {
-		log.Printf("Error deleting snapshot %s: %s", *snapshot.SnapshotId, err.Error())
+		Log.Errorf("Error deleting snapshot %s: %s", *snapshot.SnapshotId, err.Error())
 	}
 	return nil
 }

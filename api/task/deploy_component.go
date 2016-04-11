@@ -72,11 +72,11 @@ func (j DeployComponent) Perform(data []byte) error {
 	// It doesn't matter on the first deploy, though.
 	if currentRelease != nil {
 		if !currentRelease.IsStopped() {
-			return fmt.Errorf("Current Release for Component %s:%s is not completely stopped.", *app.Name, *component.Name)
+			return fmt.Errorf("Current Release for Component %s:%s is not completely stopped.", common.StringID(app.Name), common.StringID(component.Name))
 		}
 	}
 	if !targetRelease.IsStarted() {
-		return fmt.Errorf("Target Release for Component %s:%s is not completely started.", *app.Name, *component.Name)
+		return fmt.Errorf("Target Release for Component %s:%s is not completely started.", common.StringID(app.Name), common.StringID(component.Name))
 	}
 
 	// TODO really sloppy

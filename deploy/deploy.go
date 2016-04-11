@@ -65,23 +65,8 @@ func Deploy(appName *string, componentName *string) error {
 				return err
 			}
 		}
-	}
-
-	// update instances
-	// NOTE instance count should be the same at this point between releases
-	for i := 0; i < currentRelease.InstanceCount; i++ {
-		currentInstance := currentInstances[i]
-		targetInstance := targetInstances[i]
-
-		currentInstance.Stop()
-		currentInstance.WaitForStopped()
-
-		targetInstance.Start()
-		targetInstance.WaitForStarted()
-	}
-
-	// add new instances
-	if currentRelease.InstanceCount < targetRelease.InstanceCount {
+		// add new instances
+	} else if currentRelease.InstanceCount < targetRelease.InstanceCount {
 		instancesAdding := targetRelease.InstanceCount - currentRelease.InstanceCount
 		newInstances := targetInstances[len(targetInstances)-instancesAdding:]
 		for _, instance := range newInstances {
@@ -94,6 +79,30 @@ func Deploy(appName *string, componentName *string) error {
 				return err
 			}
 		}
+	}
+
+	// update instances
+
+	// NOTE we only want to update the minimum of (target, current) instance
+	// counts. When adding instances, we wouldn't want to use target instance
+	// count because we would restart new instances. When removing instances, we
+	// couldn't use current count without getting index out of range
+	var instancesRestarting int
+	if currentRelease.InstanceCount < targetRelease.InstanceCount {
+		instancesRestarting = currentRelease.InstanceCount
+	} else {
+		instancesRestarting = targetRelease.InstanceCount
+	}
+
+	for i := 0; i < instancesRestarting; i++ {
+		currentInstance := currentInstances[i]
+		targetInstance := targetInstances[i]
+
+		currentInstance.Stop()
+		currentInstance.WaitForStopped()
+
+		targetInstance.Start()
+		targetInstance.WaitForStarted()
 	}
 
 	return nil

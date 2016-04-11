@@ -74,7 +74,7 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		c.url(path),
 		string(formattedIn),
 	}
-	formattedObj, err := json.MarshalIndent(obj, "", "  ")
+	formattedObj, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
 	}
@@ -113,7 +113,7 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 			resp.StatusCode,
 			string(formattedOut),
 		}
-		formattedObj, err := json.MarshalIndent(obj, "", "  ")
+		formattedObj, err := json.Marshal(obj)
 		if err != nil {
 			panic(err)
 		}

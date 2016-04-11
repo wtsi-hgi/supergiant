@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -52,15 +51,15 @@ func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 		},
 	}
 	// TODO not consistent with the setter approach
-	r.BaseName = *r.Component().Name + "-" + *r.ID
-	r.Name = r.BaseName + *r.Release().Timestamp
+	r.BaseName = common.StringID(r.Component().Name) + "-" + common.StringID(r.ID)
+	r.Name = r.BaseName + common.StringID(r.Release().Timestamp)
 	r.setStatus()
 	return r
 }
 
 // Get takes an id and returns an InstanceResource if it exists.
 func (c *InstanceCollection) Get(id common.ID) (*InstanceResource, error) {
-	index, err := strconv.Atoi(*id)
+	index, err := strconv.Atoi(common.StringID(id))
 	if err != nil {
 		return nil, err
 	}
@@ -209,11 +208,11 @@ func (r *InstanceResource) kubeContainers() (containers []*guber.Container) {
 }
 
 func (r *InstanceResource) replicationController() (*guber.ReplicationController, error) {
-	return r.collection.core.K8S.ReplicationControllers(*r.App().Name).Get(r.Name)
+	return r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Get(r.Name)
 }
 
 func (r *InstanceResource) waitForReplicationControllerReady() error {
-	log.Printf("Waiting for ReplicationController %s to start", r.Name)
+	Log.Infof("Waiting for ReplicationController %s to start", r.Name)
 	start := time.Now()
 	maxWait := 5 * time.Minute
 	for {
@@ -262,8 +261,8 @@ func (r *InstanceResource) provisionReplicationController() error {
 				Metadata: &guber.Metadata{
 					Name: r.Name, // pod base name is same as RC
 					Labels: map[string]string{
-						"service":  *r.Component().Name, // for Service
-						"instance": r.Name,              // for RC (above)
+						"service":  common.StringID(r.Component().Name), // for Service
+						"instance": r.Name,                              // for RC (above)
 					},
 				},
 				Spec: &guber.PodSpec{
@@ -271,15 +270,12 @@ func (r *InstanceResource) provisionReplicationController() error {
 					Containers:                    r.kubeContainers(),
 					ImagePullSecrets:              imagePullSecrets,
 					TerminationGracePeriodSeconds: r.Release().TerminationGracePeriod,
-
-					// TODO
-					ImagePullPolicy: "Always",
 				},
 			},
 		},
 	}
-	log.Printf("Creating ReplicationController %s", r.Name)
-	if _, err = r.collection.core.K8S.ReplicationControllers(*r.App().Name).Create(rc); err != nil {
+	Log.Infof("Creating ReplicationController %s", r.Name)
+	if _, err = r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Create(rc); err != nil {
 		return err
 	}
 	return r.waitForReplicationControllerReady()
@@ -289,7 +285,7 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 	q := &guber.QueryParams{
 		LabelSelector: "instance=" + r.Name,
 	}
-	pods, err := r.collection.core.K8S.Pods(*r.App().Name).Query(q)
+	pods, err := r.collection.core.K8S.Pods(common.StringID(r.App().Name)).Query(q)
 	if err != nil {
 		return nil, err // Not sure what the error might be here
 	}
@@ -303,9 +299,9 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 }
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
-	log.Printf("Deleting ReplicationController %s", r.Name)
+	Log.Infof("Deleting ReplicationController %s", r.Name)
 	// TODO we call r.collection.core.K8S.ReplicationControllers(r.App().Name) enough to warrant its own method -- confusing nomenclature awaits assuredly
-	if _, err := r.collection.core.K8S.ReplicationControllers(*r.App().Name).Delete(r.Name); err != nil {
+	if _, err := r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil {
 		return err
 	}
 	pod, err := r.pod()
@@ -314,7 +310,7 @@ func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	}
 	if pod != nil {
 		// _ is found bool, we don't care if it was found or not, just don't want an error
-		if _, err := r.collection.core.K8S.Pods(*r.App().Name).Delete(pod.Metadata.Name); err != nil {
+		if _, err := r.collection.core.K8S.Pods(common.StringID(r.App().Name)).Delete(pod.Metadata.Name); err != nil {
 			return err
 		}
 	}

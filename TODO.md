@@ -24,7 +24,11 @@
 
 ## v0.4.x
 
-* custom deployments
+* ~~instance container logs~~
+
+* ~~custom deployments~~
+
+* release MergeCreate
 
 * add flag to release to indicate whether restart is needed (if instance config has changed)
 
@@ -32,7 +36,7 @@
 
 * show instance metrics
 
-* internal ELBs
+* cluster info API: node IPs, instance types, etc.  (eventually billing stuff)
 
 ## v0.6.x
 
@@ -42,29 +46,23 @@
 
 * show resource types on all API responses
 
-* standardized errors, removing panics where possible
-
 * model validations
 
 * TTL on failed tasks
 
 * TTL on old releases
 
-* standardized logging
-
 ## v0.7.x
 
-* HTTP Basic Auth on API
-
-* self-signed SSL cert for API HTTPS
+* cancel / revert deploys
 
 ## v0.8.x
 
-* cluster info API: node IPs, instance types, etc.  (eventually billing stuff)
+* internal ELBs
 
 ## v0.9.x
 
-* instance container logs / SSH
+* container SSH
 
 ## v0.10.x
 

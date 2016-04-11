@@ -1,7 +1,6 @@
 package core
 
 import (
-	"log"
 	"path"
 	"reflect"
 	"time"
@@ -33,9 +32,9 @@ type ReleaseList struct {
 
 // EtcdKey implements the Collection interface.
 func (c *ReleaseCollection) EtcdKey(timestamp common.ID) string {
-	key := path.Join("/releases", *c.Component.App().Name, *c.Component.Name)
+	key := path.Join("/releases", common.StringID(c.Component.App().Name), common.StringID(c.Component.Name))
 	if timestamp != nil {
-		key = path.Join(key, *timestamp)
+		key = path.Join(key, common.StringID(timestamp))
 	}
 	return key
 }
@@ -121,10 +120,10 @@ func (r *ReleaseResource) Save() error {
 // etcd.
 func (r *ReleaseResource) Delete() error {
 	if !r.Retired {
-		if err := r.deleteServices(); err != nil {
+		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
 			return err
 		}
-		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
+		if err := r.deleteServices(); err != nil {
 			return err
 		}
 
@@ -199,7 +198,7 @@ func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, erro
 
 			// TODO
 			if isNotFoundError(err) {
-				log.Printf("Entrypoint %s does not exist", *port.EntrypointDomain)
+				Log.Errorf("Entrypoint %s does not exist", *port.EntrypointDomain)
 				continue
 			}
 
@@ -223,7 +222,7 @@ func (r *ReleaseResource) containerPorts(public bool) (ports []*common.Port) {
 
 // Operations-------------------------------------------------------------------
 func (r *ReleaseResource) getService(name string) (*guber.Service, error) {
-	return r.collection.core.K8S.Services(*r.App().Name).Get(name)
+	return r.collection.core.K8S.Services(common.StringID(r.App().Name)).Get(name)
 }
 
 func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts []*guber.ServicePort) (*guber.Service, error) {
@@ -243,21 +242,21 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 		Spec: &guber.ServiceSpec{
 			Type: svcType,
 			Selector: map[string]string{
-				"service": *r.Component().Name,
+				"service": common.StringID(r.Component().Name),
 			},
 			Ports: svcPorts,
 		},
 	}
-	log.Printf("Creating Service %s", name)
-	return r.collection.core.K8S.Services(*r.App().Name).Create(service)
+	Log.Infof("Creating Service %s", name)
+	return r.collection.core.K8S.Services(common.StringID(r.App().Name)).Create(service)
 }
 
 func (r *ReleaseResource) ExternalServiceName() string {
-	return *r.Component().Name + "-public"
+	return common.StringID(r.Component().Name) + "-public"
 }
 
 func (r *ReleaseResource) InternalServiceName() string {
-	return *r.Component().Name
+	return common.StringID(r.Component().Name)
 }
 
 func (r *ReleaseResource) provisionExternalService() error {
@@ -289,12 +288,12 @@ func (r *ReleaseResource) provisionInternalService() error {
 }
 
 func (r *ReleaseResource) deleteServices() (err error) {
-	log.Printf("Deleting Service %s", r.ExternalServiceName())
-	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.ExternalServiceName()); err != nil {
+	Log.Infof("Deleting Service %s", r.ExternalServiceName())
+	if _, err = r.collection.core.K8S.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
 		return err
 	}
-	log.Printf("Deleting Service %s", r.InternalServiceName())
-	if _, err = r.collection.core.K8S.Services(*r.App().Name).Delete(r.InternalServiceName()); err != nil {
+	Log.Infof("Deleting Service %s", r.InternalServiceName())
+	if _, err = r.collection.core.K8S.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
 		return err
 	}
 	return nil
@@ -321,14 +320,11 @@ func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {
 }
 
 func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
-	if r.ExternalService == nil {
-		return ports
-	}
 	for _, port := range r.containerPorts(true) {
 		entrypoint, ok := r.entrypoints[*port.EntrypointDomain]
 
 		if !ok {
-			log.Printf("Entrypoint %s does not exist", *port.EntrypointDomain)
+			Log.Errorf("Entrypoint %s does not exist", *port.EntrypointDomain)
 			continue
 		}
 
@@ -407,7 +403,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 
 	if len(newInternalPorts) > 0 {
 		svc := newR.InternalService
-		log.Printf("Adding new ports to Service %s", svc.Metadata.Name)
+		Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
 
 		for _, port := range newInternalPorts {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
@@ -422,7 +418,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 
 	if len(newExternalPorts) > 0 {
 		svc := newR.ExternalService
-		log.Printf("Adding new ports to Service %s", svc.Metadata.Name)
+		Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
 
 		for _, port := range newExternalPorts {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
@@ -478,7 +474,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 
 	if len(oldInternalPorts) > 0 {
 		svc := newR.InternalService
-		log.Printf("Removing old ports from Service %s", svc.Metadata.Name)
+		Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
 
 		for _, port := range oldInternalPorts {
 			for i, svcPort := range svc.Spec.Ports {
@@ -497,7 +493,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 
 	if len(oldExternalPorts) > 0 {
 		svc := newR.ExternalService
-		log.Printf("Removing old ports from Service %s", svc.Metadata.Name)
+		Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
 
 		for _, port := range oldExternalPorts {
 			for i, svcPort := range svc.Spec.Ports {
@@ -546,6 +542,7 @@ func (r *ReleaseResource) Provision() error {
 	// Concurrently provision volumes
 	// which is not actually concurrent... just sends all requests, and then
 	// loops waiting, which prevents concurrently polling while waiting.
+	var newVols []*AwsVolume
 	for _, vol := range r.volumes() {
 		if ok, err := vol.Exists(); err != nil {
 			return err
@@ -553,9 +550,10 @@ func (r *ReleaseResource) Provision() error {
 			if err = vol.Create(); err != nil {
 				return err
 			}
+			newVols = append(newVols, vol)
 		}
 	}
-	for _, vol := range r.volumes() {
+	for _, vol := range newVols {
 		if err := vol.WaitForAvailable(); err != nil {
 			return err
 		}

@@ -26,7 +26,7 @@ func (c *EntrypointCollection) path() string {
 }
 
 func (r *EntrypointResource) path() string {
-	return path.Join(r.collection.path(), *r.Domain)
+	return path.Join(r.collection.path(), common.StringID(r.Domain))
 }
 
 // Collection-level

@@ -1,8 +1,7 @@
 package core
 
 import (
-	"log"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/supergiant/guber"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,16 +21,26 @@ type Core struct {
 }
 
 var (
+	Log = logrus.New()
+
 	EtcdEndpoints []string
 	K8sHost       string
 	K8sUser       string
 	K8sPass       string
 	AwsRegion     string
-
-	AwsAZ       string
-	AwsSgID     string
-	AwsSubnetID string
+	AwsAZ         string
+	AwsSgID       string
+	AwsSubnetID   string
 )
+
+// TODO inconsistent with method in Guber and client/
+func SetLogLevel(level string) {
+	levelInt, err := logrus.ParseLevel(level)
+	if err != nil {
+		panic(err)
+	}
+	Log.Level = levelInt
+}
 
 func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string) *Core {
 
@@ -43,9 +52,9 @@ func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string)
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, token)
 	_, err := creds.Get()
 	if err != nil {
-		log.Println("ERROR: AWS Credentials Install Failed...", err)
+		Log.Error("AWS Credentials Install Failed...", err)
 	}
-	log.Println("INFO: AWS Credentials Installed.")
+	Log.Info("AWS Credentials Installed.")
 
 	c := Core{}
 	c.DB = NewDB(EtcdEndpoints)

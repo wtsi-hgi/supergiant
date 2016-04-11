@@ -22,9 +22,9 @@ type ComponentList struct {
 
 // EtcdKey implements the Collection interface.
 func (c *ComponentCollection) EtcdKey(name common.ID) string {
-	key := path.Join("/components", *c.App.Name)
+	key := path.Join("/components", common.StringID(c.App.Name))
 	if name != nil {
-		key = path.Join(key, *name)
+		key = path.Join(key, common.StringID(name))
 	}
 	return key
 }
