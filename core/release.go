@@ -79,7 +79,7 @@ func (c *ReleaseCollection) initializeResource(r Resource) error {
 // List returns an ReleaseList.
 func (c *ReleaseCollection) List() (*ReleaseList, error) {
 	list := new(ReleaseList)
-	err := c.core.DB.List(c, list)
+	err := c.core.db.list(c, list)
 	return list, err
 }
 
@@ -105,7 +105,7 @@ func (c *ReleaseCollection) Create(r *ReleaseResource) (*ReleaseResource, error)
 		return nil, errors.New("Release InstanceGroup field can only be set to either the current or target Release's Timestamp value.")
 	}
 
-	if err := c.core.DB.Create(c, r.Timestamp, r); err != nil {
+	if err := c.core.db.create(c, r.Timestamp, r); err != nil {
 		return nil, err
 	}
 
@@ -144,7 +144,7 @@ func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) (*ReleaseResource, e
 // Get takes an id and returns an ReleaseResource if it exists.
 func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
 	r := c.New()
-	if err := c.core.DB.Get(c, id, r); err != nil {
+	if err := c.core.db.get(c, id, r); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -155,7 +155,7 @@ func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
 
 // Save saves the Release in etcd through an update.
 func (r *ReleaseResource) Save() error {
-	return r.collection.core.DB.Update(r.collection, r.Timestamp, r)
+	return r.collection.core.db.update(r.collection, r.Timestamp, r)
 }
 
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in
@@ -181,7 +181,7 @@ func (r *ReleaseResource) Delete() error {
 			}
 		}
 	}
-	return r.collection.core.DB.Delete(r.collection, r.Timestamp)
+	return r.collection.core.db.delete(r.collection, r.Timestamp)
 }
 
 func newReleaseTimestamp() common.ID {
@@ -264,7 +264,7 @@ func (r *ReleaseResource) containerPorts(public bool) (ports []*common.Port) {
 
 // Operations-------------------------------------------------------------------
 func (r *ReleaseResource) getService(name string) (*guber.Service, error) {
-	return r.collection.core.K8S.Services(common.StringID(r.App().Name)).Get(name)
+	return r.collection.core.k8s.Services(common.StringID(r.App().Name)).Get(name)
 }
 
 func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts []*guber.ServicePort) (*guber.Service, error) {
@@ -290,7 +290,7 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 		},
 	}
 	Log.Infof("Creating Service %s", name)
-	return r.collection.core.K8S.Services(common.StringID(r.App().Name)).Create(service)
+	return r.collection.core.k8s.Services(common.StringID(r.App().Name)).Create(service)
 }
 
 func (r *ReleaseResource) ExternalServiceName() string {
@@ -331,11 +331,11 @@ func (r *ReleaseResource) provisionInternalService() error {
 
 func (r *ReleaseResource) deleteServices() (err error) {
 	Log.Infof("Deleting Service %s", r.ExternalServiceName())
-	if _, err = r.collection.core.K8S.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
+	if _, err = r.collection.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
 		return err
 	}
 	Log.Infof("Deleting Service %s", r.InternalServiceName())
-	if _, err = r.collection.core.K8S.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
+	if _, err = r.collection.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
 		return err
 	}
 	return nil
@@ -451,7 +451,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
 		}
 
-		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -466,7 +466,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
 		}
 
-		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -526,7 +526,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 				}
 			}
 		}
-		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 			}
 		}
 
-		svc, err := newR.collection.core.K8S.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}

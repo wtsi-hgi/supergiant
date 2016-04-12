@@ -208,7 +208,7 @@ func (r *InstanceResource) kubeContainers() (containers []*guber.Container) {
 }
 
 func (r *InstanceResource) replicationController() (*guber.ReplicationController, error) {
-	return r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Get(r.Name)
+	return r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Get(r.Name)
 }
 
 func (r *InstanceResource) waitForReplicationControllerReady() error {
@@ -275,7 +275,7 @@ func (r *InstanceResource) provisionReplicationController() error {
 		},
 	}
 	Log.Infof("Creating ReplicationController %s", r.Name)
-	if _, err = r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Create(rc); err != nil {
+	if _, err = r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Create(rc); err != nil {
 		return err
 	}
 	return r.waitForReplicationControllerReady()
@@ -285,7 +285,7 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 	q := &guber.QueryParams{
 		LabelSelector: "instance=" + r.Name,
 	}
-	pods, err := r.collection.core.K8S.Pods(common.StringID(r.App().Name)).Query(q)
+	pods, err := r.collection.core.k8s.Pods(common.StringID(r.App().Name)).Query(q)
 	if err != nil {
 		return nil, err // Not sure what the error might be here
 	}
@@ -300,8 +300,8 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	Log.Infof("Deleting ReplicationController %s", r.Name)
-	// TODO we call r.collection.core.K8S.ReplicationControllers(r.App().Name) enough to warrant its own method -- confusing nomenclature awaits assuredly
-	if _, err := r.collection.core.K8S.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil {
+	// TODO we call r.collection.core.k8s.ReplicationControllers(r.App().Name) enough to warrant its own method -- confusing nomenclature awaits assuredly
+	if _, err := r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil {
 		return err
 	}
 	pod, err := r.pod()
@@ -310,7 +310,7 @@ func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	}
 	if pod != nil {
 		// _ is found bool, we don't care if it was found or not, just don't want an error
-		if _, err := r.collection.core.K8S.Pods(common.StringID(r.App().Name)).Delete(pod.Metadata.Name); err != nil {
+		if _, err := r.collection.core.k8s.Pods(common.StringID(r.App().Name)).Delete(pod.Metadata.Name); err != nil {
 			return err
 		}
 	}

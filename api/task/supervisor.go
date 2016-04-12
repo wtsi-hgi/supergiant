@@ -30,7 +30,7 @@ func (_ *worker) work(ch <-chan *directive) {
 		task, performer := dir.task, dir.performer
 
 		if err := task.Claim(); err != nil {
-			// TODO the error here is presumed to be a CompareAndSwap error; if so,
+			// TODO the error here is presumed to be a compareAndSwap error; if so,
 			// we should just return. If it's another error, then this is not good.
 			core.Log.Error(err)
 			continue

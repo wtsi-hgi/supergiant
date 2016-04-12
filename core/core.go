@@ -13,11 +13,11 @@ import (
 )
 
 type Core struct {
-	DB          *DB
-	K8S         *guber.Client
-	EC2         *ec2.EC2
-	ELB         *elb.ELB
-	AutoScaling *autoscaling.AutoScaling
+	db          *database
+	k8s         *guber.Client
+	ec2         *ec2.EC2
+	elb         *elb.ELB
+	autoscaling *autoscaling.AutoScaling
 }
 
 var (
@@ -58,14 +58,14 @@ func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string)
 	Log.Info("AWS Credentials Installed.")
 
 	c := Core{}
-	c.DB = NewDB(EtcdEndpoints)
-	c.K8S = guber.NewClient(K8sHost, K8sUser, K8sPass, httpsMode)
+	c.db = newDB()
+	c.k8s = guber.NewClient(K8sHost, K8sUser, K8sPass, httpsMode)
 
 	awsConf := aws.NewConfig().WithRegion(AwsRegion).WithCredentials(creds)
 
-	c.EC2 = ec2.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
-	c.ELB = elb.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
-	c.AutoScaling = autoscaling.New(session.New(), awsConf) // awsConf.WithLogLevel(aws.LogDebug)
+	c.ec2 = ec2.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
+	c.elb = elb.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
+	c.autoscaling = autoscaling.New(session.New(), awsConf) // awsConf.WithLogLevel(aws.LogDebug)
 	return &c
 }
 

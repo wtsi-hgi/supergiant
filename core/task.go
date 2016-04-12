@@ -48,7 +48,7 @@ func (c *TaskCollection) initializeResource(r Resource) error {
 // List returns an TaskList.
 func (c *TaskCollection) List() (*TaskList, error) {
 	list := new(TaskList)
-	err := c.core.DB.ListInOrder(c, list)
+	err := c.core.db.listInOrder(c, list)
 	return list, err
 }
 
@@ -64,7 +64,7 @@ func (c *TaskCollection) New() *TaskResource {
 // Create takes an Task and creates it in etcd. It also creates a Kubernetes
 // Namespace with the name of the Task.
 func (c *TaskCollection) Create(r *TaskResource) (*TaskResource, error) {
-	if err := c.core.DB.CreateInOrder(c, r); err != nil {
+	if err := c.core.db.createInOrder(c, r); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -73,7 +73,7 @@ func (c *TaskCollection) Create(r *TaskResource) (*TaskResource, error) {
 // Get takes a name and returns an TaskResource if it exists.
 func (c *TaskCollection) Get(id common.ID) (*TaskResource, error) {
 	r := c.New()
-	if err := c.core.DB.Get(c, id, r); err != nil {
+	if err := c.core.db.get(c, id, r); err != nil {
 		return nil, err
 	}
 
@@ -105,12 +105,12 @@ func (c *TaskCollection) Start(t common.TaskType, msg interface{}) (*TaskResourc
 
 // Delete deletes the Task in etcd.
 func (r *TaskResource) Delete() error {
-	return r.collection.core.DB.Delete(r.collection, r.ID)
+	return r.collection.core.db.delete(r.collection, r.ID)
 }
 
 // Save saves the Task in etcd through an update.
 func (r *TaskResource) Save() error {
-	return r.collection.core.DB.Update(r.collection, r.ID, r)
+	return r.collection.core.db.update(r.collection, r.ID, r)
 }
 
 // Implements OrderedModel interface
@@ -122,7 +122,7 @@ func (r *TaskResource) IsQueued() bool {
 	return r.Status == statusQueued
 }
 
-// Claim updates the Task status to "RUNNING" and returns nil. CompareAndSwap is
+// Claim updates the Task status to "RUNNING" and returns nil. compareAndSwap is
 // used to prevent a race condition and ensure only one worker performs the task.
 func (r *TaskResource) Claim() error {
 	// NOTE we de-ref the task because the DB will strip the ID (maybe a TODO)
@@ -134,7 +134,7 @@ func (r *TaskResource) Claim() error {
 	t.Status = statusRunning
 	next := &TaskResource{Task: &t}
 
-	return r.collection.core.DB.CompareAndSwap(r.collection, r.ID, &prev, next)
+	return r.collection.core.db.compareAndSwap(r.collection, r.ID, &prev, next)
 }
 
 func (r *TaskResource) RecordError(err error) error {

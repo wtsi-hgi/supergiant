@@ -31,7 +31,7 @@ func RunCustomDeployment(core *Core, component *ComponentResource) error {
 
 	Log.Infof("Creating pod %s", name)
 
-	pod, err := core.K8S.Pods(common.StringID(component.App().Name)).Create(podDef)
+	pod, err := core.k8s.Pods(common.StringID(component.App().Name)).Create(podDef)
 	if err != nil {
 		return err
 	}

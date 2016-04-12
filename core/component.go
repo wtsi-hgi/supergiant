@@ -45,7 +45,7 @@ func (c *ComponentCollection) initializeResource(r Resource) error {
 // List returns an ComponentList.
 func (c *ComponentCollection) List() (*ComponentList, error) {
 	list := new(ComponentList)
-	err := c.core.DB.List(c, list)
+	err := c.core.db.list(c, list)
 	return list, err
 }
 
@@ -61,7 +61,7 @@ func (c *ComponentCollection) New() *ComponentResource {
 
 // Create takes an Component and creates it in etcd.
 func (c *ComponentCollection) Create(r *ComponentResource) (*ComponentResource, error) {
-	if err := c.core.DB.Create(c, r.Name, r); err != nil {
+	if err := c.core.db.create(c, r.Name, r); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -70,7 +70,7 @@ func (c *ComponentCollection) Create(r *ComponentResource) (*ComponentResource, 
 // Get takes a name and returns an ComponentResource if it exists.
 func (c *ComponentCollection) Get(name common.ID) (*ComponentResource, error) {
 	r := c.New()
-	if err := c.core.DB.Get(c, name, r); err != nil {
+	if err := c.core.db.get(c, name, r); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -103,7 +103,7 @@ func (r *ComponentResource) decorate() error {
 
 // Save saves the Component in etcd through an update.
 func (r *ComponentResource) Save() error {
-	return r.collection.core.DB.Update(r.collection, r.Name, r)
+	return r.collection.core.db.update(r.collection, r.Name, r)
 }
 
 // Delete cascades delete calls to current and target releases, and deletes the
@@ -132,7 +132,7 @@ func (r *ComponentResource) Delete() error {
 		}
 	}
 
-	return r.collection.core.DB.Delete(r.collection, r.Name)
+	return r.collection.core.db.delete(r.collection, r.Name)
 }
 
 func (r *ComponentResource) App() *AppResource {

@@ -52,7 +52,7 @@ func (m *AwsVolume) loadAwsVolume() error {
 			},
 		},
 	}
-	resp, err := m.core.EC2.DescribeVolumes(input)
+	resp, err := m.core.ec2.DescribeVolumes(input)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
 		SnapshotId:       snapshotID,
 	}
 
-	awsVol, err := m.core.EC2.CreateVolume(volInput)
+	awsVol, err := m.core.ec2.CreateVolume(volInput)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
 			},
 		},
 	}
-	if _, err = m.core.EC2.CreateTags(tagsInput); err != nil {
+	if _, err = m.core.ec2.CreateTags(tagsInput); err != nil {
 		return err // TODO an error here means we create a hanging volume, since it does not get named
 	}
 	m.awsVol = awsVol
@@ -105,14 +105,14 @@ func (m *AwsVolume) createSnapshot() (*ec2.Snapshot, error) {
 		Description: aws.String(m.name() + "-" + common.StringID(m.Instance.Release().Timestamp)),
 		VolumeId:    vol.VolumeId,
 	}
-	snapshot, err := m.core.EC2.CreateSnapshot(input)
+	snapshot, err := m.core.ec2.CreateSnapshot(input)
 	if err != nil {
 		return nil, err
 	}
 	waitInput := &ec2.DescribeSnapshotsInput{
 		SnapshotIds: []*string{snapshot.SnapshotId},
 	}
-	if err := m.core.EC2.WaitUntilSnapshotCompleted(waitInput); err != nil {
+	if err := m.core.ec2.WaitUntilSnapshotCompleted(waitInput); err != nil {
 		return snapshot, err // TODO
 	}
 	return snapshot, nil
@@ -122,7 +122,7 @@ func (m *AwsVolume) deleteSnapshot(snapshot *ec2.Snapshot) error {
 	input := &ec2.DeleteSnapshotInput{
 		SnapshotId: snapshot.SnapshotId,
 	}
-	_, err := m.core.EC2.DeleteSnapshot(input)
+	_, err := m.core.ec2.DeleteSnapshot(input)
 	return err
 }
 
@@ -156,7 +156,7 @@ func (m *AwsVolume) waitForAvailable() error {
 		},
 	}
 	Log.Infof("Waiting for EBS volume %s to be available", m.name())
-	return m.core.EC2.WaitUntilVolumeAvailable(input)
+	return m.core.ec2.WaitUntilVolumeAvailable(input)
 }
 
 // Delete deletes the EBS volume on AWS.
@@ -175,7 +175,7 @@ func (m *AwsVolume) Delete() error {
 		VolumeId: vol.VolumeId,
 	}
 	Log.Infof("Deleting EBS volume %s", m.name())
-	if _, err := m.core.EC2.DeleteVolume(input); err != nil {
+	if _, err := m.core.ec2.DeleteVolume(input); err != nil {
 		return err
 	}
 	m.awsVol = nil
