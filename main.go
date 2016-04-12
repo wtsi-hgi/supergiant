@@ -28,42 +28,6 @@ func main() {
 			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
-		if core.AwsRegion == "" {
-			region, err := getAWSRegion()
-			if err != nil {
-				core.Log.Error(err)
-			} else {
-				core.AwsRegion = region
-				core.Log.Info("AWS Region Detected,", core.AwsRegion)
-			}
-		}
-		if core.AwsAZ == "" {
-			az, err := getAWSAZ()
-			if err != nil {
-				core.Log.Error(err)
-			} else {
-				core.AwsAZ = az
-				core.Log.Info("AWS AZ Detected,", core.AwsAZ)
-			}
-		}
-		if core.AwsSgID == "" {
-			sg, err := getAWSSecurityGroupID()
-			if err != nil {
-				core.Log.Error(err)
-			} else {
-				core.AwsSgID = sg
-				core.Log.Info("AWS Security Group Detected,", core.AwsSgID)
-			}
-		}
-		if core.AwsSubnetID == "" {
-			sub, err := getAWSSubnetID()
-			if err != nil {
-				core.Log.Info("ERROR:", err)
-			} else {
-				core.AwsSubnetID = sub
-				core.Log.Info("INFO: AWS Security Group Detected,", core.AwsSubnetID)
-			}
-		}
 
 		core.EtcdEndpoints = ctx.StringSlice("etcd-host")
 		if len(core.EtcdEndpoints) < 0 {

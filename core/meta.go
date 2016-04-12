@@ -1,10 +1,50 @@
-package main
+package core
 
 import (
 	"errors"
 	"io/ioutil"
 	"net/http"
 )
+
+func checkForAWSMeta() {
+	// Discover AWS ENV
+	if AwsRegion == "" {
+		region, err := getAWSRegion()
+		if err != nil {
+			Log.Error(err)
+		} else {
+			AwsRegion = region
+			Log.Info("AWS Region Detected,", AwsRegion)
+		}
+	}
+	if AwsAZ == "" {
+		az, err := getAWSAZ()
+		if err != nil {
+			Log.Error(err)
+		} else {
+			AwsAZ = az
+			Log.Info("AWS AZ Detected,", AwsAZ)
+		}
+	}
+	if AwsSgID == "" {
+		sg, err := getAWSSecurityGroupID()
+		if err != nil {
+			Log.Error(err)
+		} else {
+			AwsSgID = sg
+			Log.Info("AWS Security Group Detected,", AwsSgID)
+		}
+	}
+	if AwsSubnetID == "" {
+		sub, err := getAWSSubnetID()
+		if err != nil {
+			Log.Info("ERROR:", err)
+		} else {
+			AwsSubnetID = sub
+			Log.Info("INFO: AWS Security Group Detected,", AwsSubnetID)
+		}
+	}
+}
 
 // This file contains simple functions to discover metadata from the cloud provider.
 func getMacs() (string, error) {
