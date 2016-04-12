@@ -25,10 +25,10 @@ type Resource interface {
 	// ToApiObj() Resource
 }
 
-// OrderedResource is similar to Resource, but provides a SetID() method to
+// OrderedResource is similar to Resource, but provides a setID() method to
 // set an auto-generated ID from etcd on the Resource.
 type OrderedResource interface {
-	SetID(id common.ID)
+	setID(id common.ID)
 }
 
 // TODO should maybe move this to util or helper file

@@ -114,7 +114,7 @@ func (r *TaskResource) Save() error {
 }
 
 // Implements OrderedModel interface
-func (r *TaskResource) SetID(id common.ID) {
+func (r *TaskResource) setID(id common.ID) {
 	r.ID = id
 }
 
