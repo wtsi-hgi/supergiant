@@ -83,7 +83,7 @@ func Deploy(appName *string, componentName *string) error {
 
 	// update instances
 
-	if currentRelease.InstanceGroup == targetRelease.InstanceGroup {
+	if *currentRelease.InstanceGroup == *targetRelease.InstanceGroup {
 		return nil // no need to update restart instances
 	}
 

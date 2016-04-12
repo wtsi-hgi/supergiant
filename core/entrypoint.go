@@ -26,8 +26,8 @@ type EntrypointList struct {
 	Items []*EntrypointResource `json:"items"`
 }
 
-// EtcdKey implements the Collection interface.
-func (c *EntrypointCollection) EtcdKey(domain common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *EntrypointCollection) etcdKey(domain common.ID) string {
 	key := "/entrypoints"
 	if domain != nil {
 		key = path.Join(key, common.StringID(domain))
@@ -35,8 +35,8 @@ func (c *EntrypointCollection) EtcdKey(domain common.ID) string {
 	return key
 }
 
-// InitializeResource implements the Collection interface.
-func (c *EntrypointCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *EntrypointCollection) initializeResource(r Resource) error {
 	resource := r.(*EntrypointResource)
 	resource.collection = c
 	return nil

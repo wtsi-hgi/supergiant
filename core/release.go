@@ -32,8 +32,8 @@ type ReleaseList struct {
 	Items []*ReleaseResource `json:"items"`
 }
 
-// EtcdKey implements the Collection interface.
-func (c *ReleaseCollection) EtcdKey(timestamp common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *ReleaseCollection) etcdKey(timestamp common.ID) string {
 	key := path.Join("/releases", common.StringID(c.Component.App().Name), common.StringID(c.Component.Name))
 	if timestamp != nil {
 		key = path.Join(key, common.StringID(timestamp))
@@ -41,8 +41,8 @@ func (c *ReleaseCollection) EtcdKey(timestamp common.ID) string {
 	return key
 }
 
-// InitializeResource implements the Collection interface.
-func (c *ReleaseCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *ReleaseCollection) initializeResource(r Resource) error {
 	resource := r.(*ReleaseResource)
 	resource.collection = c
 
@@ -344,7 +344,7 @@ func (r *ReleaseResource) deleteServices() (err error) {
 // NOTE it seems weird here, but "Provision" == "CreateUnlessExists"
 func (r *ReleaseResource) provisionSecrets() error {
 	for _, repo := range r.imageRepos {
-		if err := r.App().ProvisionSecret(repo); err != nil {
+		if err := r.App().provisionSecret(repo); err != nil {
 			return err
 		}
 	}
@@ -356,7 +356,7 @@ func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {
 		return ports
 	}
 	for _, port := range r.containerPorts(false) {
-		ports = append(ports, NewInternalPort(port, r))
+		ports = append(ports, newInternalPort(port, r))
 	}
 	return ports
 }
@@ -370,7 +370,7 @@ func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
 			continue
 		}
 
-		ports = append(ports, NewExternalPort(port, r, entrypoint))
+		ports = append(ports, newExternalPort(port, r, entrypoint))
 	}
 	return ports
 }
@@ -386,7 +386,7 @@ func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
 	for _, svcPort := range r.ExternalService.Spec.Ports {
 		for _, port := range ports {
 			if port.Number == svcPort.Port {
-				if err := port.AddToELB(); err != nil {
+				if err := port.addToELB(); err != nil {
 					return err
 				}
 				return nil
@@ -398,7 +398,7 @@ func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
 
 func (r *ReleaseResource) removeExternalPortsFromEntrypoint() error {
 	for _, port := range r.ExternalPorts() {
-		if err := port.RemoveFromELB(); err != nil {
+		if err := port.removeFromELB(); err != nil {
 			return err
 		}
 	}
@@ -473,7 +473,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 		newR.ExternalService = svc
 
 		for _, port := range newExternalPorts {
-			if err := port.AddToELB(); err != nil {
+			if err := port.addToELB(); err != nil {
 				return err
 			}
 		}
@@ -553,7 +553,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 		newR.ExternalService = svc
 
 		for _, port := range oldExternalPorts {
-			if err := port.RemoveFromELB(); err != nil {
+			if err := port.removeFromELB(); err != nil {
 				return err
 			}
 		}
@@ -596,7 +596,7 @@ func (r *ReleaseResource) Provision() error {
 		}
 	}
 	for _, vol := range newVols {
-		if err := vol.WaitForAvailable(); err != nil {
+		if err := vol.waitForAvailable(); err != nil {
 			return err
 		}
 	}

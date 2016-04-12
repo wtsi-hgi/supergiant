@@ -10,11 +10,11 @@ import (
 // Collection is an interface for defining behavior of a collection of
 // Resources.
 type Collection interface {
-	EtcdKey(id common.ID) string
+	etcdKey(id common.ID) string
 
-	// InitializeResource is called when unmarshalling objects from etcd.
+	// initializeResource is called when unmarshalling objects from etcd.
 	// Primarily, it sets a pointer to the Collection on the Resource.
-	InitializeResource(r Resource) error
+	initializeResource(r Resource) error
 }
 
 // Resource is an interface used mainly for generalized marshalling purposes for

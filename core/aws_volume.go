@@ -139,7 +139,7 @@ func (m *AwsVolume) Create() error {
 	return m.createAwsVolume(nil)
 }
 
-func (m *AwsVolume) WaitForAvailable() error {
+func (m *AwsVolume) waitForAvailable() error {
 	vol, err := m.awsVolume()
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (m *AwsVolume) Delete() error {
 	if vol == nil {
 		return nil
 	}
-	if err := m.WaitForAvailable(); err != nil {
+	if err := m.waitForAvailable(); err != nil {
 		return err
 	}
 	input := &ec2.DeleteVolumeInput{
@@ -182,8 +182,8 @@ func (m *AwsVolume) Delete() error {
 	return nil
 }
 
-// NeedsResize returns true if the actual EBS size does not match the blueprint.
-func (m *AwsVolume) NeedsResize() bool {
+// needsResize returns true if the actual EBS size does not match the blueprint.
+func (m *AwsVolume) needsResize() bool {
 	vol, _ := m.awsVolume()
 	if vol == nil {
 		return false
@@ -191,9 +191,9 @@ func (m *AwsVolume) NeedsResize() bool {
 	return int64(m.Blueprint.Size) != *vol.Size
 }
 
-// Resize snapshots the volume, creates a new volume from the snapshot, deletes
+//resize snapshots the volume, creates a new volume from the snapshot, deletes
 // the old volume, and renames the new volume to have the old name.
-func (m *AwsVolume) Resize() error {
+func (m *AwsVolume) resize() error {
 	Log.Infof("Resizing EBS volume %s", m.name())
 	snapshot, err := m.createSnapshot()
 	if err != nil {

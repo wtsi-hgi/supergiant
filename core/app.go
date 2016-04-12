@@ -22,16 +22,16 @@ type AppList struct {
 	Items []*AppResource `json:"items"`
 }
 
-// EtcdKey implements the Collection interface.
-func (c *AppCollection) EtcdKey(name common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *AppCollection) etcdKey(name common.ID) string {
 	if name == nil {
 		return "/apps"
 	}
 	return path.Join("/apps", common.StringID(name))
 }
 
-// InitializeResource implements the Collection interface.
-func (c *AppCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *AppCollection) initializeResource(r Resource) error {
 	resource := r.(*AppResource)
 	resource.collection = c
 	return nil
@@ -78,7 +78,6 @@ func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 }
 
 // Resource-level
-//==============================================================================
 
 // Save saves the App in etcd through an update.
 func (r *AppResource) Save() error {
@@ -126,7 +125,7 @@ func (r *AppResource) deleteNamespace() error {
 	return err
 }
 
-func (r *AppResource) ProvisionSecret(repo *ImageRepoResource) error {
+func (r *AppResource) provisionSecret(repo *ImageRepoResource) error {
 	// TODO not sure i've been consistent with error handling -- this strategy is
 	// useful when there could be multiple common of errors, alongside the
 	// expectation of an error when something doesn't exist

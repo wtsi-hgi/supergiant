@@ -129,7 +129,7 @@ func (r *InstanceResource) Stop() error {
 		return err
 	}
 	for _, vol := range r.Volumes() {
-		if err := vol.WaitForAvailable(); err != nil {
+		if err := vol.waitForAvailable(); err != nil {
 			return err
 		}
 	}
@@ -168,16 +168,16 @@ func (r *InstanceResource) Volumes() (vols []*AwsVolume) {
 }
 
 func (r *InstanceResource) prepareVolumes() error {
-	// Resize volumes (concurrently) if needed
+	//resize volumes (concurrently) if needed
 	c := make(chan error)
 	// really, we should be resizing all or none. this is just so we don't wait
 	// forever below when not resizing
 	volsResizing := 0
 	for _, vol := range r.Volumes() {
-		if vol.NeedsResize() {
+		if vol.needsResize() {
 			volsResizing++
 			go func(vol *AwsVolume) {
-				c <- vol.Resize()
+				c <- vol.resize()
 			}(vol)
 		}
 	}

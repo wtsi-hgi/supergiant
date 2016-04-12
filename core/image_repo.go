@@ -21,8 +21,8 @@ type ImageRepoList struct {
 	Items []*ImageRepoResource `json:"items"`
 }
 
-// EtcdKey implements the Collection interface.
-func (c *ImageRepoCollection) EtcdKey(name common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *ImageRepoCollection) etcdKey(name common.ID) string {
 	key := "/image_repos/dockerhub"
 	if name != nil {
 		key = path.Join(key, common.StringID(name))
@@ -30,8 +30,8 @@ func (c *ImageRepoCollection) EtcdKey(name common.ID) string {
 	return key
 }
 
-// InitializeResource implements the Collection interface.
-func (c *ImageRepoCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *ImageRepoCollection) initializeResource(r Resource) error {
 	resource := r.(*ImageRepoResource)
 	resource.collection = c
 	return nil

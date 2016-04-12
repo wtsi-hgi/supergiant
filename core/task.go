@@ -29,8 +29,8 @@ const (
 	statusFailed  = "FAILED"
 )
 
-// EtcdKey implements the Collection interface.
-func (c *TaskCollection) EtcdKey(id common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *TaskCollection) etcdKey(id common.ID) string {
 	key := "/tasks"
 	if id != nil {
 		key = path.Join(key, common.StringID(id))
@@ -38,8 +38,8 @@ func (c *TaskCollection) EtcdKey(id common.ID) string {
 	return key
 }
 
-// InitializeResource implements the Collection interface.
-func (c *TaskCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *TaskCollection) initializeResource(r Resource) error {
 	resource := r.(*TaskResource)
 	resource.collection = c
 	return nil

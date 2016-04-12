@@ -20,8 +20,8 @@ type ComponentList struct {
 	Items []*ComponentResource `json:"items"`
 }
 
-// EtcdKey implements the Collection interface.
-func (c *ComponentCollection) EtcdKey(name common.ID) string {
+// etcdKey implements the Collection interface.
+func (c *ComponentCollection) etcdKey(name common.ID) string {
 	key := path.Join("/components", common.StringID(c.App.Name))
 	if name != nil {
 		key = path.Join(key, common.StringID(name))
@@ -29,8 +29,8 @@ func (c *ComponentCollection) EtcdKey(name common.ID) string {
 	return key
 }
 
-// InitializeResource implements the Collection interface.
-func (c *ComponentCollection) InitializeResource(r Resource) error {
+// initializeResource implements the Collection interface.
+func (c *ComponentCollection) initializeResource(r Resource) error {
 	resource := r.(*ComponentResource)
 	resource.collection = c
 
@@ -160,7 +160,7 @@ func (r *ComponentResource) externalAddresses() (addrs []*common.PortAddress, er
 		return nil, err
 	}
 	for _, port := range release.ExternalPorts() {
-		addrs = append(addrs, port.Address())
+		addrs = append(addrs, port.address())
 	}
 	return addrs, nil
 }
@@ -171,7 +171,7 @@ func (r *ComponentResource) internalAddresses() (addrs []*common.PortAddress, er
 		return nil, err
 	}
 	for _, port := range release.InternalPorts() {
-		addrs = append(addrs, port.Address())
+		addrs = append(addrs, port.address())
 	}
 	return addrs, nil
 }

@@ -29,7 +29,7 @@ type InternalPort struct {
 	*port
 }
 
-func NewInternalPort(p *common.Port, r *ReleaseResource) *InternalPort {
+func newInternalPort(p *common.Port, r *ReleaseResource) *InternalPort {
 	return &InternalPort{
 		port: &port{p, r},
 	}
@@ -40,7 +40,7 @@ func (ip *InternalPort) service() *guber.Service {
 	return ip.release.InternalService
 }
 
-func (ip *InternalPort) Address() *common.PortAddress {
+func (ip *InternalPort) address() *common.PortAddress {
 	svcMeta := ip.service().Metadata
 	host := fmt.Sprintf("%s.%s.svc.cluster.local", svcMeta.Name, svcMeta.Namespace)
 	return &common.PortAddress{
@@ -65,7 +65,7 @@ type ExternalPort struct {
 
 // NOTE we pass entrypoint here, instead of simply finding from the port
 // definition because it prevents unnecessary multiple lookups on the Entrypoint
-func NewExternalPort(p *common.Port, r *ReleaseResource, e *EntrypointResource) *ExternalPort {
+func newExternalPort(p *common.Port, r *ReleaseResource, e *EntrypointResource) *ExternalPort {
 	return &ExternalPort{
 		port:       &port{p, r},
 		entrypoint: e,
@@ -93,7 +93,7 @@ func (ep *ExternalPort) elbPort() int {
 	return ep.nodePort()
 }
 
-func (ep *ExternalPort) Address() *common.PortAddress {
+func (ep *ExternalPort) address() *common.PortAddress {
 	// TODO
 	//
 	// Current it is assumed that all external ports have an entrypoint, which is
@@ -106,10 +106,10 @@ func (ep *ExternalPort) Address() *common.PortAddress {
 }
 
 // TODO like the comment above, this only applies when there is an EntrypointDomain
-func (ep *ExternalPort) AddToELB() error {
+func (ep *ExternalPort) addToELB() error {
 	return ep.entrypoint.AddPort(ep.elbPort(), ep.nodePort())
 }
 
-func (ep *ExternalPort) RemoveFromELB() error {
+func (ep *ExternalPort) removeFromELB() error {
 	return ep.entrypoint.RemovePort(ep.elbPort())
 }
