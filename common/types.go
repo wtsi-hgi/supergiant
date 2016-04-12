@@ -17,6 +17,10 @@ func NewMeta() *Meta {
 	}
 }
 
+// App is the main top-level Resource within Supergiant, acting as a logical
+// namespace for Components and all of their controlled assets -- along with
+// provisioning an actual Kubernetes Namespace, it is used as a base name for
+// app-specific cloud assets.
 type App struct {
 	Name ID `json:"name"`
 	*Meta

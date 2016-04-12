@@ -55,6 +55,7 @@ func (c *TaskCollection) List() (*TaskList, error) {
 // New initializes an Task with a pointer to the Collection.
 func (c *TaskCollection) New() *TaskResource {
 	return &TaskResource{
+		collection: c,
 		Task: &common.Task{
 			Meta: common.NewMeta(),
 		},
@@ -84,7 +85,7 @@ func (c *TaskCollection) Get(id common.ID) (*TaskResource, error) {
 	return r, nil
 }
 
-// NOTE kinda like a New().Save()
+// NOTE kinda like a New().Update()
 func (c *TaskCollection) Start(t common.TaskType, msg interface{}) (*TaskResource, error) {
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -108,8 +109,8 @@ func (r *TaskResource) Delete() error {
 	return r.collection.core.db.delete(r.collection, r.ID)
 }
 
-// Save saves the Task in etcd through an update.
-func (r *TaskResource) Save() error {
+// Update saves the Task in etcd through an update.
+func (r *TaskResource) Update() error {
 	return r.collection.core.db.update(r.collection, r.ID, r)
 }
 
@@ -148,7 +149,7 @@ func (r *TaskResource) RecordError(err error) error {
 	}
 	r.Attempts++
 
-	return r.Save()
+	return r.Update()
 }
 
 func (r *TaskResource) TypeName() string {

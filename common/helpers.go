@@ -27,3 +27,7 @@ func StringID(id ID) string {
 	}
 	return *id
 }
+
+func IDString(str string) ID {
+	return &str
+}

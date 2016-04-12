@@ -19,6 +19,11 @@ func newDB() *database {
 	return &database{newEtcdClient(EtcdEndpoints)}
 }
 
+// TODO this is weird
+func (db *database) setKeysAPI(kapi etcd.KeysAPI) {
+	db.keys.kapi = kapi
+}
+
 func (db *database) list(r Collection, out interface{}) error {
 	key := r.etcdKey(nil)
 	resp, err := db.keys.get(key)

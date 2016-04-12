@@ -14,7 +14,7 @@ import (
 
 type Core struct {
 	db          *database
-	k8s         *guber.Client
+	k8s         guber.Client
 	ec2         *ec2.EC2
 	elb         *elb.ELB
 	autoscaling *autoscaling.AutoScaling

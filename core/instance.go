@@ -215,19 +215,15 @@ func (r *InstanceResource) waitForReplicationControllerReady() error {
 	Log.Infof("Waiting for ReplicationController %s to start", r.Name)
 	start := time.Now()
 	maxWait := 5 * time.Minute
-	for {
-		if elapsed := time.Since(start); elapsed < maxWait {
-			rc, err := r.replicationController()
-			if err != nil {
-				return err
-			} else if rc.Status.Replicas == 1 { // TODO this may not assert pod running
-				break
-			}
-		} else {
-			return fmt.Errorf("Timed out waiting for RC '%s' to start", r.Name)
+	for elapsed := time.Since(start); elapsed < maxWait; {
+		rc, err := r.replicationController()
+		if err != nil {
+			return err
+		} else if rc.Status.Replicas == 1 { // TODO this may not assert pod running
+			return nil
 		}
 	}
-	return nil
+	return fmt.Errorf("Timed out waiting for RC '%s' to start", r.Name)
 }
 
 func (r *InstanceResource) provisionReplicationController() error {

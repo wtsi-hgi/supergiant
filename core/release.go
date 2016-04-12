@@ -86,6 +86,7 @@ func (c *ReleaseCollection) List() (*ReleaseList, error) {
 // New initializes an Release with a pointer to the Collection.
 func (c *ReleaseCollection) New() *ReleaseResource {
 	return &ReleaseResource{
+		collection: c,
 		Release: &common.Release{
 			Meta: common.NewMeta(),
 		},
@@ -110,7 +111,7 @@ func (c *ReleaseCollection) Create(r *ReleaseResource) (*ReleaseResource, error)
 	}
 
 	c.Component.TargetReleaseTimestamp = r.Timestamp
-	if err := c.Component.Save(); err != nil {
+	if err := c.Component.Update(); err != nil {
 		return nil, err
 	}
 
@@ -153,8 +154,8 @@ func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
 // Resource-level
 //==============================================================================
 
-// Save saves the Release in etcd through an update.
-func (r *ReleaseResource) Save() error {
+// Update saves the Release in etcd through an update.
+func (r *ReleaseResource) Update() error {
 	return r.collection.core.db.update(r.collection, r.Timestamp, r)
 }
 
@@ -354,11 +355,26 @@ func (r *ReleaseResource) deleteServices() (err error) {
 // NOTE it seems weird here, but "Provision" == "CreateUnlessExists"
 func (r *ReleaseResource) provisionSecrets() error {
 	for _, repo := range r.imageRepos {
-		if err := r.App().provisionSecret(repo); err != nil {
+		if err := r.provisionSecret(repo); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (r *ReleaseResource) provisionSecret(repo *ImageRepoResource) error {
+	// TODO not sure i've been consistent with error handling -- this strategy is
+	// useful when there could be multiple common of errors, alongside the
+	// expectation of an error when something doesn't exist
+	secret, err := r.collection.core.k8s.Secrets(common.StringID(r.App().Name)).Get(common.StringID(repo.Name))
+
+	if err != nil {
+		return err
+	} else if secret != nil {
+		return nil
+	}
+	_, err = r.collection.core.k8s.Secrets(common.StringID(r.App().Name)).Create(asKubeSecret(repo))
+	return err
 }
 
 func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {

@@ -47,6 +47,7 @@ func (c *ImageRepoCollection) List() (*ImageRepoList, error) {
 // New initializes an ImageRepo with a pointer to the Collection.
 func (c *ImageRepoCollection) New() *ImageRepoResource {
 	return &ImageRepoResource{
+		collection: c,
 		ImageRepo: &common.ImageRepo{
 			Meta: common.NewMeta(),
 		},

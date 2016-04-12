@@ -5,7 +5,6 @@ import (
 )
 
 func Deploy(appName *string, componentName *string) error {
-
 	sg := client.New("http://localhost:8080/v0", "", "", true)
 
 	app, err := sg.Apps().Get(appName)

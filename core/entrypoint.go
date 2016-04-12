@@ -52,6 +52,7 @@ func (c *EntrypointCollection) List() (*EntrypointList, error) {
 // New initializes an Entrypoint with a pointer to the Collection.
 func (c *EntrypointCollection) New() *EntrypointResource {
 	return &EntrypointResource{
+		collection: c,
 		Entrypoint: &common.Entrypoint{
 			Meta: common.NewMeta(),
 		},
@@ -79,7 +80,7 @@ func (c *EntrypointCollection) Create(r *EntrypointResource) (*EntrypointResourc
 	}
 
 	r.Address = *address
-	r.Save()
+	r.Update()
 
 	return r, nil
 }
@@ -96,8 +97,8 @@ func (c *EntrypointCollection) Get(domain common.ID) (*EntrypointResource, error
 // Resource-level
 //==============================================================================
 
-// Save saves the Entrypoint in etcd through an update.
-func (r *EntrypointResource) Save() error {
+// Update saves the Entrypoint in etcd through an update.
+func (r *EntrypointResource) Update() error {
 	return r.collection.core.db.update(r.collection, r.Domain, r)
 }
 
