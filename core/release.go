@@ -181,6 +181,16 @@ func (r *ReleaseResource) Delete() error {
 			}
 		}
 	}
+
+	// TODO sloppy
+	if *r.Timestamp == *r.Component().TargetReleaseTimestamp {
+		r.Component().TargetReleaseTimestamp = nil
+		r.Component().Save()
+	} else if *r.Timestamp == *r.Component().CurrentReleaseTimestamp {
+		r.Component().CurrentReleaseTimestamp = nil
+		r.Component().Save()
+	}
+
 	return r.collection.core.db.delete(r.collection, r.Timestamp)
 }
 
