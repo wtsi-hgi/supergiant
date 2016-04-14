@@ -29,6 +29,9 @@ type ComponentResource struct {
 	core       *Core
 	collection ComponentsInterface
 	*common.Component
+
+	// Relations
+	ReleasesInterface ReleasesInterface
 }
 
 type ComponentList struct {
@@ -45,17 +48,21 @@ func (c *ComponentCollection) etcdKey(name common.ID) string {
 }
 
 // initializeResource implements the Collection interface.
-func (c *ComponentCollection) initializeResource(r Resource) error {
-	resource := r.(*ComponentResource)
-	resource.collection = c
-	resource.core = c.core
+func (c *ComponentCollection) initializeResource(in Resource) error {
+	r := in.(*ComponentResource)
+	r.core = c.core
+	r.collection = c
+	r.ReleasesInterface = &ReleaseCollection{
+		core:      c.core,
+		component: r,
+	}
 
 	// TODO it seems wrong this is called here -- execessive to have to load the
 	// current Release, Entrypoints, and Kube Services just to render a
 	// Component.
 	// However, it's rare a Component is loaded out of the context of its
 	// Release. We will change this when we see issues.
-	return resource.decorate()
+	return r.decorate()
 }
 
 func (c *ComponentCollection) App() *AppResource {
@@ -94,10 +101,15 @@ func (c *ComponentCollection) Get(name common.ID) (*ComponentResource, error) {
 	return r, nil
 }
 
+// Update saves the Component in etcd through an update.
 func (c *ComponentCollection) Update(name common.ID, r *ComponentResource) error {
 	return c.core.db.update(c, name, r)
 }
 
+// Delete cascades delete calls to current and target releases, and deletes the
+// Component in etcd.
+//
+// TODO this should somehow stop any ongoing tasks related to the Component.
 func (c *ComponentCollection) Delete(r *ComponentResource) error {
 	releases, err := r.Releases().List()
 	if err != nil {
@@ -114,26 +126,23 @@ func (c *ComponentCollection) Delete(r *ComponentResource) error {
 			ch <- release.Delete()
 		}(release)
 	}
-	close(ch)
-	for err := <-ch; err != nil; {
-		return err
+	for i := 0; i < len(releases.Items); i++ {
+		for err := <-ch; err != nil; {
+			return err
+		}
 	}
 
 	return c.core.db.delete(c, r.Name)
 }
 
 // Resource-level
-//==============================================================================
 
-// Update saves the Component in etcd through an update.
+// Update is a proxy method to ComponentCollection's Update.
 func (r *ComponentResource) Update() error {
 	return r.collection.Update(r.Name, r)
 }
 
-// Delete cascades delete calls to current and target releases, and deletes the
-// Component in etcd.
-//
-// TODO this should somehow stop any ongoing tasks related to the Component.
+// Delete is a proxy method to ComponentCollection's Delete.
 func (r *ComponentResource) Delete() error {
 	return r.collection.Delete(r)
 }
@@ -142,11 +151,10 @@ func (r *ComponentResource) App() *AppResource {
 	return r.collection.App()
 }
 
-func (r *ComponentResource) Releases() *ReleaseCollection {
-	return &ReleaseCollection{
-		core:      r.core,
-		Component: r,
-	}
+// Releases returns a ReleasesInterface with a pointer to the AppResource.
+func (r *ComponentResource) Releases() ReleasesInterface {
+	// TODO this is now just a getter
+	return r.ReleasesInterface
 }
 
 func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {

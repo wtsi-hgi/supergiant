@@ -11,13 +11,26 @@ import (
 	"github.com/supergiant/supergiant/common"
 )
 
+type ReleasesInterface interface {
+	Component() *ComponentResource
+
+	List() (*ReleaseList, error)
+	New() *ReleaseResource
+	Create(*ReleaseResource) error
+	MergeCreate(*ReleaseResource) error
+	Get(common.ID) (*ReleaseResource, error)
+	Update(common.ID, *ReleaseResource) error
+	Delete(*ReleaseResource) error
+}
+
 type ReleaseCollection struct {
 	core      *Core
-	Component *ComponentResource
+	component *ComponentResource
 }
 
 type ReleaseResource struct {
-	collection *ReleaseCollection
+	core       *Core
+	collection ReleasesInterface
 	*common.Release
 
 	// TODO these are shared between releases, it's kinda funky right now
@@ -34,7 +47,7 @@ type ReleaseList struct {
 
 // etcdKey implements the Collection interface.
 func (c *ReleaseCollection) etcdKey(timestamp common.ID) string {
-	key := path.Join("/releases", common.StringID(c.Component.App().Name), common.StringID(c.Component.Name))
+	key := path.Join("/releases", common.StringID(c.Component().App().Name), common.StringID(c.Component().Name))
 	if timestamp != nil {
 		key = path.Join(key, common.StringID(timestamp))
 	}
@@ -76,6 +89,10 @@ func (c *ReleaseCollection) initializeResource(r Resource) error {
 	return nil
 }
 
+func (c *ReleaseCollection) Component() *ComponentResource {
+	return c.component
+}
+
 // List returns an ReleaseList.
 func (c *ReleaseCollection) List() (*ReleaseList, error) {
 	list := new(ReleaseList)
@@ -94,44 +111,40 @@ func (c *ReleaseCollection) New() *ReleaseResource {
 }
 
 // Create takes an Release and creates it in etcd.
-func (c *ReleaseCollection) Create(r *ReleaseResource) (*ReleaseResource, error) {
-	if c.Component.TargetReleaseTimestamp != nil {
-		return nil, errors.New("Component already has a target Release")
+func (c *ReleaseCollection) Create(r *ReleaseResource) error {
+	if c.Component().TargetReleaseTimestamp != nil {
+		return errors.New("Component already has a target Release")
 	}
 
 	r.Timestamp = newReleaseTimestamp()
 	if r.InstanceGroup == nil {
 		r.InstanceGroup = r.Timestamp
-	} else if *r.InstanceGroup != *r.Timestamp && *r.InstanceGroup != *c.Component.CurrentReleaseTimestamp {
-		return nil, errors.New("Release InstanceGroup field can only be set to either the current or target Release's Timestamp value.")
+	} else if *r.InstanceGroup != *r.Timestamp && *r.InstanceGroup != *c.Component().CurrentReleaseTimestamp {
+		return errors.New("Release InstanceGroup field can only be set to either the current or target Release's Timestamp value.")
 	}
 
 	if err := c.core.db.create(c, r.Timestamp, r); err != nil {
-		return nil, err
+		return err
 	}
 
-	c.Component.TargetReleaseTimestamp = r.Timestamp
-	if err := c.Component.Update(); err != nil {
-		return nil, err
-	}
-
-	return r, nil
+	c.Component().TargetReleaseTimestamp = r.Timestamp
+	return c.Component().Update()
 }
 
 // MergeCreate creates a Release by taking a new Release and merging it with the
 // Component's current Release.
-func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) (*ReleaseResource, error) {
-	if c.Component.CurrentReleaseTimestamp == nil {
-		return nil, errors.New("Attempting MergeCreate with no current Release")
+func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) error {
+	if c.Component().CurrentReleaseTimestamp == nil {
+		return errors.New("Attempting MergeCreate with no current Release")
 	}
 
-	current, err := c.Component.CurrentRelease()
+	current, err := c.Component().CurrentRelease()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := mergo.Merge(r, *current); err != nil {
-		return nil, err
+		return err
 	}
 
 	// TODO
@@ -151,17 +164,14 @@ func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
 	return r, nil
 }
 
-// Resource-level
-//==============================================================================
-
 // Update saves the Release in etcd through an update.
-func (r *ReleaseResource) Update() error {
-	return r.collection.core.db.update(r.collection, r.Timestamp, r)
+func (c *ReleaseCollection) Update(name common.ID, r *ReleaseResource) error {
+	return c.core.db.update(c, name, r)
 }
 
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in
 // etcd.
-func (r *ReleaseResource) Delete() error {
+func (c *ReleaseCollection) Delete(r *ReleaseResource) error {
 	if r.Committed && !r.Retired {
 		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
 			return err
@@ -186,13 +196,25 @@ func (r *ReleaseResource) Delete() error {
 	// TODO sloppy
 	if *r.Timestamp == *r.Component().TargetReleaseTimestamp {
 		r.Component().TargetReleaseTimestamp = nil
-		r.Component().Save()
+		r.Component().Update()
 	} else if *r.Timestamp == *r.Component().CurrentReleaseTimestamp {
 		r.Component().CurrentReleaseTimestamp = nil
-		r.Component().Save()
+		r.Component().Update()
 	}
 
-	return r.collection.core.db.delete(r.collection, r.Timestamp)
+	return r.core.db.delete(c, r.Timestamp)
+}
+
+// Resource-level
+
+// Update is a proxy method to ReleaseCollection's Update.
+func (r *ReleaseResource) Update() error {
+	return r.collection.Update(r.Timestamp, r)
+}
+
+// Delete is a proxy method to ReleaseCollection's Delete.
+func (r *ReleaseResource) Delete() error {
+	return r.collection.Delete(r)
 }
 
 func newReleaseTimestamp() common.ID {
@@ -205,12 +227,12 @@ func (r *ReleaseResource) App() *AppResource {
 }
 
 func (r *ReleaseResource) Component() *ComponentResource {
-	return r.collection.Component
+	return r.collection.Component()
 }
 
 func (r *ReleaseResource) Instances() *InstanceCollection {
 	return &InstanceCollection{
-		core:    r.collection.core,
+		core:    r.core,
 		Release: r,
 	}
 }
@@ -246,7 +268,7 @@ func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, erro
 		if port.EntrypointDomain == nil {
 			continue
 		}
-		entrypoint, err := r.collection.core.Entrypoints().Get(port.EntrypointDomain)
+		entrypoint, err := r.core.Entrypoints().Get(port.EntrypointDomain)
 		if err != nil {
 
 			// TODO
@@ -275,7 +297,7 @@ func (r *ReleaseResource) containerPorts(public bool) (ports []*common.Port) {
 
 // Operations-------------------------------------------------------------------
 func (r *ReleaseResource) getService(name string) (*guber.Service, error) {
-	return r.collection.core.k8s.Services(common.StringID(r.App().Name)).Get(name)
+	return r.core.k8s.Services(common.StringID(r.App().Name)).Get(name)
 }
 
 func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts []*guber.ServicePort) (*guber.Service, error) {
@@ -301,7 +323,7 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 		},
 	}
 	Log.Infof("Creating Service %s", name)
-	return r.collection.core.k8s.Services(common.StringID(r.App().Name)).Create(service)
+	return r.core.k8s.Services(common.StringID(r.App().Name)).Create(service)
 }
 
 func (r *ReleaseResource) ExternalServiceName() string {
@@ -342,11 +364,11 @@ func (r *ReleaseResource) provisionInternalService() error {
 
 func (r *ReleaseResource) deleteServices() (err error) {
 	Log.Infof("Deleting Service %s", r.ExternalServiceName())
-	if _, err = r.collection.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
+	if _, err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
 		return err
 	}
 	Log.Infof("Deleting Service %s", r.InternalServiceName())
-	if _, err = r.collection.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
+	if _, err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
 		return err
 	}
 	return nil
@@ -366,14 +388,14 @@ func (r *ReleaseResource) provisionSecret(repo *ImageRepoResource) error {
 	// TODO not sure i've been consistent with error handling -- this strategy is
 	// useful when there could be multiple common of errors, alongside the
 	// expectation of an error when something doesn't exist
-	secret, err := r.collection.core.k8s.Secrets(common.StringID(r.App().Name)).Get(common.StringID(repo.Name))
+	secret, err := r.core.k8s.Secrets(common.StringID(r.App().Name)).Get(common.StringID(repo.Name))
 
 	if err != nil {
 		return err
 	} else if secret != nil {
 		return nil
 	}
-	_, err = r.collection.core.k8s.Secrets(common.StringID(r.App().Name)).Create(asKubeSecret(repo))
+	_, err = r.core.k8s.Secrets(common.StringID(r.App().Name)).Create(asKubeSecret(repo))
 	return err
 }
 
@@ -477,7 +499,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
 		}
 
-		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -492,7 +514,7 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
 		}
 
-		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -552,7 +574,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 				}
 			}
 		}
-		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -572,7 +594,7 @@ func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
 			}
 		}
 
-		svc, err := newR.collection.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
+		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
 		if err != nil {
 			return err
 		}
@@ -639,7 +661,7 @@ func (r *ReleaseResource) volumes() (vols []*AwsVolume) {
 
 func (r *ReleaseResource) getImageRepos() (repos []*ImageRepoResource, err error) { // Not returning ImageRepoResource, since they are defined before hand
 	for _, repoName := range r.imageRepoNames() {
-		repo, err := r.collection.core.ImageRepos().Get(&repoName)
+		repo, err := r.core.ImageRepos().Get(&repoName)
 		if err != nil {
 
 			// TODO this method is ambiguously named

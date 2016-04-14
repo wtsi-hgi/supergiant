@@ -24,7 +24,7 @@ func (c *ComponentController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	component, err = app.Components().Create(component)
+	err = app.Components().Create(component)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
@@ -79,7 +79,7 @@ func (c *ComponentController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := component.Save(); err != nil {
+	if err := component.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -132,7 +132,7 @@ func (c *ComponentController) Deploy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	release.Committed = true
-	if err := release.Save(); err != nil {
+	if err := release.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

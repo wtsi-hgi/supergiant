@@ -2,7 +2,34 @@ package mock
 
 import "github.com/supergiant/guber"
 
-type FakeGuberClient struct {
+func (f *FakeGuber) OnNamespaceCreate(clbk func(*guber.Namespace) error) *FakeGuber {
+	return f.mockNamespaces(&FakeGuberNamespaces{
+		CreateFn: func(namespace *guber.Namespace) (*guber.Namespace, error) {
+			if err := clbk(namespace); err != nil {
+				return nil, err
+			}
+			return namespace, nil
+		},
+	})
+}
+
+func (f *FakeGuber) OnNamespaceDelete(clbk func(string) error) *FakeGuber {
+	return f.mockNamespaces(&FakeGuberNamespaces{
+		DeleteFn: func(name string) (bool, error) {
+			err := clbk(name)
+			return err == nil, err
+		},
+	})
+}
+
+func (f *FakeGuber) mockNamespaces(namespaces *FakeGuberNamespaces) *FakeGuber {
+	f.NamespacesFn = func() guber.NamespaceCollection {
+		return namespaces
+	}
+	return f
+}
+
+type FakeGuber struct {
 	NamespacesFn             func() guber.NamespaceCollection
 	EventsFn                 func(namespace string) guber.EventCollection
 	SecretsFn                func(namespace string) guber.SecretCollection
@@ -12,31 +39,31 @@ type FakeGuberClient struct {
 	NodesFn                  func() guber.NodeCollection
 }
 
-func (f *FakeGuberClient) Namespaces() guber.NamespaceCollection {
+func (f *FakeGuber) Namespaces() guber.NamespaceCollection {
 	return f.NamespacesFn()
 }
 
-func (f *FakeGuberClient) Events(namespace string) guber.EventCollection {
+func (f *FakeGuber) Events(namespace string) guber.EventCollection {
 	return f.EventsFn(namespace)
 }
 
-func (f *FakeGuberClient) Secrets(namespace string) guber.SecretCollection {
+func (f *FakeGuber) Secrets(namespace string) guber.SecretCollection {
 	return f.SecretsFn(namespace)
 }
 
-func (f *FakeGuberClient) Services(namespace string) guber.ServiceCollection {
+func (f *FakeGuber) Services(namespace string) guber.ServiceCollection {
 	return f.ServicesFn(namespace)
 }
 
-func (f *FakeGuberClient) ReplicationControllers(namespace string) guber.ReplicationControllerCollection {
+func (f *FakeGuber) ReplicationControllers(namespace string) guber.ReplicationControllerCollection {
 	return f.ReplicationControllersFn(namespace)
 }
 
-func (f *FakeGuberClient) Pods(namespace string) guber.PodCollection {
+func (f *FakeGuber) Pods(namespace string) guber.PodCollection {
 	return f.PodsFn(namespace)
 }
 
-func (f *FakeGuberClient) Nodes() guber.NodeCollection {
+func (f *FakeGuber) Nodes() guber.NodeCollection {
 	return f.NodesFn()
 }
 
@@ -48,7 +75,7 @@ type FakeGuberNamespaces struct {
 	ListFn   func() (*guber.NamespaceList, error)
 	GetFn    func(name string) (*guber.Namespace, error)
 	UpdateFn func(name string, r *guber.Namespace) (*guber.Namespace, error)
-	DeleteFn func(name string) (found bool, err error)
+	DeleteFn func(name string) (bool, error)
 }
 
 func (f *FakeGuberNamespaces) Meta() *guber.CollectionMeta {

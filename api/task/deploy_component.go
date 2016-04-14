@@ -94,11 +94,11 @@ func (j DeployComponent) Perform(data []byte) error {
 		targetRelease.RemoveOldPorts(currentRelease)
 
 		currentRelease.Retired = true
-		currentRelease.Save()
+		currentRelease.Update()
 	}
 
 	// If we're all good, we set target to current, and remove target.
 	component.CurrentReleaseTimestamp = component.TargetReleaseTimestamp
 	component.TargetReleaseTimestamp = nil
-	return component.Save()
+	return component.Update()
 }

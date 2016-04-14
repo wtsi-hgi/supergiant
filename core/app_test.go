@@ -5,8 +5,6 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	etcd "github.com/coreos/etcd/client"
-
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/mock"
@@ -14,38 +12,30 @@ import (
 
 func TestAppList(t *testing.T) {
 	Convey("Given an AppCollection with 1 App", t, func() {
-		fakeEtcd := &mock.FakeKeysAPI{
-			GetFn: func() (*etcd.Response, error) {
-				return &etcd.Response{
-					Node: &etcd.Node{
-						Nodes: etcd.Nodes{
-							&etcd.Node{
-								Value: `{
-                  "name": "test",
-                  "created": "Tue, 12 Apr 2016 03:54:56 UTC",
-                  "updated": null,
-                  "tags": {}
-                }`,
-							},
-						},
-					},
-				}, nil
+		fakeEtcd := new(mock.FakeEtcd).ReturnOnList(
+			[]string{
+				`{
+					"name": "test",
+					"created": "Tue, 12 Apr 2016 03:54:56 UTC",
+					"updated": null,
+					"tags": {}
+				}`,
 			},
-		}
+			nil,
+		)
 		core := newMockCore(fakeEtcd)
 		apps := &AppCollection{core}
-
-		app := apps.New()
-		app.Name = common.IDString("test")
-		app.Meta.Created = new(common.Timestamp)
-		app.Meta.Created.UnmarshalJSON([]byte(`"Tue, 12 Apr 2016 03:54:56 UTC"`))
 
 		Convey("When List() is called", func() {
 			list, err := apps.List()
 
 			Convey("The return value should be an AppList with 1 App", func() {
+				expected := apps.New()
+				expected.Name = common.IDString("test")
+				expected.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
+
 				So(list.Items, ShouldHaveLength, 1)
-				So(list.Items[0], ShouldResemble, app)
+				So(list.Items[0], ShouldResemble, expected)
 				So(err, ShouldBeNil)
 			})
 		})
@@ -54,36 +44,21 @@ func TestAppList(t *testing.T) {
 
 func TestAppCreate(t *testing.T) {
 	Convey("Given an AppCollection and a new AppResource", t, func() {
-		createCalled := false
+		etcdKeyCreated := ""
 		namespaceCreated := ""
 
-		fakeEtcd := &mock.FakeKeysAPI{
-			CreateFn: func(val string) (*etcd.Response, error) {
-				createCalled = true
+		fakeEtcd := new(mock.FakeEtcd).OnCreate(func(key string, val string) error {
+			etcdKeyCreated = key
+			return nil
+		})
 
-				return &etcd.Response{
-					Node: &etcd.Node{
-						Value: val,
-					},
-				}, nil
-			},
-		}
 		core := newMockCore(fakeEtcd)
 		apps := &AppCollection{core}
 
-		fakeNamespaces := &mock.FakeGuberNamespaces{
-			CreateFn: func(namespace *guber.Namespace) (*guber.Namespace, error) {
-				namespaceCreated = namespace.Metadata.Name
-
-				return namespace, nil
-			},
-		}
-
-		core.k8s = &mock.FakeGuberClient{
-			NamespacesFn: func() guber.NamespaceCollection {
-				return fakeNamespaces
-			},
-		}
+		core.k8s = new(mock.FakeGuber).OnNamespaceCreate(func(namespace *guber.Namespace) error {
+			namespaceCreated = namespace.Metadata.Name
+			return nil
+		})
 
 		app := apps.New()
 		app.Name = common.IDString("test")
@@ -92,7 +67,7 @@ func TestAppCreate(t *testing.T) {
 			err := apps.Create(app)
 
 			Convey("The App should be created in etcd with a Created Timestamp", func() {
-				So(createCalled, ShouldBeTrue)
+				So(etcdKeyCreated, ShouldEqual, "/supergiant/apps/test")
 				So(app.Created, ShouldHaveSameTypeAs, new(common.Timestamp))
 				So(err, ShouldBeNil)
 			})
@@ -104,43 +79,29 @@ func TestAppCreate(t *testing.T) {
 	})
 }
 
-func newMockCore(fakeEtcd *mock.FakeKeysAPI) *Core {
-	return &Core{
-		db: &database{
-			&etcdClient{fakeEtcd},
-		},
-	}
-}
-
 func TestAppGet(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
-		fakeEtcd := &mock.FakeKeysAPI{
-			GetFn: func() (*etcd.Response, error) {
-				return &etcd.Response{
-					Node: &etcd.Node{
-						Value: `{
-              "name": "test",
-              "created": "Tue, 12 Apr 2016 03:54:56 UTC",
-              "updated": null,
-              "tags": {}
-            }`,
-					},
-				}, nil
-			},
-		}
+		fakeEtcd := new(mock.FakeEtcd).ReturnOnGet(
+			`{
+				"name": "test",
+				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
+				"updated": null,
+				"tags": {}
+			}`,
+			nil,
+		)
 		core := newMockCore(fakeEtcd)
 		apps := &AppCollection{core}
 
-		newApp := apps.New()
-		newApp.Name = common.IDString("test")
-		newApp.Meta.Created = new(common.Timestamp)
-		newApp.Meta.Created.UnmarshalJSON([]byte(`"Tue, 12 Apr 2016 03:54:56 UTC"`))
-
 		Convey("When Get() is called with the App name", func() {
-			app, err := apps.Get(newApp.Name)
+			expected := apps.New()
+			expected.Name = common.IDString("test")
+			expected.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
+
+			app, err := apps.Get(expected.Name)
 
 			Convey("The return value should be the AppResource", func() {
-				So(app, ShouldResemble, newApp)
+				So(app, ShouldResemble, expected)
 				So(err, ShouldBeNil)
 			})
 		})
@@ -149,43 +110,23 @@ func TestAppGet(t *testing.T) {
 
 func TestAppUpdate(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
-		updateCalled := false
+		etcdKeyUpdated := ""
 
-		fakeEtcd := &mock.FakeKeysAPI{
-			GetFn: func() (*etcd.Response, error) {
-				return &etcd.Response{
-					Node: &etcd.Node{
-						Value: `{
-							"name": "test",
-							"created": "Tue, 12 Apr 2016 03:54:56 UTC",
-							"updated": null,
-							"tags": {}
-						}`,
-					},
-				}, nil
-			},
-			UpdateFn: func(val string) (*etcd.Response, error) {
-				updateCalled = true
-
-				return &etcd.Response{
-					Node: &etcd.Node{
-						Value: val,
-					},
-				}, nil
-			},
-		}
+		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
+			etcdKeyUpdated = key
+			return nil
+		})
 		core := newMockCore(fakeEtcd)
 		apps := &AppCollection{core}
 
-		app, _ := apps.Get(common.IDString("test"))
+		app := apps.New()
+		app.Name = common.IDString("test")
 
 		Convey("When Update() is called", func() {
-			app.Tags["foo"] = "bar"
 			err := app.Update()
 
 			Convey("The App should be updated in etcd with an Updated Timestamp", func() {
-				So(updateCalled, ShouldBeTrue)
-				So(app.Tags["foo"], ShouldEqual, "bar")
+				So(etcdKeyUpdated, ShouldEqual, "/supergiant/apps/test")
 				So(app.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
 				So(err, ShouldBeNil)
 			})
@@ -195,66 +136,46 @@ func TestAppUpdate(t *testing.T) {
 
 func TestAppDelete(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
-		deleteCalled := false
+		etcdKeyDeleted := ""
 		namespaceDeleted := ""
 		componentDeleted := ""
 
-		fakeEtcd := &mock.FakeKeysAPI{
-			DeleteFn: func() (*etcd.Response, error) {
-				deleteCalled = true
-
-				return new(etcd.Response), nil
-			},
-		}
-
+		fakeEtcd := new(mock.FakeEtcd).OnDelete(func(key string) error {
+			etcdKeyDeleted = key
+			return nil
+		})
 		core := newMockCore(fakeEtcd)
 
-		fakeNamespaces := &mock.FakeGuberNamespaces{
-			DeleteFn: func(name string) (bool, error) {
-				namespaceDeleted = name
-
-				return true, nil
-			},
-		}
-		core.k8s = &mock.FakeGuberClient{
-			NamespacesFn: func() guber.NamespaceCollection {
-				return fakeNamespaces
-			},
-		}
+		core.k8s = new(mock.FakeGuber).OnNamespaceDelete(func(name string) error {
+			namespaceDeleted = name
+			return nil
+		})
 
 		apps := &AppCollection{core}
 		app := apps.New()
 		app.Name = common.IDString("test")
 
 		fakeComponents := &FakeComponentCollection{
-			app: app,
-			DeleteFn: func(r *ComponentResource) error {
-				componentDeleted = *r.Name
-
-				return nil
+			app:  app,
+			core: core,
+		}
+		fakeComponents.ReturnOnList([]*common.Component{
+			&common.Component{
+				Name: common.IDString("component-test"),
 			},
-		}
-		fakeComponents.ListFn = func() (*ComponentList, error) {
-			return &ComponentList{
-				Items: []*ComponentResource{
-					&ComponentResource{
-						collection: fakeComponents,
-						Component: &common.Component{
-							Name: common.IDString("component-test"),
-						},
-					},
-				},
-			}, nil
-		}
-
+		})
+		fakeComponents.OnDelete(func(r *ComponentResource) error {
+			componentDeleted = *r.Name
+			return nil
+		})
 		app.ComponentsInterface = fakeComponents
 
 		Convey("When Delete() is called", func() {
 			err := app.Delete()
 
 			Convey("The App should be deleted in etcd", func() {
-				So(deleteCalled, ShouldBeTrue)
 				So(err, ShouldBeNil)
+				So(etcdKeyDeleted, ShouldEqual, "/supergiant/apps/test")
 			})
 
 			Convey("The Kubernetes Namespace should be deleted", func() {
@@ -268,7 +189,39 @@ func TestAppDelete(t *testing.T) {
 	})
 }
 
+// TODO move to shared folder
+func newMockCore(fakeEtcd *mock.FakeEtcd) *Core {
+	return &Core{
+		db: &database{
+			&etcdClient{fakeEtcd},
+		},
+	}
+}
+
+func (f *FakeComponentCollection) ReturnOnList(components []*common.Component) *FakeComponentCollection {
+	var items []*ComponentResource
+	for _, component := range components {
+		items = append(items, &ComponentResource{
+			core:       f.core,
+			collection: f,
+			Component:  component,
+		})
+	}
+	f.ListFn = func() (*ComponentList, error) {
+		return &ComponentList{Items: items}, nil
+	}
+	return f
+}
+
+func (f *FakeComponentCollection) OnDelete(clbk func(*ComponentResource) error) *FakeComponentCollection {
+	f.DeleteFn = func(r *ComponentResource) error {
+		return clbk(r)
+	}
+	return f
+}
+
 type FakeComponentCollection struct {
+	core     *Core
 	app      *AppResource
 	ListFn   func() (*ComponentList, error)
 	NewFn    func() *ComponentResource

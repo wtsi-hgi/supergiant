@@ -19,7 +19,7 @@ func (c *AppController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app, err := c.core.Apps().Create(app)
+	err := c.core.Apps().Create(app)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
@@ -69,7 +69,7 @@ func (c *AppController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := app.Save(); err != nil {
+	if err := app.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
