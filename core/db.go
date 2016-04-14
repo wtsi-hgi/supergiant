@@ -15,8 +15,8 @@ type database struct {
 	keys *etcdClient
 }
 
-func newDB() *database {
-	return &database{newEtcdClient(EtcdEndpoints)}
+func newDB(etcdEndpoints []string) *database {
+	return &database{newEtcdClient(etcdEndpoints)}
 }
 
 // TODO this is weird

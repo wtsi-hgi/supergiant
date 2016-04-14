@@ -7,7 +7,7 @@ import (
 
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
-	"github.com/supergiant/supergiant/mock"
+	"github.com/supergiant/supergiant/core/mock"
 )
 
 func TestAppList(t *testing.T) {
@@ -24,7 +24,7 @@ func TestAppList(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
-		apps := &AppCollection{core}
+		apps := core.Apps()
 
 		Convey("When List() is called", func() {
 			list, err := apps.List()
@@ -53,7 +53,7 @@ func TestAppCreate(t *testing.T) {
 		})
 
 		core := newMockCore(fakeEtcd)
-		apps := &AppCollection{core}
+		apps := core.Apps()
 
 		core.k8s = new(mock.FakeGuber).OnNamespaceCreate(func(namespace *guber.Namespace) error {
 			namespaceCreated = namespace.Metadata.Name
@@ -91,7 +91,7 @@ func TestAppGet(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
-		apps := &AppCollection{core}
+		apps := core.Apps()
 
 		Convey("When Get() is called with the App name", func() {
 			expected := apps.New()
@@ -117,7 +117,7 @@ func TestAppUpdate(t *testing.T) {
 			return nil
 		})
 		core := newMockCore(fakeEtcd)
-		apps := &AppCollection{core}
+		apps := core.Apps()
 
 		app := apps.New()
 		app.Name = common.IDString("test")
@@ -151,7 +151,7 @@ func TestAppDelete(t *testing.T) {
 			return nil
 		})
 
-		apps := &AppCollection{core}
+		apps := core.Apps()
 		app := apps.New()
 		app.Name = common.IDString("test")
 

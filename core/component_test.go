@@ -6,7 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/supergiant/supergiant/common"
-	"github.com/supergiant/supergiant/mock"
+	"github.com/supergiant/supergiant/core/mock"
 )
 
 func TestComponentList(t *testing.T) {

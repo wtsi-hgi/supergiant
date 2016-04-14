@@ -17,7 +17,7 @@ func (c *EntrypointController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entrypoint, err := c.core.Entrypoints().Create(entrypoint)
+	err := c.core.Entrypoints().Create(entrypoint)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
