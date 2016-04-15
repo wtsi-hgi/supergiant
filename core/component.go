@@ -31,7 +31,7 @@ type ComponentResource struct {
 	*common.Component
 
 	// Relations
-	ReleasesInterface ReleasesInterface
+	ReleasesInterface ReleasesInterface `json:"-"`
 }
 
 type ComponentList struct {

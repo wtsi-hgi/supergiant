@@ -55,33 +55,34 @@ func (c *ReleaseCollection) etcdKey(timestamp common.ID) string {
 }
 
 // initializeResource implements the Collection interface.
-func (c *ReleaseCollection) initializeResource(r Resource) error {
-	resource := r.(*ReleaseResource)
-	resource.collection = c
+func (c *ReleaseCollection) initializeResource(in Resource) error {
+	r := in.(*ReleaseResource)
+	r.core = c.core
+	r.collection = c
 
 	// TODO
 	// We do this here because this is called when pulling from the DB. If it's
 	// being pulled from the DB, it can be assumed to have services.
 	// Still really sloppy, since there could be an error.
-	svc, err := resource.getService(resource.ExternalServiceName())
+	svc, err := r.getService(r.ExternalServiceName())
 	if err != nil {
 		return err
 	}
-	resource.ExternalService = svc
+	r.ExternalService = svc
 
-	svc, err = resource.getService(resource.InternalServiceName())
+	svc, err = r.getService(r.InternalServiceName())
 	if err != nil {
 		return err
 	}
-	resource.InternalService = svc
+	r.InternalService = svc
 
-	repos, err := resource.getImageRepos()
+	repos, err := r.getImageRepos()
 	if err != nil {
 		return err
 	}
-	resource.imageRepos = repos
+	r.imageRepos = repos
 
-	resource.entrypoints, err = resource.getEntrypoints()
+	r.entrypoints, err = r.getEntrypoints()
 	if err != nil {
 		return err
 	}
@@ -194,10 +195,12 @@ func (c *ReleaseCollection) Delete(r *ReleaseResource) error {
 	}
 
 	// TODO sloppy
-	if *r.Timestamp == *r.Component().TargetReleaseTimestamp {
+	targetTimestamp := r.Component().TargetReleaseTimestamp
+	currentTimestamp := r.Component().CurrentReleaseTimestamp
+	if targetTimestamp != nil && *r.Timestamp == *targetTimestamp {
 		r.Component().TargetReleaseTimestamp = nil
 		r.Component().Update()
-	} else if *r.Timestamp == *r.Component().CurrentReleaseTimestamp {
+	} else if currentTimestamp != nil && *r.Timestamp == *currentTimestamp {
 		r.Component().CurrentReleaseTimestamp = nil
 		r.Component().Update()
 	}

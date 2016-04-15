@@ -16,7 +16,7 @@ type AppResource struct {
 	*common.App
 
 	// Relations
-	ComponentsInterface ComponentsInterface
+	ComponentsInterface ComponentsInterface `json:"-"`
 }
 
 // NOTE this does not inherit from common like model does; all we need is a List
