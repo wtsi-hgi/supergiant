@@ -17,7 +17,7 @@ func (c *ImageRepoController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repo, err := c.core.ImageRepos().Create(repo)
+	err := c.core.ImageRepos().Create(repo)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return

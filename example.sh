@@ -1,11 +1,11 @@
 curl -XPOST localhost:8080/v0/registries/dockerhub/repos -d '{
   "name": "qbox",
   "key": "'$QBOX_DOCKERHUB_KEY'"
-}'
+}' || true
 
 curl -XPOST localhost:8080/v0/entrypoints -d '{
   "domain": "example.com"
-}'
+}' || true
 
 curl -XPOST localhost:8080/v0/apps -d '{
   "name": "test"

@@ -14,6 +14,9 @@ type AppCollection struct {
 type AppResource struct {
 	collection *AppCollection
 	*common.App
+
+	// Relations
+	ComponentsInterface ComponentsInterface
 }
 
 // NOTE this does not inherit from common like model does; all we need is a List
@@ -31,9 +34,13 @@ func (c *AppCollection) etcdKey(name common.ID) string {
 }
 
 // initializeResource implements the Collection interface.
-func (c *AppCollection) initializeResource(r Resource) error {
-	resource := r.(*AppResource)
-	resource.collection = c
+func (c *AppCollection) initializeResource(in Resource) error {
+	r := in.(*AppResource)
+	r.collection = c
+	r.ComponentsInterface = &ComponentCollection{
+		core: c.core,
+		app:  r,
+	}
 	return nil
 }
 
@@ -46,26 +53,27 @@ func (c *AppCollection) List() (*AppList, error) {
 
 // New initializes an App with a pointer to the Collection.
 func (c *AppCollection) New() *AppResource {
-	return &AppResource{
+	r := &AppResource{
 		App: &common.App{
 			Meta: common.NewMeta(),
 		},
 	}
+	c.initializeResource(r)
+	return r
 }
 
 // Create takes an App and creates it in etcd. It also creates a Kubernetes
 // Namespace with the name of the App.
-func (c *AppCollection) Create(r *AppResource) (*AppResource, error) {
+func (c *AppCollection) Create(r *AppResource) error {
 	if err := c.core.db.create(c, r.Name, r); err != nil {
-		return nil, err
+		return err
 	}
-
 	// TODO for error handling and retries, we may want to do this in a task and
 	// utilize a Status field
 	if err := r.createNamespace(); err != nil {
-		return nil, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // Get takes a name and returns an AppResource if it exists.
@@ -77,16 +85,25 @@ func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 	return r, nil
 }
 
-// Resource-level
-
-// Save saves the App in etcd through an update.
-func (r *AppResource) Save() error {
-	return r.collection.core.db.update(r.collection, r.Name, r)
+// Update updates the App in etcd.
+func (c *AppCollection) Update(name common.ID, r *AppResource) error {
+	return c.core.db.update(c, name, r)
 }
 
-// Delete cascades deletes to all Components, deletes the Kube Namespace, and
-// deletes the App in etcd.
-func (r *AppResource) Delete() error {
+// Delete deletes the App in etcd, and deletes the namespace and all Components.
+//
+// NOTE I know it's weird that we take an App here and not an ID, but we do that
+// to prevent double lookup when component.Delete() is called. And while it may
+// be weird, the resource-level Delete() is the natural approach to calling
+// Delete, and so it would be rare to have to manually say
+// components.Delete(component). The reason we put this logic here and not
+// on the Component itself is because we want to isolate shared Resource
+// behavior (CRUD) from Resources, preventing Resources from having any
+// operational logic (like deleting volumes and such) that we want to mock.
+// It is difficult to approach mocking Resources, because if they are returned
+// as interfaces from methods like collection.Get(), we no longer have access
+// to the attributes of the Resource without type casting.
+func (c *AppCollection) Delete(r *AppResource) error {
 	components, err := r.Components().List()
 	if err != nil {
 		return err
@@ -99,15 +116,25 @@ func (r *AppResource) Delete() error {
 			return err
 		}
 	}
-	return r.collection.core.db.delete(r.collection, r.Name)
+	return c.core.db.delete(c, r.Name)
 }
 
-// Components returns a ComponentCollection with a pointer to the AppResource.
-func (r *AppResource) Components() *ComponentCollection {
-	return &ComponentCollection{
-		core: r.collection.core,
-		App:  r,
-	}
+// Resource-level
+
+// Update is a proxy method to AppCollection's Update.
+func (r *AppResource) Update() error {
+	return r.collection.Update(r.Name, r)
+}
+
+// Delete is a proxy method to AppCollection's Delete.
+func (r *AppResource) Delete() error {
+	return r.collection.Delete(r)
+}
+
+// Components returns a ComponentsInterface with a pointer to the AppResource.
+func (r *AppResource) Components() ComponentsInterface {
+	// TODO this is now just a getter
+	return r.ComponentsInterface
 }
 
 func (r *AppResource) createNamespace() error {
@@ -122,20 +149,5 @@ func (r *AppResource) createNamespace() error {
 
 func (r *AppResource) deleteNamespace() error {
 	_, err := r.collection.core.k8s.Namespaces().Delete(common.StringID(r.Name))
-	return err
-}
-
-func (r *AppResource) provisionSecret(repo *ImageRepoResource) error {
-	// TODO not sure i've been consistent with error handling -- this strategy is
-	// useful when there could be multiple common of errors, alongside the
-	// expectation of an error when something doesn't exist
-	secret, err := r.collection.core.k8s.Secrets(common.StringID(r.Name)).Get(common.StringID(repo.Name))
-
-	if err != nil {
-		return err
-	} else if secret != nil {
-		return nil
-	}
-	_, err = r.collection.core.k8s.Secrets(common.StringID(r.Name)).Create(asKubeSecret(repo))
 	return err
 }

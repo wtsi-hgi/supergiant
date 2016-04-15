@@ -66,7 +66,7 @@ func (m *AwsVolume) loadAwsVolume() error {
 
 func (m *AwsVolume) createAwsVolume(snapshotID *string) error {
 	volInput := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String(AwsAZ),
+		AvailabilityZone: aws.String(m.core.AwsAZ),
 		VolumeType:       aws.String(m.Blueprint.Type),
 		Size:             aws.Int64(int64(m.Blueprint.Size)),
 		SnapshotId:       snapshotID,

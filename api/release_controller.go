@@ -22,7 +22,7 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	release, err = component.Releases().Create(release)
+	err = component.Releases().Create(release)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
@@ -46,7 +46,7 @@ func (c *ReleaseController) MergeCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	release, err = component.Releases().MergeCreate(release)
+	err = component.Releases().MergeCreate(release)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
@@ -108,7 +108,7 @@ func (c *ReleaseController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := release.Save(); err != nil {
+	if err := release.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

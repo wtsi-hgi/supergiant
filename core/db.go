@@ -15,8 +15,13 @@ type database struct {
 	keys *etcdClient
 }
 
-func newDB() *database {
-	return &database{newEtcdClient(EtcdEndpoints)}
+func newDB(etcdEndpoints []string) *database {
+	return &database{newEtcdClient(etcdEndpoints)}
+}
+
+// TODO this is weird
+func (db *database) setKeysAPI(kapi etcd.KeysAPI) {
+	db.keys.kapi = kapi
 }
 
 func (db *database) list(r Collection, out interface{}) error {

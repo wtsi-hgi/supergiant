@@ -6,42 +6,42 @@ import (
 	"net/http"
 )
 
-func checkForAWSMeta() {
+func checkForAWSMeta(c *Core) {
 	// Discover AWS ENV
-	if AwsRegion == "" {
+	if c.AwsRegion == "" {
 		region, err := getAWSRegion()
 		if err != nil {
 			Log.Error(err)
 		} else {
-			AwsRegion = region
-			Log.Info("AWS Region Detected,", AwsRegion)
+			c.AwsRegion = region
+			Log.Info("AWS Region Detected,", c.AwsRegion)
 		}
 	}
-	if AwsAZ == "" {
+	if c.AwsAZ == "" {
 		az, err := getAWSAZ()
 		if err != nil {
 			Log.Error(err)
 		} else {
-			AwsAZ = az
-			Log.Info("AWS AZ Detected,", AwsAZ)
+			c.AwsAZ = az
+			Log.Info("AWS AZ Detected,", c.AwsAZ)
 		}
 	}
-	if AwsSgID == "" {
+	if c.AwsSgID == "" {
 		sg, err := getAWSSecurityGroupID()
 		if err != nil {
 			Log.Error(err)
 		} else {
-			AwsSgID = sg
-			Log.Info("AWS Security Group Detected,", AwsSgID)
+			c.AwsSgID = sg
+			Log.Info("AWS Security Group Detected,", c.AwsSgID)
 		}
 	}
-	if AwsSubnetID == "" {
+	if c.AwsSubnetID == "" {
 		sub, err := getAWSSubnetID()
 		if err != nil {
 			Log.Info("ERROR:", err)
 		} else {
-			AwsSubnetID = sub
-			Log.Info("INFO: AWS Security Group Detected,", AwsSubnetID)
+			c.AwsSubnetID = sub
+			Log.Info("INFO: AWS Security Group Detected,", c.AwsSubnetID)
 		}
 	}
 }

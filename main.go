@@ -15,34 +15,33 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "supergiant-api"
 	app.Usage = "The Supergiant api server."
+
+	c := new(core.Core)
+
 	app.Action = func(ctx *cli.Context) {
 
 		// Check the args. The ones we don't have default values for...
-		if core.K8sUser == "<Kubernetes api userID>" {
-			core.Log.Error("Kubernetes userID required...")
+		if c.K8sUser == "" {
+			core.Log.Error("Kubernetes HTTP basic username required")
 			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
-		if core.K8sPass == "<Kubernetes api password>" {
-			core.Log.Error("Kubernetes Password required...")
+		if c.K8sPass == "" {
+			core.Log.Error("Kubernetes HTTP basic password required")
 			cli.ShowCommandHelp(ctx, "")
 			os.Exit(5)
 		}
 
-		core.EtcdEndpoints = ctx.StringSlice("etcd-host")
-		if len(core.EtcdEndpoints) < 0 {
-			core.EtcdEndpoints = []string{"http://etcd:2379"}
+		c.EtcdEndpoints = ctx.StringSlice("etcd-hosts")
+		if len(c.EtcdEndpoints) < 0 {
+			c.EtcdEndpoints = []string{"http://etcd:2379"}
 		}
 
 		// Log args that have default values.
-		core.Log.Info("ETCD hosts,", ctx.StringSlice("etcd-host"))
-		core.Log.Info("Kubernetes Host,", core.K8sHost)
+		core.Log.Info("ETCD hosts,", c.EtcdEndpoints)
+		core.Log.Info("Kubernetes Host,", c.K8sHost)
 
-		c := core.New(
-			ctx.Bool("https-mode"),   // Tells the api if it needs to connect to Kuberntes over TLS or not.
-			ctx.String("access-key"), // AWS Access Key
-			ctx.String("secret-key"), // AWS Secret Key
-		)
+		c.Initialize()
 
 		// TODO should probably be able to say api.New(), because we shouldn't have to import task here
 		// NOTE using pool size of 4
@@ -56,73 +55,67 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringSliceFlag{
-			Name:   "etcd-host",
+			Name:   "etcd-hosts",
 			Usage:  "Array of etcd hosts.",
 			EnvVar: "ETCD_ENDPOINT",
 		},
 		cli.StringFlag{
-			Name:        "k8sHost, kh",
-			Value:       "kubernetes",
+			Name:        "k8s-host, kh",
+			Value:       "kubernetes", // TODO is this working?
 			Usage:       "IP of a Kuberntes api.",
 			EnvVar:      "K8S_HOST",
-			Destination: &core.K8sHost,
+			Destination: &c.K8sHost,
 		},
 		cli.StringFlag{
-			Name:        "k8sUser, ku",
-			Value:       "<Kubernetes api userID>",
+			Name:        "k8s-user, ku",
 			Usage:       "Username used to connect to your Kubernetes api.",
 			EnvVar:      "K8S_USER",
-			Destination: &core.K8sUser,
+			Destination: &c.K8sUser,
 		},
 		cli.StringFlag{
-			Name:        "k8sPass, kp",
-			Value:       "<Kubernetes api password>",
+			Name:        "k8s-pass, kp",
 			Usage:       "Password used to connect to your Kubernetes api.",
 			EnvVar:      "K8S_PASS",
-			Destination: &core.K8sPass,
+			Destination: &c.K8sPass,
 		},
 		cli.StringFlag{
-			Name:        "awsRegion, ar",
-			Value:       "",
+			Name:        "aws-region, ar",
 			Usage:       "AWS Region in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_REGION",
-			Destination: &core.AwsRegion,
+			Destination: &c.AwsRegion,
 		},
 		cli.StringFlag{
-			Name:        "awsAZ, az",
-			Value:       "",
+			Name:        "aws-az, az",
 			Usage:       "AWS Availability Zone in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_AZ",
-			Destination: &core.AwsAZ,
+			Destination: &c.AwsAZ,
 		},
 		cli.StringFlag{
-			Name:        "awsSgID, sg",
-			Value:       "",
+			Name:        "aws-sg-id, sg",
 			Usage:       "AWS Security Group in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_SG_ID",
-			Destination: &core.AwsSgID,
+			Destination: &c.AwsSgID,
 		},
 		cli.StringFlag{
-			Name:        "awsSubnetID, sid",
-			Value:       "",
+			Name:        "aws-subnet-id, sid",
 			Usage:       "AWS Subnet ID in which your kubernetes cluster resides.",
 			EnvVar:      "AWS_SUBNET_ID",
-			Destination: &core.AwsSubnetID,
+			Destination: &c.AwsSubnetID,
 		},
 		cli.StringFlag{
-			Name:  "access-key",
-			Value: "",
-			Usage: "AWS Access key.",
+			Name:        "aws-access-key",
+			Usage:       "AWS Access key.",
+			Destination: &c.AwsAccessKey,
 		},
 		cli.StringFlag{
-			Name:  "secret-key",
-			Value: "",
-			Usage: "AWS Secret key.",
+			Name:        "aws-secret-key",
+			Usage:       "AWS Secret key.",
+			Destination: &c.AwsSecretKey,
 		},
 		cli.BoolFlag{
-			Name:   "https-mode",
-			Usage:  "Enable https mode for guber client when running outside a kube.",
-			EnvVar: "HTTPS_MODE",
+			Name:        "k8s-insecure-https",
+			Usage:       "Skip verification if HTTPS mode when connecting to Kubernetes.",
+			Destination: &c.K8sInsecureHTTPS,
 		},
 	}
 

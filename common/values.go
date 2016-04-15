@@ -22,11 +22,17 @@ func (t *Timestamp) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	noQuotes := str[1 : len(str)-1]
 	t.Time, err = time.Parse(time.RFC1123, noQuotes)
-	return err
+	return
 }
 
 func NewTimestamp() *Timestamp {
 	return &Timestamp{time.Now().UTC()}
+}
+
+func TimestampFromString(str string) *Timestamp {
+	t := new(Timestamp)
+	t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`, str)))
+	return t
 }
 
 // CPU / RAM resource values

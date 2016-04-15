@@ -8,29 +8,34 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 )
 
 type Core struct {
+	EtcdEndpoints    []string
+	K8sHost          string
+	K8sUser          string
+	K8sPass          string
+	K8sInsecureHTTPS bool
+	AwsRegion        string
+	AwsAZ            string
+	AwsSgID          string
+	AwsSubnetID      string
+	AwsAccessKey     string
+	AwsSecretKey     string
+
 	db          *database
-	k8s         *guber.Client
+	k8s         guber.Client
 	ec2         *ec2.EC2
-	elb         *elb.ELB
-	autoscaling *autoscaling.AutoScaling
+	elb         elbiface.ELBAPI
+	autoscaling autoscalingiface.AutoScalingAPI
 }
 
 var (
 	Log = logrus.New()
-
-	EtcdEndpoints []string
-	K8sHost       string
-	K8sUser       string
-	K8sPass       string
-	AwsRegion     string
-	AwsAZ         string
-	AwsSgID       string
-	AwsSubnetID   string
 )
 
 // TODO inconsistent with method in Guber and client/
@@ -42,31 +47,32 @@ func SetLogLevel(level string) {
 	Log.Level = levelInt
 }
 
-func New(httpsMode bool, aws_access_key_id string, aws_secret_access_key string) *Core {
+// NOTE this used to be core.New(), but due to how we load in values from the
+// cli package, I needed to first actually initialize a Core struct and then
+// configure.
+func (c *Core) Initialize() {
+	c.db = newDB(c.EtcdEndpoints)
+	c.k8s = guber.NewClient(c.K8sHost, c.K8sUser, c.K8sPass, c.K8sInsecureHTTPS)
 
-	checkForAWSMeta()
+	checkForAWSMeta(c)
 	// If you're working with temporary security credentials,
 	// you can also keep the session token in AWS_SESSION_TOKEN.
 	// TODO: We need to set this up when we have more timez
 	token := ""
 
-	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, token)
+	creds := credentials.NewStaticCredentials(c.AwsAccessKey, c.AwsSecretKey, token)
 	_, err := creds.Get()
 	if err != nil {
 		Log.Error("AWS Credentials Install Failed...", err)
 	}
 	Log.Info("AWS Credentials Installed.")
 
-	c := Core{}
-	c.db = newDB()
-	c.k8s = guber.NewClient(K8sHost, K8sUser, K8sPass, httpsMode)
+	awsSession := session.New()
+	awsConf := aws.NewConfig().WithRegion(c.AwsRegion).WithCredentials(creds)
 
-	awsConf := aws.NewConfig().WithRegion(AwsRegion).WithCredentials(creds)
-
-	c.ec2 = ec2.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
-	c.elb = elb.New(session.New(), awsConf)                 // awsConf.WithLogLevel(aws.LogDebug)
-	c.autoscaling = autoscaling.New(session.New(), awsConf) // awsConf.WithLogLevel(aws.LogDebug)
-	return &c
+	c.ec2 = ec2.New(awsSession, awsConf)
+	c.elb = elb.New(awsSession, awsConf)
+	c.autoscaling = autoscaling.New(awsSession, awsConf)
 }
 
 // Top-level resources

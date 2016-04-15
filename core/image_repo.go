@@ -11,6 +11,7 @@ type ImageRepoCollection struct {
 }
 
 type ImageRepoResource struct {
+	core       *Core
 	collection *ImageRepoCollection
 	*common.ImageRepo
 }
@@ -31,9 +32,10 @@ func (c *ImageRepoCollection) etcdKey(name common.ID) string {
 }
 
 // initializeResource implements the Collection interface.
-func (c *ImageRepoCollection) initializeResource(r Resource) error {
-	resource := r.(*ImageRepoResource)
-	resource.collection = c
+func (c *ImageRepoCollection) initializeResource(in Resource) error {
+	r := in.(*ImageRepoResource)
+	r.collection = c
+	r.core = c.core
 	return nil
 }
 
@@ -46,20 +48,20 @@ func (c *ImageRepoCollection) List() (*ImageRepoList, error) {
 
 // New initializes an ImageRepo with a pointer to the Collection.
 func (c *ImageRepoCollection) New() *ImageRepoResource {
-	return &ImageRepoResource{
+	r := &ImageRepoResource{
+		collection: c,
 		ImageRepo: &common.ImageRepo{
 			Meta: common.NewMeta(),
 		},
 	}
+	c.initializeResource(r)
+	return r
 }
 
 // Create takes an ImageRepo and creates it in etcd. It also creates a Kubernetes
 // Namespace with the name of the ImageRepo.
-func (c *ImageRepoCollection) Create(r *ImageRepoResource) (*ImageRepoResource, error) {
-	if err := c.core.db.create(c, r.Name, r); err != nil {
-		return nil, err
-	}
-	return r, nil
+func (c *ImageRepoCollection) Create(r *ImageRepoResource) error {
+	return c.core.db.create(c, r.Name, r)
 }
 
 // Get takes a name and returns an ImageRepoResource if it exists.
@@ -71,10 +73,24 @@ func (c *ImageRepoCollection) Get(name common.ID) (*ImageRepoResource, error) {
 	return r, nil
 }
 
-// Resource-level
-//==============================================================================
+// Update updates the ImageRepo in etcd.
+func (c *ImageRepoCollection) Update(name common.ID, r *ImageRepoResource) error {
+	return c.core.db.update(c, name, r)
+}
 
 // Delete deletes the ImageRepo in etcd.
+func (c *ImageRepoCollection) Delete(r *ImageRepoResource) error {
+	return c.core.db.delete(c, r.Name)
+}
+
+// Resource-level
+
+// Update is a proxy method to ImageRepoCollection's Update.
+func (r *ImageRepoResource) Update() error {
+	return r.collection.Update(r.Name, r)
+}
+
+// Delete is a proxy method to ImageRepoCollection's Delete.
 func (r *ImageRepoResource) Delete() error {
-	return r.collection.core.db.delete(r.collection, r.Name)
+	return r.collection.Delete(r)
 }
