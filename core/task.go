@@ -13,6 +13,7 @@ type TaskCollection struct {
 }
 
 type TaskResource struct {
+	core       *Core
 	collection *TaskCollection
 	*common.Task
 }
@@ -39,9 +40,10 @@ func (c *TaskCollection) etcdKey(id common.ID) string {
 }
 
 // initializeResource implements the Collection interface.
-func (c *TaskCollection) initializeResource(r Resource) error {
-	resource := r.(*TaskResource)
-	resource.collection = c
+func (c *TaskCollection) initializeResource(in Resource) error {
+	r := in.(*TaskResource)
+	r.core = c.core
+	r.collection = c
 	return nil
 }
 
@@ -54,21 +56,19 @@ func (c *TaskCollection) List() (*TaskList, error) {
 
 // New initializes an Task with a pointer to the Collection.
 func (c *TaskCollection) New() *TaskResource {
-	return &TaskResource{
-		collection: c,
+	r := &TaskResource{
 		Task: &common.Task{
 			Meta: common.NewMeta(),
 		},
 	}
+	c.initializeResource(r)
+	return r
 }
 
 // Create takes an Task and creates it in etcd. It also creates a Kubernetes
 // Namespace with the name of the Task.
-func (c *TaskCollection) Create(r *TaskResource) (*TaskResource, error) {
-	if err := c.core.db.createInOrder(c, r); err != nil {
-		return nil, err
-	}
-	return r, nil
+func (c *TaskCollection) Create(r *TaskResource) error {
+	return c.core.db.createInOrder(c, r)
 }
 
 // Get takes a name and returns an TaskResource if it exists.
@@ -98,7 +98,10 @@ func (c *TaskCollection) Start(t common.TaskType, msg interface{}) (*TaskResourc
 	task.Status = statusQueued
 	task.MaxAttempts = 20
 
-	return c.Create(task)
+	if err := c.Create(task); err != nil {
+		return nil, err
+	}
+	return task, nil
 }
 
 // Resource-level

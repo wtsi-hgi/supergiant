@@ -5,28 +5,33 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (f *FakeEtcd) ReturnOnList(vals []string, err error) *FakeEtcd {
-	f.GetFn = func() (*etcd.Response, error) {
-		var nodes []*etcd.Node
-		for _, val := range vals {
-			nodes = append(nodes, &etcd.Node{Value: val})
-		}
-		return &etcd.Response{
-			Node: &etcd.Node{
-				Nodes: nodes,
-			},
-		}, nil
+// Convenience method for the usual ReturnValueOnGet
+func (f *FakeEtcd) ReturnValuesOnGet(vals []string, err error) *FakeEtcd {
+	var nodes []*etcd.Node
+	for _, val := range vals {
+		nodes = append(nodes, &etcd.Node{Value: val})
 	}
-	return f
+	r := &etcd.Response{
+		Node: &etcd.Node{
+			Nodes: nodes,
+		},
+	}
+	return f.ReturnOnGet(r, err)
 }
 
-func (f *FakeEtcd) ReturnOnGet(val string, err error) *FakeEtcd {
+// Convenience method for the usual ReturnValueOnGet
+func (f *FakeEtcd) ReturnValueOnGet(val string, err error) *FakeEtcd {
+	r := &etcd.Response{
+		Node: &etcd.Node{
+			Value: val,
+		},
+	}
+	return f.ReturnOnGet(r, err)
+}
+
+func (f *FakeEtcd) ReturnOnGet(r *etcd.Response, err error) *FakeEtcd {
 	f.GetFn = func() (*etcd.Response, error) {
-		return &etcd.Response{
-			Node: &etcd.Node{
-				Value: val,
-			},
-		}, err
+		return r, err
 	}
 	return f
 }
@@ -42,6 +47,13 @@ func (f *FakeEtcd) OnCreate(clbk func(string, string) error) *FakeEtcd {
 				Value: val,
 			},
 		}, nil
+	}
+	return f
+}
+
+func (f *FakeEtcd) OnCreateInOrder(clbk func(string) (*etcd.Response, error)) *FakeEtcd {
+	f.CreateInOrderFn = func(val string) (*etcd.Response, error) {
+		return clbk(val)
 	}
 	return f
 }
@@ -77,7 +89,7 @@ type FakeEtcd struct {
 	SetFn           func() (*etcd.Response, error)
 	DeleteFn        func(key string) (*etcd.Response, error)
 	CreateFn        func(key string, val string) (*etcd.Response, error)
-	CreateInOrderFn func() (*etcd.Response, error)
+	CreateInOrderFn func(val string) (*etcd.Response, error)
 	UpdateFn        func(key string, val string) (*etcd.Response, error)
 }
 
@@ -103,7 +115,7 @@ func (f *FakeEtcd) Create(ctx context.Context, key, value string) (*etcd.Respons
 
 // CreateInOrder implements the etcd.KeysAPI interface
 func (f *FakeEtcd) CreateInOrder(ctx context.Context, dir, value string, opts *etcd.CreateInOrderOptions) (*etcd.Response, error) {
-	return f.CreateInOrderFn()
+	return f.CreateInOrderFn(value)
 }
 
 // Update implements the etcd.KeysAPI interface

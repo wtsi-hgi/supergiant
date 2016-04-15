@@ -12,7 +12,7 @@ import (
 
 func TestAppList(t *testing.T) {
 	Convey("Given an AppCollection with 1 App", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnList(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValuesOnGet(
 			[]string{
 				`{
 					"name": "test",
@@ -81,7 +81,7 @@ func TestAppCreate(t *testing.T) {
 
 func TestAppGet(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnGet(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(
 			`{
 				"name": "test",
 				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
@@ -159,7 +159,7 @@ func TestAppDelete(t *testing.T) {
 			app:  app,
 			core: core,
 		}
-		fakeComponents.ReturnOnList([]*common.Component{
+		fakeComponents.ReturnValuesOnGet([]*common.Component{
 			&common.Component{
 				Name: common.IDString("component-test"),
 			},
@@ -198,7 +198,7 @@ func newMockCore(fakeEtcd *mock.FakeEtcd) *Core {
 	}
 }
 
-func (f *FakeComponentCollection) ReturnOnList(components []*common.Component) *FakeComponentCollection {
+func (f *FakeComponentCollection) ReturnValuesOnGet(components []*common.Component) *FakeComponentCollection {
 	var items []*ComponentResource
 	for _, component := range components {
 		items = append(items, &ComponentResource{

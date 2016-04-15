@@ -11,7 +11,7 @@ import (
 
 func TestImageRepoList(t *testing.T) {
 	Convey("Given an ImageRepoCollection with 1 ImageRepo", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnList(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValuesOnGet(
 			[]string{
 				`{
 					"name": "test",
@@ -70,7 +70,7 @@ func TestImageRepoCreate(t *testing.T) {
 
 func TestImageRepoGet(t *testing.T) {
 	Convey("Given an ImageRepoCollection with an ImageRepoResource", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnGet(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(
 			`{
 				"name": "test",
 				"created": "Tue, 12 Apr 2016 03:54:56 UTC",

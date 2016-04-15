@@ -14,7 +14,7 @@ import (
 
 func TestEntrypointList(t *testing.T) {
 	Convey("Given an EntrypointCollection with 1 Entrypoint", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnList(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValuesOnGet(
 			[]string{
 				`{
 					"domain": "example.com",
@@ -134,7 +134,7 @@ func TestEntrypointCreate(t *testing.T) {
 
 func TestEntrypointGet(t *testing.T) {
 	Convey("Given an EntrypointCollection with an EntrypointResource", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnGet(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(
 			`{
 				"domain": "example.com",
 				"created": "Tue, 12 Apr 2016 03:54:56 UTC",

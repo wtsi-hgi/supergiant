@@ -11,7 +11,7 @@ import (
 
 func TestComponentList(t *testing.T) {
 	Convey("Given an ComponentCollection with 1 Component", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnList(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValuesOnGet(
 			[]string{
 				`{
 					"name": "component-test",
@@ -78,7 +78,7 @@ func TestComponentCreate(t *testing.T) {
 
 func TestComponentGet(t *testing.T) {
 	Convey("Given an ComponentCollection with an ComponentResource", t, func() {
-		fakeEtcd := new(mock.FakeEtcd).ReturnOnGet(
+		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(
 			`{
 				"name": "component-test",
 				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
@@ -159,7 +159,7 @@ func TestComponentDelete(t *testing.T) {
 			core:      core,
 		}
 
-		fakeReleases.ReturnOnList([]*common.Release{
+		fakeReleases.ReturnValuesOnGet([]*common.Release{
 			&common.Release{
 				Timestamp: common.IDString("20160412035456"),
 			},
@@ -187,7 +187,7 @@ func TestComponentDelete(t *testing.T) {
 
 // Mock
 
-func (f *FakeReleaseCollection) ReturnOnList(components []*common.Release) *FakeReleaseCollection {
+func (f *FakeReleaseCollection) ReturnValuesOnGet(components []*common.Release) *FakeReleaseCollection {
 	var items []*ReleaseResource
 	for _, component := range components {
 		items = append(items, &ReleaseResource{
