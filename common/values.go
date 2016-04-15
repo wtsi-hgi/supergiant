@@ -65,15 +65,15 @@ func (v *BytesValue) ToKubeMebibytes() string {
 }
 
 type CoresValue struct {
-	cores uint
+	cores float64
 }
 
 func CoresFromMillicores(millicores uint) *CoresValue {
-	return &CoresValue{millicores / 1000}
+	return &CoresValue{float64(millicores) / 1000}
 }
 
 func (v *CoresValue) millicores() uint {
-	return v.cores * 1000
+	return uint(v.cores * 1000)
 }
 
 func (v *CoresValue) ToKubeMillicores() string {

@@ -45,17 +45,13 @@ func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *
 		Limits:   new(guber.ResourceValues),
 	}
 	if m.RAM != nil {
-		if m.RAM.Min != 0 {
-			resources.Requests.Memory = common.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
-		}
+		resources.Requests.Memory = common.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
 		if m.RAM.Max != 0 {
 			resources.Limits.Memory = common.BytesFromMiB(m.RAM.Max).ToKubeMebibytes()
 		}
 	}
 	if m.CPU != nil {
-		if m.CPU.Min != 0 {
-			resources.Requests.CPU = common.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
-		}
+		resources.Requests.CPU = common.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
 		if m.CPU.Max != 0 {
 			resources.Limits.CPU = common.CoresFromMillicores(m.CPU.Max).ToKubeMillicores()
 		}
