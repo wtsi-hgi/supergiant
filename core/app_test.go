@@ -164,8 +164,8 @@ func TestAppDelete(t *testing.T) {
 				Name: common.IDString("component-test"),
 			},
 		})
-		fakeComponents.OnDelete(func(r *ComponentResource) error {
-			componentDeleted = *r.Name
+		fakeComponents.OnDelete(func(r Resource) error {
+			componentDeleted = *(r.(*ComponentResource).Name)
 			return nil
 		})
 		app.ComponentsInterface = fakeComponents
@@ -213,8 +213,8 @@ func (f *FakeComponentCollection) ReturnValuesOnGet(components []*common.Compone
 	return f
 }
 
-func (f *FakeComponentCollection) OnDelete(clbk func(*ComponentResource) error) *FakeComponentCollection {
-	f.DeleteFn = func(r *ComponentResource) error {
+func (f *FakeComponentCollection) OnDelete(clbk func(Resource) error) *FakeComponentCollection {
+	f.DeleteFn = func(r Resource) error {
 		return clbk(r)
 	}
 	return f
@@ -228,7 +228,8 @@ type FakeComponentCollection struct {
 	CreateFn func() error
 	GetFn    func() (*ComponentResource, error)
 	UpdateFn func() error
-	DeleteFn func(*ComponentResource) error
+	DeleteFn func(Resource) error
+	DeployFn func(Resource) error
 }
 
 func (f *FakeComponentCollection) App() *AppResource {
@@ -255,6 +256,10 @@ func (f *FakeComponentCollection) Update(common.ID, *ComponentResource) error {
 	return f.UpdateFn()
 }
 
-func (f *FakeComponentCollection) Delete(r *ComponentResource) error {
+func (f *FakeComponentCollection) Delete(r Resource) error {
 	return f.DeleteFn(r)
+}
+
+func (f *FakeComponentCollection) Deploy(r Resource) error {
+	return f.DeployFn(r)
 }

@@ -36,3 +36,21 @@ func (c *TaskController) Show(w http.ResponseWriter, r *http.Request) {
 	}
 	renderWithStatusOK(w, body)
 }
+
+func (c *TaskController) Delete(w http.ResponseWriter, r *http.Request) {
+	task, err := loadTask(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	if err := task.Delete(); err != nil {
+		renderError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	body, err := marshalBody(w, task)
+	if err != nil {
+		return
+	}
+	renderWithStatusAccepted(w, body)
+}

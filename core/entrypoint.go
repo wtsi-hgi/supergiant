@@ -1,7 +1,6 @@
 package core
 
 import (
-	"path"
 	"strings"
 
 	"github.com/supergiant/supergiant/common"
@@ -11,13 +10,22 @@ import (
 	"github.com/aws/aws-sdk-go/service/elb"
 )
 
+type EntrypointsInterface interface {
+	List() (*EntrypointList, error)
+	New() *EntrypointResource
+	Create(*EntrypointResource) error
+	Get(common.ID) (*EntrypointResource, error)
+	Update(common.ID, *EntrypointResource) error
+	Delete(*EntrypointResource) error
+}
+
 type EntrypointCollection struct {
 	core *Core
 }
 
 type EntrypointResource struct {
 	core       *Core
-	collection *EntrypointCollection
+	collection EntrypointsInterface
 	*common.Entrypoint
 }
 
@@ -27,21 +35,11 @@ type EntrypointList struct {
 	Items []*EntrypointResource `json:"items"`
 }
 
-// etcdKey implements the Collection interface.
-func (c *EntrypointCollection) etcdKey(domain common.ID) string {
-	key := "/entrypoints"
-	if domain != nil {
-		key = path.Join(key, common.StringID(domain))
-	}
-	return key
-}
-
 // initializeResource implements the Collection interface.
-func (c *EntrypointCollection) initializeResource(in Resource) error {
+func (c *EntrypointCollection) initializeResource(in Resource) {
 	r := in.(*EntrypointResource)
 	r.collection = c
 	r.core = c.core
-	return nil
 }
 
 // List returns an EntrypointList.
@@ -113,7 +111,67 @@ func (c *EntrypointCollection) Delete(r *EntrypointResource) error {
 	return c.core.db.delete(c, r.Domain)
 }
 
-// Resource-level
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *EntrypointCollection) locationKey() string {
+	return "entrypoints"
+}
+
+// Parent implements the Locatable interface.
+func (c *EntrypointCollection) parent() (l Locatable) {
+	return
+}
+
+// Child implements the Locatable interface.
+func (c *EntrypointCollection) child(key string) Locatable {
+	r, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return r
+}
+
+// Key implements the Locatable interface.
+func (r *EntrypointResource) locationKey() string {
+	return common.StringID(r.Domain)
+}
+
+// Parent implements the Locatable interface.
+func (r *EntrypointResource) parent() Locatable {
+	return r.collection.(Locatable)
+}
+
+// Child implements the Locatable interface.
+func (r *EntrypointResource) child(key string) (l Locatable) {
+	switch key {
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *EntrypointResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	default:
+		Log.Panicf("No action %s for Entrypoint", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *EntrypointResource) decorate() (err error) {
+	return
+}
 
 // Update is a proxy method to EntrypointCollection's Update.
 func (r *EntrypointResource) Update() error {
@@ -211,27 +269,8 @@ func (r *EntrypointResource) configureELBHealthCheck() error {
 	return err
 }
 
-func (r *EntrypointResource) autoscalingGroups() (groups []*autoscaling.Group, err error) {
-	params := &autoscaling.DescribeAutoScalingGroupsInput{
-		// VPCZoneIdentifier: aws.String(AwsSubnetID),
-		// NOTE I think we have to just filter this client-side? Seems weird
-		MaxRecords: aws.Int64(100),
-	}
-	resp, err := r.core.autoscaling.DescribeAutoScalingGroups(params)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, group := range resp.AutoScalingGroups {
-		if *group.VPCZoneIdentifier == r.core.AwsSubnetID {
-			groups = append(groups, group)
-		}
-	}
-	return groups, nil
-}
-
 func (r *EntrypointResource) attachELBToScalingGroups() error {
-	groups, err := r.autoscalingGroups()
+	groups, err := autoscalingGroups(r.core)
 	if err != nil {
 		return err
 	}
@@ -249,7 +288,7 @@ func (r *EntrypointResource) attachELBToScalingGroups() error {
 }
 
 func (r *EntrypointResource) detachELBFromScalingGroups() error {
-	groups, err := r.autoscalingGroups()
+	groups, err := autoscalingGroups(r.core)
 	if err != nil {
 		return err
 	}

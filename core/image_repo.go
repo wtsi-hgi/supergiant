@@ -1,18 +1,24 @@
 package core
 
-import (
-	"path"
+import "github.com/supergiant/supergiant/common"
 
-	"github.com/supergiant/supergiant/common"
-)
+type ImageReposInterface interface {
+	List() (*ImageRepoList, error)
+	New() *ImageRepoResource
+	Create(*ImageRepoResource) error
+	Get(common.ID) (*ImageRepoResource, error)
+	Update(common.ID, *ImageRepoResource) error
+	Delete(*ImageRepoResource) error
+}
 
 type ImageRepoCollection struct {
-	core *Core
+	core     *Core
+	registry *ImageRegistryResource
 }
 
 type ImageRepoResource struct {
 	core       *Core
-	collection *ImageRepoCollection
+	collection ImageReposInterface
 	*common.ImageRepo
 }
 
@@ -22,21 +28,11 @@ type ImageRepoList struct {
 	Items []*ImageRepoResource `json:"items"`
 }
 
-// etcdKey implements the Collection interface.
-func (c *ImageRepoCollection) etcdKey(name common.ID) string {
-	key := "/image_repos/dockerhub"
-	if name != nil {
-		key = path.Join(key, common.StringID(name))
-	}
-	return key
-}
-
 // initializeResource implements the Collection interface.
-func (c *ImageRepoCollection) initializeResource(in Resource) error {
+func (c *ImageRepoCollection) initializeResource(in Resource) {
 	r := in.(*ImageRepoResource)
 	r.collection = c
 	r.core = c.core
-	return nil
 }
 
 // List returns an ImageRepoList.
@@ -49,7 +45,6 @@ func (c *ImageRepoCollection) List() (*ImageRepoList, error) {
 // New initializes an ImageRepo with a pointer to the Collection.
 func (c *ImageRepoCollection) New() *ImageRepoResource {
 	r := &ImageRepoResource{
-		collection: c,
 		ImageRepo: &common.ImageRepo{
 			Meta: common.NewMeta(),
 		},
@@ -58,8 +53,7 @@ func (c *ImageRepoCollection) New() *ImageRepoResource {
 	return r
 }
 
-// Create takes an ImageRepo and creates it in etcd. It also creates a Kubernetes
-// Namespace with the name of the ImageRepo.
+// Create takes an ImageRepo and creates it in etcd.
 func (c *ImageRepoCollection) Create(r *ImageRepoResource) error {
 	return c.core.db.create(c, r.Name, r)
 }
@@ -83,7 +77,67 @@ func (c *ImageRepoCollection) Delete(r *ImageRepoResource) error {
 	return c.core.db.delete(c, r.Name)
 }
 
-// Resource-level
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *ImageRepoCollection) locationKey() string {
+	return "repos"
+}
+
+// Parent implements the Locatable interface.
+func (c *ImageRepoCollection) parent() Locatable {
+	return c.registry
+}
+
+// Child implements the Locatable interface.
+func (c *ImageRepoCollection) child(key string) Locatable {
+	r, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return r
+}
+
+// Key implements the Locatable interface.
+func (r *ImageRepoResource) locationKey() string {
+	return common.StringID(r.Name)
+}
+
+// Parent implements the Locatable interface.
+func (r *ImageRepoResource) parent() Locatable {
+	return r.collection.(Locatable)
+}
+
+// Child implements the Locatable interface.
+func (r *ImageRepoResource) child(key string) (l Locatable) {
+	switch key {
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *ImageRepoResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	default:
+		Log.Panicf("No action %s for ImageRepo", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *ImageRepoResource) decorate() (err error) {
+	return
+}
 
 // Update is a proxy method to ImageRepoCollection's Update.
 func (r *ImageRepoResource) Update() error {

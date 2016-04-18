@@ -4,8 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/supergiant/supergiant/api/task"
-	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/core"
 )
 
@@ -97,12 +95,7 @@ func (c *ComponentController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &task.DeleteComponentMessage{
-		AppName:       component.App().Name,
-		ComponentName: component.Name,
-	}
-	_, err = c.core.Tasks().Start(common.TaskTypeDeleteComponent, msg)
-	if err != nil {
+	if err := component.Action("delete").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -137,12 +130,7 @@ func (c *ComponentController) Deploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &task.DeployComponentMessage{
-		AppName:       component.App().Name,
-		ComponentName: component.Name,
-	}
-	_, err = c.core.Tasks().Start(common.TaskTypeDeployComponent, msg)
-	if err != nil {
+	if err := component.Action("deploy").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

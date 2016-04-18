@@ -13,6 +13,11 @@ import (
 // resource definition into a Kubernetes resource defition.
 // (and some other assorted things that should maybe be moved out...)
 
+func isKubeNotFoundErr(err error) bool {
+	_, yes := err.(*guber.Error404)
+	return yes
+}
+
 func kubeVolumeMounts(m *common.ContainerBlueprint) (volMounts []*guber.VolumeMount) {
 	for _, mount := range m.Mounts {
 		volMounts = append(volMounts, asKubeVolumeMount(mount))

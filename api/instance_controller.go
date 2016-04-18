@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/supergiant/supergiant/api/task"
-	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/core"
 )
 
@@ -62,14 +60,7 @@ func (c *InstanceController) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &task.StartInstanceMessage{
-		AppName:          instance.App().Name,
-		ComponentName:    instance.Component().Name,
-		ReleaseTimestamp: instance.Release().Timestamp,
-		ID:               instance.ID,
-	}
-	_, err = c.core.Tasks().Start(common.TaskTypeStartInstance, msg)
-	if err != nil {
+	if err := instance.Action("start").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -87,14 +78,7 @@ func (c *InstanceController) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &task.StopInstanceMessage{
-		AppName:          instance.App().Name,
-		ComponentName:    instance.Component().Name,
-		ReleaseTimestamp: instance.Release().Timestamp,
-		ID:               instance.ID,
-	}
-	_, err = c.core.Tasks().Start(common.TaskTypeStopInstance, msg)
-	if err != nil {
+	if err := instance.Action("stop").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

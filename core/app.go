@@ -1,17 +1,25 @@
 package core
 
 import (
-	"path"
-
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 )
+
+type AppsInterface interface {
+	List() (*AppList, error)
+	New() *AppResource
+	Create(*AppResource) error
+	Get(common.ID) (*AppResource, error)
+	Update(common.ID, *AppResource) error
+	Delete(Resource) error
+}
 
 type AppCollection struct {
 	core *Core
 }
 
 type AppResource struct {
+	core       *Core
 	collection *AppCollection
 	*common.App
 
@@ -25,23 +33,15 @@ type AppList struct {
 	Items []*AppResource `json:"items"`
 }
 
-// etcdKey implements the Collection interface.
-func (c *AppCollection) etcdKey(name common.ID) string {
-	if name == nil {
-		return "/apps"
-	}
-	return path.Join("/apps", common.StringID(name))
-}
-
 // initializeResource implements the Collection interface.
-func (c *AppCollection) initializeResource(in Resource) error {
+func (c *AppCollection) initializeResource(in Resource) {
 	r := in.(*AppResource)
 	r.collection = c
+	r.core = c.core
 	r.ComponentsInterface = &ComponentCollection{
 		core: c.core,
 		app:  r,
 	}
-	return nil
 }
 
 // List returns an AppList.
@@ -103,12 +103,13 @@ func (c *AppCollection) Update(name common.ID, r *AppResource) error {
 // It is difficult to approach mocking Resources, because if they are returned
 // as interfaces from methods like collection.Get(), we no longer have access
 // to the attributes of the Resource without type casting.
-func (c *AppCollection) Delete(r *AppResource) error {
+func (c *AppCollection) Delete(ri Resource) error {
+	r := ri.(*AppResource)
 	components, err := r.Components().List()
 	if err != nil {
 		return err
 	}
-	if err := r.deleteNamespace(); err != nil {
+	if err := r.deleteNamespace(); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
 	for _, component := range components.Items {
@@ -119,7 +120,72 @@ func (c *AppCollection) Delete(r *AppResource) error {
 	return c.core.db.delete(c, r.Name)
 }
 
-// Resource-level
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *AppCollection) locationKey() string {
+	return "apps"
+}
+
+// Parent implements the Locatable interface. It returns nil here because Core
+// is the parent, and it is the root, which we exclude from paths.
+func (c *AppCollection) parent() (l Locatable) {
+	return
+}
+
+// Child implements the Locatable interface.
+func (c *AppCollection) child(key string) Locatable {
+	app, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return app
+}
+
+// Key implements the Locatable interface.
+func (r *AppResource) locationKey() string {
+	return common.StringID(r.Name)
+}
+
+// Parent implements the Locatable interface.
+func (r *AppResource) parent() Locatable {
+	return r.collection
+}
+
+// Child implements the Locatable interface.
+func (r *AppResource) child(key string) (l Locatable) {
+	switch key {
+	case "components":
+		l = r.Components().(Locatable)
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *AppResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	case "delete":
+		fn = ActionPerformer(r.collection.Delete)
+	default:
+		Log.Panicf("No action %s for App", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *AppResource) decorate() (err error) {
+	return
+}
 
 // Update is a proxy method to AppCollection's Update.
 func (r *AppResource) Update() error {
@@ -143,11 +209,10 @@ func (r *AppResource) createNamespace() error {
 			Name: common.StringID(r.Name),
 		},
 	}
-	_, err := r.collection.core.k8s.Namespaces().Create(namespace)
+	_, err := r.core.k8s.Namespaces().Create(namespace)
 	return err
 }
 
 func (r *AppResource) deleteNamespace() error {
-	_, err := r.collection.core.k8s.Namespaces().Delete(common.StringID(r.Name))
-	return err
+	return r.core.k8s.Namespaces().Delete(common.StringID(r.Name))
 }

@@ -21,11 +21,18 @@ func NewRouter(core *core.Core) *mux.Router {
 	releases := &ReleaseController{core}
 	instances := &InstanceController{core}
 	tasks := &TaskController{core}
+	nodes := &NodeController{core}
 
 	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Create).Methods("POST")
 	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Index).Methods("GET")
 	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Show).Methods("GET")
 	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Delete).Methods("DELETE")
+
+	s.HandleFunc("/nodes", nodes.Create).Methods("POST")
+	s.HandleFunc("/nodes", nodes.Index).Methods("GET")
+	s.HandleFunc("/nodes/{node_id}", nodes.Show).Methods("GET")
+	s.HandleFunc("/nodes/{node_id}", nodes.Update).Methods("PUT")
+	s.HandleFunc("/nodes/{node_id}", nodes.Delete).Methods("DELETE")
 
 	s.HandleFunc("/entrypoints", entrypoints.Create).Methods("POST")
 	s.HandleFunc("/entrypoints", entrypoints.Index).Methods("GET")
@@ -67,6 +74,7 @@ func NewRouter(core *core.Core) *mux.Router {
 
 	s.HandleFunc("/tasks", tasks.Index).Methods("GET")
 	s.HandleFunc("/tasks/{id}", tasks.Show).Methods("GET")
+	s.HandleFunc("/tasks/{id}", tasks.Delete).Methods("DELETE")
 
 	return r
 }

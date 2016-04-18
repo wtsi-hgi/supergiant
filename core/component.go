@@ -1,13 +1,13 @@
 package core
 
 import (
-	"path"
+	"fmt"
 
 	"github.com/supergiant/supergiant/common"
+	"github.com/supergiant/supergiant/deploy"
 )
 
 type ComponentsInterface interface {
-
 	// A simple getter since App is an attribute on actual Collections implementing this
 	App() *AppResource
 
@@ -16,7 +16,8 @@ type ComponentsInterface interface {
 	Create(*ComponentResource) error
 	Get(common.ID) (*ComponentResource, error)
 	Update(common.ID, *ComponentResource) error
-	Delete(*ComponentResource) error
+	Deploy(Resource) error
+	Delete(Resource) error
 }
 
 // ComponentCollection implements ComponentsInterface.
@@ -38,31 +39,15 @@ type ComponentList struct {
 	Items []*ComponentResource `json:"items"`
 }
 
-// etcdKey implements the Collection interface.
-func (c *ComponentCollection) etcdKey(name common.ID) string {
-	key := path.Join("/components", common.StringID(c.App().Name))
-	if name != nil {
-		key = path.Join(key, common.StringID(name))
-	}
-	return key
-}
-
 // initializeResource implements the Collection interface.
-func (c *ComponentCollection) initializeResource(in Resource) error {
+func (c *ComponentCollection) initializeResource(in Resource) {
 	r := in.(*ComponentResource)
-	r.core = c.core
 	r.collection = c
+	r.core = c.core
 	r.ReleasesInterface = &ReleaseCollection{
 		core:      c.core,
 		component: r,
 	}
-
-	// TODO it seems wrong this is called here -- execessive to have to load the
-	// current Release, Entrypoints, and Kube Services just to render a
-	// Component.
-	// However, it's rare a Component is loaded out of the context of its
-	// Release. We will change this when we see issues.
-	return r.decorate()
 }
 
 func (c *ComponentCollection) App() *AppResource {
@@ -110,7 +95,9 @@ func (c *ComponentCollection) Update(name common.ID, r *ComponentResource) error
 // Component in etcd.
 //
 // TODO this should somehow stop any ongoing tasks related to the Component.
-func (c *ComponentCollection) Delete(r *ComponentResource) error {
+func (c *ComponentCollection) Delete(ri Resource) error {
+	r := ri.(*ComponentResource)
+
 	releases, err := r.Releases().List()
 	if err != nil {
 		return err
@@ -135,7 +122,164 @@ func (c *ComponentCollection) Delete(r *ComponentResource) error {
 	return c.core.db.delete(c, r.Name)
 }
 
-// Resource-level
+func (c *ComponentCollection) Deploy(ri Resource) (err error) {
+	r := ri.(*ComponentResource)
+
+	var currentRelease *ReleaseResource
+	if r.CurrentReleaseTimestamp != nil {
+		currentRelease, err = r.CurrentRelease()
+		if err != nil {
+			return err
+		}
+	}
+	// There should always be a target release at this point
+	targetRelease, err := r.TargetRelease()
+	if err != nil {
+		return err
+	}
+
+	// This sets up all the necessary dependencies (the only thing needed past the
+	// first release is volumes for new instances)
+	if err := targetRelease.Provision(); err != nil {
+		return err
+	}
+
+	if currentRelease != nil {
+		targetRelease.AddNewPorts(currentRelease)
+	}
+
+	if customDeploy := r.CustomDeployScript; customDeploy != nil {
+		if err := RunCustomDeployment(c.core, r); err != nil {
+			return err
+		}
+	} else {
+		// This goes to the deploy/ folder which uses the client package.
+		if err := deploy.Deploy(c.app.Name, r.Name); err != nil {
+			return err
+		}
+	}
+
+	// Make sure old release (current) has been fully stopped, and the new release
+	// (target) has been fully started.
+	// It doesn't matter on the first deploy, though.
+	if currentRelease != nil && *currentRelease.InstanceGroup != *targetRelease.InstanceGroup {
+		if !currentRelease.IsStopped() {
+			return fmt.Errorf("Current Release for Component %s:%s is not completely stopped.", common.StringID(c.app.Name), common.StringID(r.Name))
+		}
+	}
+	if !targetRelease.IsStarted() {
+		return fmt.Errorf("Target Release for Component %s:%s is not completely started.", common.StringID(c.app.Name), common.StringID(r.Name))
+	}
+
+	// TODO really sloppy
+	// Stopping instances doesn't remove volumes. So, user-defined deploys, when
+	// removing instances, can't control the volumes, which need to be deleted.
+	if currentRelease != nil && targetRelease.InstanceCount < currentRelease.InstanceCount {
+		instancesRemoving := currentRelease.InstanceCount - targetRelease.InstanceCount
+		instances := currentRelease.Instances().List().Items
+		for _, instance := range instances[len(instances)-instancesRemoving:] { // TODO test that this works correctly
+			instance.DeleteVolumes()
+		}
+	}
+
+	if currentRelease != nil {
+		targetRelease.RemoveOldPorts(currentRelease)
+
+		currentRelease.Retired = true
+		currentRelease.Update()
+	}
+
+	// If we're all good, we set target to current, and remove target.
+	r.CurrentReleaseTimestamp = r.TargetReleaseTimestamp
+	r.TargetReleaseTimestamp = nil
+	return r.Update()
+}
+
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *ComponentCollection) locationKey() string {
+	return "components"
+}
+
+// Parent implements the Locatable interface.
+func (c *ComponentCollection) parent() Locatable {
+	return c.app
+}
+
+// Child implements the Locatable interface.
+func (c *ComponentCollection) child(key string) Locatable {
+	r, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return r
+}
+
+// Key implements the Locatable interface.
+func (r *ComponentResource) locationKey() string {
+	return common.StringID(r.Name)
+}
+
+// Parent implements the Locatable interface.
+func (r *ComponentResource) parent() Locatable {
+	return r.collection.(Locatable)
+}
+
+// Child implements the Locatable interface.
+func (r *ComponentResource) child(key string) (l Locatable) {
+	switch key {
+	case "releases":
+		l = r.Releases().(Locatable)
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *ComponentResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	case "deploy":
+		fn = ActionPerformer(r.collection.Deploy)
+	case "delete":
+		fn = ActionPerformer(r.collection.Delete)
+	default:
+		Log.Panicf("No action %s for Component", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *ComponentResource) decorate() error {
+	if r.CurrentReleaseTimestamp == nil {
+		return nil
+	}
+
+	externalAddrs, err := r.externalAddresses()
+	if err != nil {
+		return err
+	}
+	internalAddrs, err := r.internalAddresses()
+	if err != nil {
+		return err
+	}
+
+	r.Addresses = &common.ComponentAddresses{
+		External: externalAddrs,
+		Internal: internalAddrs,
+	}
+
+	return nil
+}
 
 // Update is a proxy method to ComponentCollection's Update.
 func (r *ComponentResource) Update() error {
@@ -163,28 +307,6 @@ func (r *ComponentResource) CurrentRelease() (*ReleaseResource, error) {
 
 func (r *ComponentResource) TargetRelease() (*ReleaseResource, error) {
 	return r.Releases().Get(r.TargetReleaseTimestamp)
-}
-
-func (r *ComponentResource) decorate() error {
-	if r.CurrentReleaseTimestamp == nil {
-		return nil
-	}
-
-	externalAddrs, err := r.externalAddresses()
-	if err != nil {
-		return err
-	}
-	internalAddrs, err := r.internalAddresses()
-	if err != nil {
-		return err
-	}
-
-	r.Addresses = &common.ComponentAddresses{
-		External: externalAddrs,
-		Internal: internalAddrs,
-	}
-
-	return nil
 }
 
 func (r *ComponentResource) externalAddresses() (addrs []*common.PortAddress, err error) {

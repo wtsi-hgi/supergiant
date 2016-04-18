@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/supergiant/supergiant/api/task"
-	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/core"
 )
 
@@ -87,9 +85,7 @@ func (c *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &task.DeleteAppMessage{AppName: app.Name}
-	_, err = c.core.Tasks().Start(common.TaskTypeDeleteApp, msg)
-	if err != nil {
+	if err := app.Action("delete").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

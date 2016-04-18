@@ -48,8 +48,6 @@ func RunCustomDeployment(core *Core, component *ComponentResource) error {
 		pod, err = pod.Reload()
 		if err != nil {
 			return false, err
-		} else if pod == nil {
-			return false, fmt.Errorf("pod %s does not exist", name)
 		}
 		return pod.IsReady(), nil
 	})
@@ -71,11 +69,13 @@ func RunCustomDeployment(core *Core, component *ComponentResource) error {
 	err = common.WaitFor(name, timeout, time.Second*5, func() (bool, error) {
 		pod, err = pod.Reload()
 		if err != nil {
-			return false, err
-		} else if pod == nil {
-			// This or the Phase == "Succeeded" line may fire, but this one is much
-			// less likely. The pod seems to linger for a while as we capture the Status
-			return true, nil // done
+			if isKubeNotFoundErr(err) {
+				// This or the Phase == "Succeeded" line may fire, but this one is much
+				// less likely. The pod seems to linger for a while as we capture the Status
+				return true, nil // done
+			} else {
+				return false, err
+			}
 		}
 
 		if !pod.IsReady() {

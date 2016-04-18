@@ -6,7 +6,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/supergiant/supergiant/api"
-	"github.com/supergiant/supergiant/api/task"
 	"github.com/supergiant/supergiant/core"
 )
 
@@ -19,6 +18,8 @@ func main() {
 	c := new(core.Core)
 
 	app.Action = func(ctx *cli.Context) {
+
+		core.SetLogLevel(ctx.String("log-level"))
 
 		// Check the args. The ones we don't have default values for...
 		if c.K8sUser == "" {
@@ -42,10 +43,6 @@ func main() {
 		core.Log.Info("Kubernetes Host,", c.K8sHost)
 
 		c.Initialize()
-
-		// TODO should probably be able to say api.New(), because we shouldn't have to import task here
-		// NOTE using pool size of 4
-		go task.NewSupervisor(c, 20).Run()
 
 		router := api.NewRouter(c)
 
@@ -116,6 +113,11 @@ func main() {
 			Name:        "k8s-insecure-https",
 			Usage:       "Skip verification if HTTPS mode when connecting to Kubernetes.",
 			Destination: &c.K8sInsecureHTTPS,
+		},
+		cli.StringFlag{
+			Name:  "log-level",
+			Value: "info",
+			Usage: "Set the API log level",
 		},
 	}
 
