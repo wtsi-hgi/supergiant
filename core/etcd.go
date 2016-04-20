@@ -49,13 +49,13 @@ func (e *etcdClient) delete(key string) (*etcd.Response, error) {
 	return e.kapi.Delete(context.Background(), fullKey(key), nil)
 }
 
-func (e *etcdClient) createInOrder(key string, value string) (*etcd.Response, error) {
-	return e.kapi.CreateInOrder(context.Background(), fullKey(key), value, nil)
-}
-
-func (e *etcdClient) getInOrder(key string) (*etcd.Response, error) {
-	return e.kapi.Get(context.Background(), fullKey(key), &etcd.GetOptions{Sort: true})
-}
+// func (e *etcdClient) createInOrder(key string, value string) (*etcd.Response, error) {
+// 	return e.kapi.CreateInOrder(context.Background(), fullKey(key), value, nil)
+// }
+//
+// func (e *etcdClient) getInOrder(key string) (*etcd.Response, error) {
+// 	return e.kapi.Get(context.Background(), fullKey(key), &etcd.GetOptions{Sort: true})
+// }
 
 func (e *etcdClient) createDir(key string) (*etcd.Response, error) {
 	return e.kapi.Set(context.Background(), key, "", &etcd.SetOptions{Dir: true})

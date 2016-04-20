@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/supergiant/guber"
+	"github.com/supergiant/supergiant/common"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -73,22 +74,69 @@ func (c *Core) Initialize() {
 	c.ec2 = ec2.New(awsSession, awsConf)
 	c.elb = elb.New(awsSession, awsConf)
 	c.autoscaling = autoscaling.New(awsSession, awsConf)
+
+	// TODO expose as worker num option in main
+	go NewSupervisor(c, 4).Run()
+
+	// TODO
+	if err := c.Nodes().populate(); err != nil {
+		panic(err)
+	}
+}
+
+// Core implements the Locatable interface, but is only utilized for the child()
+// method, since it is the root object and does not have a locationKey() or parent().
+func (c *Core) locationKey() (k string) {
+	return
+}
+
+func (c *Core) parent() (l Locatable) {
+	return
+}
+
+func (c *Core) child(key string) (l Locatable) {
+	switch key {
+	case "apps":
+		l = c.Apps().(Locatable)
+	case "entrypoints":
+		l = c.Entrypoints().(Locatable)
+	case "registries":
+		l = c.ImageRegistries().(Locatable)
+	case "nodes":
+		l = c.Nodes().(Locatable)
+	case "tasks":
+		l = c.Tasks().(Locatable)
+	default:
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return
 }
 
 // Top-level resources
-//==============================================================================
-func (c *Core) Apps() *AppCollection {
+
+func (c *Core) Apps() AppsInterface {
 	return &AppCollection{c}
 }
 
-func (c *Core) Entrypoints() *EntrypointCollection {
+func (c *Core) Entrypoints() EntrypointsInterface {
 	return &EntrypointCollection{c}
 }
 
-func (c *Core) ImageRepos() *ImageRepoCollection {
-	return &ImageRepoCollection{c}
+func (c *Core) ImageRegistries() ImageRegistriesInterface {
+	return &ImageRegistryCollection{c}
 }
 
-func (c *Core) Tasks() *TaskCollection {
+// TODO this goes away when Dockerhub is not the only ImageRegistry
+func (c *Core) ImageRepos() ImageReposInterface {
+	registry := c.ImageRegistries().New()
+	registry.Name = common.IDString("dockerhub")
+	return registry.ImageRepos()
+}
+
+func (c *Core) Nodes() NodesInterface {
+	return &NodeCollection{c}
+}
+
+func (c *Core) Tasks() TasksInterface {
 	return &TaskCollection{c}
 }

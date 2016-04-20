@@ -60,7 +60,7 @@ func TestImageRepoCreate(t *testing.T) {
 			err := repos.Create(repo)
 
 			Convey("The ImageRepo should be created in etcd with a Created Timestamp", func() {
-				So(etcdKeyCreated, ShouldEqual, "/supergiant/image_repos/dockerhub/test")
+				So(etcdKeyCreated, ShouldEqual, "/supergiant/repos/dockerhub/test")
 				So(repo.Created, ShouldHaveSameTypeAs, new(common.Timestamp))
 				So(err, ShouldBeNil)
 			})
@@ -115,7 +115,7 @@ func TestImageRepoUpdate(t *testing.T) {
 			err := repo.Update()
 
 			Convey("The ImageRepo should be updated in etcd with an Updated Timestamp", func() {
-				So(etcdKeyUpdated, ShouldEqual, "/supergiant/image_repos/dockerhub/test")
+				So(etcdKeyUpdated, ShouldEqual, "/supergiant/repos/dockerhub/test")
 				So(repo.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
 				So(err, ShouldBeNil)
 			})
@@ -142,7 +142,7 @@ func TestImageRepoDelete(t *testing.T) {
 
 			Convey("The ImageRepo should be deleted in etcd", func() {
 				So(err, ShouldBeNil)
-				So(etcdKeyDeleted, ShouldEqual, "/supergiant/image_repos/dockerhub/test")
+				So(etcdKeyDeleted, ShouldEqual, "/supergiant/repos/dockerhub/test")
 			})
 		})
 	})

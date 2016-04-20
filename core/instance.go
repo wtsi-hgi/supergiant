@@ -9,12 +9,23 @@ import (
 	"github.com/supergiant/supergiant/common"
 )
 
+type InstancesInterface interface {
+	// Release() *ReleaseResource
+
+	List() *InstanceList
+	New(common.ID) *InstanceResource
+	Get(common.ID) (*InstanceResource, error)
+	Start(Resource) error
+	Stop(Resource) error
+}
+
 type InstanceCollection struct {
 	core    *Core
-	Release *ReleaseResource
+	release *ReleaseResource
 }
 
 type InstanceResource struct {
+	core       *Core
 	collection *InstanceCollection
 	*common.Instance
 }
@@ -24,18 +35,18 @@ type InstanceList struct {
 }
 
 func (c *InstanceCollection) app() *AppResource {
-	return c.Release.Component().App()
+	return c.release.Component().App()
 }
 
 func (c *InstanceCollection) component() *ComponentResource {
-	return c.Release.Component()
+	return c.release.Component()
 }
 
 // List returns an InstanceList.
 func (c *InstanceCollection) List() *InstanceList {
 	list := new(InstanceList)
 	list.Items = make([]*InstanceResource, 0)
-	for i := 0; i < c.Release.InstanceCount; i++ {
+	for i := 0; i < c.release.InstanceCount; i++ {
 		id := strconv.Itoa(i)
 		list.Items = append(list.Items, c.New(&id))
 	}
@@ -45,6 +56,7 @@ func (c *InstanceCollection) List() *InstanceList {
 // New initializes an Instance with a pointer to the Collection.
 func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 	r := &InstanceResource{
+		core:       c.core,
 		collection: c,
 		Instance: &common.Instance{
 			ID: id,
@@ -53,7 +65,11 @@ func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 	// TODO not consistent with the setter approach
 	r.BaseName = common.StringID(r.Component().Name) + "-" + common.StringID(r.ID)
 	r.Name = r.BaseName + common.StringID(r.Release().InstanceGroup)
-	r.setStatus()
+
+	// TODO definitely have to take this panic out
+	if err := r.decorate(); err != nil {
+		panic(err)
+	}
 	return r
 }
 
@@ -63,15 +79,107 @@ func (c *InstanceCollection) Get(id common.ID) (*InstanceResource, error) {
 	if err != nil {
 		return nil, err
 	}
-	maxIndex := c.Release.InstanceCount - 1
+	maxIndex := c.release.InstanceCount - 1
 	if index < 0 || index > maxIndex {
 		return nil, fmt.Errorf("%d for Instance ID is out of range; Highest ID is %d", index, maxIndex)
 	}
 	return c.New(id), nil
 }
 
-// Resource-level
-//==============================================================================
+func (c *InstanceCollection) Start(ri Resource) error {
+	r := ri.(*InstanceResource)
+
+	if err := r.prepareVolumes(); err != nil {
+		return err
+	}
+	if err := r.provisionReplicationController(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *InstanceCollection) Stop(ri Resource) error {
+	r := ri.(*InstanceResource)
+
+	if err := r.deleteReplicationControllerAndPod(); err != nil {
+		return err
+	}
+	for _, vol := range r.Volumes() {
+		if err := vol.waitForAvailable(); err != nil {
+			return err
+		}
+	}
+
+	// TODO need a wait in here (optional) for the pod to be deleted
+
+	return nil
+}
+
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *InstanceCollection) locationKey() string {
+	return "instances"
+}
+
+// Parent implements the Locatable interface.
+func (c *InstanceCollection) parent() Locatable {
+	return c.release
+}
+
+// Child implements the Locatable interface.
+func (c *InstanceCollection) child(key string) Locatable {
+	r, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return r
+}
+
+// Key implements the Locatable interface.
+func (r *InstanceResource) locationKey() string {
+	return common.StringID(r.ID)
+}
+
+// Parent implements the Locatable interface.
+func (r *InstanceResource) parent() Locatable {
+	return r.collection
+}
+
+// Child implements the Locatable interface.
+func (r *InstanceResource) child(key string) (l Locatable) {
+	switch key {
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *InstanceResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	case "start":
+		fn = ActionPerformer(r.collection.Start)
+	case "stop":
+		fn = ActionPerformer(r.collection.Stop)
+	default:
+		Log.Panicf("No action %s for Instance", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *InstanceResource) decorate() error {
+	return r.setStatus()
+}
 
 func (r *InstanceResource) App() *AppResource {
 	return r.collection.app()
@@ -81,16 +189,17 @@ func (r *InstanceResource) Component() *ComponentResource {
 	return r.collection.component()
 }
 
-func (r *InstanceResource) setStatus() {
+func (r *InstanceResource) setStatus() error {
 	pod, err := r.pod()
 	if err != nil {
-		panic(err) // TODO
+		return err
 	}
 	if pod != nil && pod.IsReady() {
 		r.Status = common.InstanceStatusStarted
-		return
+		return nil
 	}
 	r.Status = common.InstanceStatusStopped
+	return nil
 }
 
 func (r *InstanceResource) IsStarted() bool {
@@ -115,28 +224,11 @@ func (r *InstanceResource) Delete() (err error) {
 // The following 2 are only diff from Provision() and Delete() in that they do
 // not delete the create or delete the volumes.
 func (r *InstanceResource) Start() error {
-	if err := r.prepareVolumes(); err != nil {
-		return err
-	}
-	if err := r.provisionReplicationController(); err != nil {
-		return err
-	}
-	return nil
+	return r.collection.Start(r)
 }
 
 func (r *InstanceResource) Stop() error {
-	if err := r.deleteReplicationControllerAndPod(); err != nil {
-		return err
-	}
-	for _, vol := range r.Volumes() {
-		if err := vol.waitForAvailable(); err != nil {
-			return err
-		}
-	}
-
-	// TODO need a wait in here (optional) for the pod to be deleted
-
-	return nil
+	return r.collection.Stop(r)
 }
 
 func (r *InstanceResource) Log() (string, error) {
@@ -145,6 +237,8 @@ func (r *InstanceResource) Log() (string, error) {
 		return "", err
 	}
 
+	// TODO nil pointer possibility if pod is nil
+
 	// TODO we need a better way of initializing defaults on sub-resources
 	containerName := asKubeContainer(r.Release().Containers[0], r).Name
 
@@ -152,7 +246,7 @@ func (r *InstanceResource) Log() (string, error) {
 }
 
 func (r *InstanceResource) Release() *ReleaseResource {
-	return r.collection.Release
+	return r.collection.release
 }
 
 func (r *InstanceResource) Volumes() (vols []*AwsVolume) {
@@ -227,10 +321,10 @@ func (r *InstanceResource) waitForReplicationControllerReady() error {
 }
 
 func (r *InstanceResource) provisionReplicationController() error {
-	if rc, err := r.replicationController(); err != nil {
-		return err // some systemic error (err, along with rc, is nil when rc does not exist)
-	} else if rc != nil {
-		return nil // rc already exists
+	if _, err := r.replicationController(); err == nil {
+		return nil // already provisioned
+	} else if !isKubeNotFoundErr(err) {
+		return err
 	}
 
 	// We load them here because the repos may not exist, which needs to return error
@@ -286,18 +380,19 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 		return nil, err // Not sure what the error might be here
 	}
 
-	if len(pods.Items) > 1 {
-		panic("More than 1 pod returned in query?")
-	} else if len(pods.Items) == 1 {
+	if len(pods.Items) == 1 {
 		return pods.Items[0], nil
 	}
+
+	// NOTE this does not return error if the pod cannot be found
 	return nil, nil
 }
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	Log.Infof("Deleting ReplicationController %s", r.Name)
-	// TODO we call r.collection.core.k8s.ReplicationControllers(r.App().Name) enough to warrant its own method -- confusing nomenclature awaits assuredly
-	if _, err := r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil {
+	// TODO we call r.collection.core.k8s.ReplicationControllers(r.App().Name)
+	// nough to warrant its own method
+	if err := r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
 	pod, err := r.pod()
@@ -306,7 +401,7 @@ func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	}
 	if pod != nil {
 		// _ is found bool, we don't care if it was found or not, just don't want an error
-		if _, err := r.collection.core.k8s.Pods(common.StringID(r.App().Name)).Delete(pod.Metadata.Name); err != nil {
+		if err := pod.Delete(); err != nil && !isKubeNotFoundErr(err) {
 			return err
 		}
 	}

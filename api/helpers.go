@@ -125,6 +125,19 @@ func loadInstance(core *core.Core, w http.ResponseWriter, r *http.Request) (*cor
 	return instance, nil
 }
 
+// loadNode loads an Node resource from URL params, or renders an HTTP Not Found
+// error.
+func loadNode(core *core.Core, w http.ResponseWriter, r *http.Request) (*core.NodeResource, error) {
+	id := mux.Vars(r)["node_id"]
+	node, err := core.Nodes().Get(&id)
+	if err != nil {
+		renderError(w, err, http.StatusNotFound)
+		return nil, err
+	}
+
+	return node, nil
+}
+
 // loadImageRepo loads an ImageRepo resource from URL params, or renders an HTTP
 // Not Found error.
 func loadImageRepo(core *core.Core, w http.ResponseWriter, r *http.Request) (*core.ImageRepoResource, error) {

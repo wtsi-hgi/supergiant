@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"path"
 	"reflect"
 	"time"
 
@@ -33,6 +32,9 @@ type ReleaseResource struct {
 	collection ReleasesInterface
 	*common.Release
 
+	// Relations
+	InstancesInterface InstancesInterface `json:"-"`
+
 	// TODO these are shared between releases, it's kinda funky right now
 	ExternalService *guber.Service `json:"-"`
 	InternalService *guber.Service `json:"-"`
@@ -45,49 +47,15 @@ type ReleaseList struct {
 	Items []*ReleaseResource `json:"items"`
 }
 
-// etcdKey implements the Collection interface.
-func (c *ReleaseCollection) etcdKey(timestamp common.ID) string {
-	key := path.Join("/releases", common.StringID(c.Component().App().Name), common.StringID(c.Component().Name))
-	if timestamp != nil {
-		key = path.Join(key, common.StringID(timestamp))
-	}
-	return key
-}
-
 // initializeResource implements the Collection interface.
-func (c *ReleaseCollection) initializeResource(in Resource) error {
+func (c *ReleaseCollection) initializeResource(in Resource) {
 	r := in.(*ReleaseResource)
-	r.core = c.core
 	r.collection = c
-
-	// TODO
-	// We do this here because this is called when pulling from the DB. If it's
-	// being pulled from the DB, it can be assumed to have services.
-	// Still really sloppy, since there could be an error.
-	svc, err := r.getService(r.ExternalServiceName())
-	if err != nil {
-		return err
+	r.core = c.core
+	r.InstancesInterface = &InstanceCollection{
+		core:    c.core,
+		release: r,
 	}
-	r.ExternalService = svc
-
-	svc, err = r.getService(r.InternalServiceName())
-	if err != nil {
-		return err
-	}
-	r.InternalService = svc
-
-	repos, err := r.getImageRepos()
-	if err != nil {
-		return err
-	}
-	r.imageRepos = repos
-
-	r.entrypoints, err = r.getEntrypoints()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *ReleaseCollection) Component() *ComponentResource {
@@ -103,12 +71,13 @@ func (c *ReleaseCollection) List() (*ReleaseList, error) {
 
 // New initializes an Release with a pointer to the Collection.
 func (c *ReleaseCollection) New() *ReleaseResource {
-	return &ReleaseResource{
-		collection: c,
+	r := &ReleaseResource{
 		Release: &common.Release{
 			Meta: common.NewMeta(),
 		},
 	}
+	c.initializeResource(r)
+	return r
 }
 
 // Create takes an Release and creates it in etcd.
@@ -208,7 +177,91 @@ func (c *ReleaseCollection) Delete(r *ReleaseResource) error {
 	return r.core.db.delete(c, r.Timestamp)
 }
 
-// Resource-level
+//------------------------------------------------------------------------------
+
+// Key implements the Locatable interface.
+func (c *ReleaseCollection) locationKey() string {
+	return "releases"
+}
+
+// Parent implements the Locatable interface.
+func (c *ReleaseCollection) parent() Locatable {
+	return c.component
+}
+
+// Child implements the Locatable interface.
+func (c *ReleaseCollection) child(key string) Locatable {
+	r, err := c.Get(common.IDString(key))
+	if err != nil {
+		Log.Panicf("No child with key %s for %T", key, c)
+	}
+	return r
+}
+
+// Key implements the Locatable interface.
+func (r *ReleaseResource) locationKey() string {
+	return common.StringID(r.Timestamp)
+}
+
+// Parent implements the Locatable interface.
+func (r *ReleaseResource) parent() Locatable {
+	return r.collection.(Locatable)
+}
+
+// Child implements the Locatable interface.
+func (r *ReleaseResource) child(key string) (l Locatable) {
+	switch key {
+	case "instances":
+		l = r.Instances().(Locatable)
+	default:
+		Log.Panicf("No child with key %s for %T", key, r)
+	}
+	return
+}
+
+// Action implements the Resource interface.
+func (r *ReleaseResource) Action(name string) *Action {
+	var fn ActionPerformer
+	switch name {
+	default:
+		Log.Panicf("No action %s for Release", name)
+	}
+	return &Action{
+		ActionName: name,
+		core:       r.core,
+		resource:   r,
+		performer:  fn,
+	}
+}
+
+//------------------------------------------------------------------------------
+
+// decorate implements the Resource interface
+func (r *ReleaseResource) decorate() error {
+	svc, err := r.getService(r.ExternalServiceName())
+	if err != nil && !isKubeNotFoundErr(err) {
+		return err
+	}
+	r.ExternalService = svc
+
+	svc, err = r.getService(r.InternalServiceName())
+	if err != nil && !isKubeNotFoundErr(err) {
+		return err
+	}
+	r.InternalService = svc
+
+	repos, err := r.getImageRepos()
+	if err != nil {
+		return err
+	}
+	r.imageRepos = repos
+
+	r.entrypoints, err = r.getEntrypoints()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // Update is a proxy method to ReleaseCollection's Update.
 func (r *ReleaseResource) Update() error {
@@ -233,10 +286,10 @@ func (r *ReleaseResource) Component() *ComponentResource {
 	return r.collection.Component()
 }
 
-func (r *ReleaseResource) Instances() *InstanceCollection {
+func (r *ReleaseResource) Instances() InstancesInterface {
 	return &InstanceCollection{
 		core:    r.core,
-		Release: r,
+		release: r,
 	}
 }
 
@@ -275,7 +328,7 @@ func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, erro
 		if err != nil {
 
 			// TODO
-			if isNotFoundError(err) {
+			if isEtcdNotFoundErr(err) {
 				Log.Errorf("Entrypoint %s does not exist", *port.EntrypointDomain)
 				continue
 			}
@@ -309,11 +362,14 @@ func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts
 		return nil, nil
 	}
 
-	if service, _ := r.getService(name); service != nil {
-		return service, nil // already created
+	service, err := r.getService(name)
+	if err == nil {
+		return service, nil // already provisioned
+	} else if !isKubeNotFoundErr(err) {
+		return nil, err
 	}
 
-	service := &guber.Service{
+	service = &guber.Service{
 		Metadata: &guber.Metadata{
 			Name: name,
 		},
@@ -367,11 +423,11 @@ func (r *ReleaseResource) provisionInternalService() error {
 
 func (r *ReleaseResource) deleteServices() (err error) {
 	Log.Infof("Deleting Service %s", r.ExternalServiceName())
-	if _, err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil {
+	if err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
 	Log.Infof("Deleting Service %s", r.InternalServiceName())
-	if _, err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil {
+	if err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
 	return nil
@@ -388,16 +444,14 @@ func (r *ReleaseResource) provisionSecrets() error {
 }
 
 func (r *ReleaseResource) provisionSecret(repo *ImageRepoResource) error {
-	// TODO not sure i've been consistent with error handling -- this strategy is
-	// useful when there could be multiple common of errors, alongside the
-	// expectation of an error when something doesn't exist
-	secret, err := r.core.k8s.Secrets(common.StringID(r.App().Name)).Get(common.StringID(repo.Name))
-
-	if err != nil {
-		return err
-	} else if secret != nil {
+	// TODO why don't we just do a call directly to Create, and then check the error?
+	_, err := r.core.k8s.Secrets(common.StringID(r.App().Name)).Get(common.StringID(repo.Name))
+	if err == nil { // Secret already exists
 		return nil
+	} else if !isKubeNotFoundErr(err) { // to continue, it has to be a not found error
+		return err
 	}
+
 	_, err = r.core.k8s.Secrets(common.StringID(r.App().Name)).Create(asKubeSecret(repo))
 	return err
 }
@@ -434,6 +488,7 @@ func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
 	// NOTE we find from the service so that we don't try to add not-yet serviced
 	// ports to the ELB
 	ports := r.ExternalPorts()
+
 	for _, svcPort := range r.ExternalService.Spec.Ports {
 		for _, port := range ports {
 			if port.Number == svcPort.Port {
@@ -667,8 +722,7 @@ func (r *ReleaseResource) getImageRepos() (repos []*ImageRepoResource, err error
 		repo, err := r.core.ImageRepos().Get(&repoName)
 		if err != nil {
 
-			// TODO this method is ambiguously named
-			if isNotFoundError(err) {
+			if isEtcdNotFoundErr(err) {
 				// if there is no repo, we can assume this is a public repo (though it
 				// may not be) -- this represents a TODO on how to report errors from
 				// Kubernetes

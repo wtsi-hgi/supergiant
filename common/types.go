@@ -27,18 +27,12 @@ type App struct {
 }
 
 type Component struct {
-	Name ID `json:"name"`
-	// TODO kinda weird,
-	// you choose a container that has the deploy file, and then reference it as a command
+	Name ID `json:"name"` //  validate:"regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$"
+
 	CustomDeployScript *CustomDeployScript `json:"custom_deploy_script"`
 
-	// TODO these all seem to be a departure in terms of relations... I feel like
-	// there is a more elegant solution to house the info, and delete it atomically
 	CurrentReleaseTimestamp ID `json:"current_release_id"`
 	TargetReleaseTimestamp  ID `json:"target_release_id"`
-	// We should just store the DeployTaskID but actually should render the task
-	// when showing it in HTTP.
-	// DeployTaskID ID `json:"deploy_task_id"`
 
 	*Meta
 
@@ -187,26 +181,24 @@ type Entrypoint struct {
 
 // Task
 //==============================================================================
-type TaskType int
-
-const (
-	TaskTypeDeployComponent TaskType = iota
-	TaskTypeDeleteComponent
-	TaskTypeDeleteApp
-	TaskTypeDeleteRelease
-	TaskTypeStartInstance
-	TaskTypeStopInstance
-)
-
 type Task struct {
-	ID ID `json:"id,omitempty" db:"-"`
+	ID         ID     `json:"id"`
+	ActionData string `json:"action_data"`
 
-	Type        TaskType `json:"type"`
-	Data        []byte   `json:"data"`
-	Status      string   `json:"status"`
-	Attempts    int      `json:"attempts"`
-	MaxAttempts int      `json:"max_attempts"` // this is static; config-level
-	Error       string   `json:"error"`
+	Status      string `json:"status"`
+	Attempts    int    `json:"attempts"`
+	MaxAttempts int    `json:"max_attempts"` // this is static; config-level
+	Error       string `json:"error"`
+
+	*Meta
+}
+
+// ImageRegistry
+//==============================================================================
+type ImageRegistry struct {
+	Name ID `json:"name"`
+
+	// more to come soon... it's just Dockerhub for now
 
 	*Meta
 }
@@ -216,6 +208,34 @@ type Task struct {
 type ImageRepo struct {
 	Name ID     `json:"name"`
 	Key  string `json:"key,omitempty"`
+
+	*Meta
+}
+
+// Node
+//==============================================================================
+// NOTE this is not to be confused with our concept of Resources like Apps and
+// Components -- this is for CPU / RAM / disk.
+type ResourceMetrics struct {
+	Usage int `json:"usage"`
+	Limit int `json:"limit"`
+}
+
+type Node struct {
+	ID         ID     `json:"id"`
+	Name       string `json:"name"`
+	Class      string `json:"class"`
+	ExternalIP string `json:"external_ip" db:"-"`
+
+	// LaunchTime time.Time `json:"-"`
+	// ServerUptime int              `json:"server_uptime" db:"-"`
+
+	ProviderCreationTimestamp *Timestamp `json:"provider_creation_timestamp"`
+
+	OutOfDisk bool             `json:"out_of_disk" db:"-"`
+	Status    string           `json:"status" db:"-"`
+	CPU       *ResourceMetrics `json:"cpu" db:"-"`
+	RAM       *ResourceMetrics `json:"ram" db:"-"`
 
 	*Meta
 }

@@ -3,32 +3,88 @@ package core
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/supergiant/supergiant/common"
 )
 
-// Collection is an interface for defining behavior of a collection of
-// Resources.
+type Locatable interface {
+	locationKey() string
+	parent() Locatable
+	child(string) Locatable
+}
+
 type Collection interface {
-	etcdKey(id common.ID) string
+	// locationKey() string
+	// parent() Locatable
+	// child(string) Locatable
 
-	// initializeResource is called when unmarshalling objects from etcd.
-	// Primarily, it sets a pointer to the Collection on the Resource.
-	initializeResource(r Resource) error
+	initializeResource(Resource)
 }
 
-// Resource is an interface used mainly for generalized marshalling purposes for
-// resource common.
 type Resource interface {
-	// // ToApiObj allows for each resource to return a stripped or embellished
-	// // version of itself for rendering in API responses.
-	// ToApiObj() Resource
+	// locationKey() string
+	// parent() Locatable
+	// child(string) Locatable
+
+	Action(string) *Action
+	decorate() error
 }
 
-// OrderedResource is similar to Resource, but provides a setID() method to
-// set an auto-generated ID from etcd on the Resource.
-type OrderedResource interface {
-	setID(id common.ID)
+// // OrderedResource is similar to Resource, but provides a setID() method to
+// // set an auto-generated ID from etcd on the Resource.
+// type OrderedResource interface {
+// 	setID(id common.ID)
+// }
+
+// NOTE Core will implement Locatable, but no top-level Collection (like Apps) will actually return Core as parent()
+// So, Core can just implement parent() and locationKey() with nil and ""
+
+func locationChain(location Locatable) (locs []Locatable) {
+	for location != nil {
+		locs = append([]Locatable{location}, locs...) // prepend (we're going up the tree; ascending; reversing)
+		location = location.parent()
+	}
+	return
+}
+
+// ResourceLocation will take a Locatable and return a path just as "/apps/:name/components/:name/releases/:timestamp/instances/0"
+// This will mirror API routes.
+func ResourceLocation(location Locatable) (path string) {
+	for _, loc := range locationChain(location) {
+		path = path + "/" + loc.locationKey()
+	}
+	return
+}
+
+func LocateResource(coreLoc Locatable, path string) Resource {
+	keys := strings.Split(path, "/")[1:] // element 0 is empty due to starting /
+	location := coreLoc
+	for _, key := range keys {
+		location = location.child(key).(Locatable)
+	}
+	return location.(Resource)
+}
+
+func etcdKey(location Locatable) string {
+	// In etcd, the top-most directory will be the name of the Collection of the
+	// Location. For example, in etcd, a Release will be stored under:
+	// /releases/:app_name/:component_name/:timestamp
+	//
+	// but in the API, it would be:
+	// /apps/:name/components/:name/releases/:timestamp
+	collection := location
+	if _, ok := location.(Resource); ok {
+		collection = location.parent()
+	}
+	path := "/" + collection.locationKey()
+
+	for _, loc := range locationChain(location) {
+		if _, ok := loc.(Resource); ok { // by filtering out Collections, this is a path of just IDs
+			path = path + "/" + loc.locationKey()
+		}
+	}
+	return path
 }
 
 // TODO should maybe move this to util or helper file

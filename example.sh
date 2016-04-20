@@ -20,7 +20,12 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
   "termination_grace_period": 10,
   "volumes": [
     {
-      "name": "elasticsearch-data",
+      "name": "elasticsearch-data-1",
+      "type": "gp2",
+      "size": 10
+    },
+    {
+      "name": "elasticsearch-data-2",
       "type": "gp2",
       "size": 10
     }
@@ -38,8 +43,12 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
       },
       "mounts": [
         {
-          "volume": "elasticsearch-data",
+          "volume": "elasticsearch-data-1",
           "path": "/data-1"
+        },
+        {
+          "volume": "elasticsearch-data-2",
+          "path": "/data-2"
         }
       ],
       "ports": [
@@ -70,7 +79,7 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
         },
         {
           "name": "DATA_PATHS",
-          "value": "/data-1"
+          "value": "/data-1,/data-2"
         },
         {
           "name": "UNICAST_HOSTS",

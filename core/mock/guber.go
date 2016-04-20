@@ -15,9 +15,8 @@ func (f *FakeGuber) OnNamespaceCreate(clbk func(*guber.Namespace) error) *FakeGu
 
 func (f *FakeGuber) OnNamespaceDelete(clbk func(string) error) *FakeGuber {
 	return f.mockNamespaces(&FakeGuberNamespaces{
-		DeleteFn: func(name string) (bool, error) {
-			err := clbk(name)
-			return err == nil, err
+		DeleteFn: func(name string) error {
+			return clbk(name)
 		},
 	})
 }
@@ -75,7 +74,7 @@ type FakeGuberNamespaces struct {
 	ListFn   func() (*guber.NamespaceList, error)
 	GetFn    func(name string) (*guber.Namespace, error)
 	UpdateFn func(name string, r *guber.Namespace) (*guber.Namespace, error)
-	DeleteFn func(name string) (bool, error)
+	DeleteFn func(name string) error
 }
 
 func (f *FakeGuberNamespaces) Meta() *guber.CollectionMeta {
@@ -106,6 +105,6 @@ func (f *FakeGuberNamespaces) Update(name string, r *guber.Namespace) (*guber.Na
 	return f.UpdateFn(name, r)
 }
 
-func (f *FakeGuberNamespaces) Delete(name string) (found bool, err error) {
+func (f *FakeGuberNamespaces) Delete(name string) error {
 	return f.DeleteFn(name)
 }
