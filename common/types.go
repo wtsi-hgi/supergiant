@@ -168,6 +168,9 @@ type Instance struct {
 	Name     string `json:"name"`
 
 	Status InstanceStatus `json:"status"`
+
+	CPU *ResourceMetrics `json:"cpu"`
+	RAM *ResourceMetrics `json:"ram"`
 }
 
 // Entrypoint
