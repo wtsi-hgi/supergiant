@@ -34,12 +34,12 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
     {
       "image": "qbox/qbox-docker:2.1.1",
       "cpu": {
-        "min": 0,
-        "max": 500
+        "min": 0.25,
+        "max": "500m"
       },
       "ram": {
-        "min": 2048,
-        "max": 2048
+        "min": "1.5Gi",
+        "max": "2048Mi"
       },
       "mounts": [
         {
@@ -55,7 +55,7 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
         {
           "protocol": "HTTP",
           "number": 9200,
-          "external_number": 9200,
+          "external_number": 33666,
           "public": true,
           "entrypoint_domain": "example.com"
         },

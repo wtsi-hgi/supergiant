@@ -145,7 +145,7 @@ func (db *database) compareAndSwap(r Collection, id common.ID, old Resource, new
 func stripNonDbFields(m Resource) interface{} { // we return a copy here so we don't strip fields on the actual object
 	rv := reflect.ValueOf(m).Elem()
 
-	rxp, _ := regexp.Compile("(.+)Resource")
+	rxp := regexp.MustCompile("(.+)Resource")
 	typeName := rxp.FindStringSubmatch(rv.Type().Name())[1]
 
 	oldT := rv.FieldByName(typeName).Elem()

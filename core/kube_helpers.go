@@ -50,22 +50,26 @@ func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *
 		Limits:   new(guber.ResourceValues),
 	}
 	if m.RAM != nil {
-		resources.Requests.Memory = common.BytesFromMiB(m.RAM.Min).ToKubeMebibytes()
-		if m.RAM.Max != 0 {
-			resources.Limits.Memory = common.BytesFromMiB(m.RAM.Max).ToKubeMebibytes()
+		if m.RAM.Min != nil {
+			resources.Requests.Memory = m.RAM.Min.ToKubeMebibytes()
+		}
+		if m.RAM.Max != nil {
+			resources.Limits.Memory = m.RAM.Max.ToKubeMebibytes()
 		}
 	}
 	if m.CPU != nil {
-		resources.Requests.CPU = common.CoresFromMillicores(m.CPU.Min).ToKubeMillicores()
-		if m.CPU.Max != 0 {
-			resources.Limits.CPU = common.CoresFromMillicores(m.CPU.Max).ToKubeMillicores()
+		if m.CPU.Min != nil {
+			resources.Requests.CPU = m.CPU.Min.ToKubeMillicores()
+		}
+		if m.CPU.Max != nil {
+			resources.Limits.CPU = m.CPU.Max.ToKubeMillicores()
 		}
 	}
 
 	// TODO
 	containerName := m.Name
 	if m.Name == "" {
-		rxp, _ := regexp.Compile("[^A-Za-z0-9]")
+		rxp := regexp.MustCompile("[^A-Za-z0-9]")
 		containerName = rxp.ReplaceAllString(m.Image, "-")
 	}
 

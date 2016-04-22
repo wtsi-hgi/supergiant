@@ -66,14 +66,14 @@ type VolumeBlueprint struct {
 // Container
 //==============================================================================
 type ContainerBlueprint struct {
-	Image   string              `json:"image"`
-	Name    string              `json:"name,omitempty"`
-	Command []string            `json:"command,omitempty"`
-	Ports   []*Port             `json:"ports"`
-	Env     []*EnvVar           `json:"env"`
-	CPU     *ResourceAllocation `json:"cpu"`
-	RAM     *ResourceAllocation `json:"ram"`
-	Mounts  []*Mount            `json:"mounts,omitempty"`
+	Image   string         `json:"image"`
+	Name    string         `json:"name,omitempty"`
+	Command []string       `json:"command,omitempty"`
+	Ports   []*Port        `json:"ports"`
+	Env     []*EnvVar      `json:"env"`
+	CPU     *CpuAllocation `json:"cpu"`
+	RAM     *RamAllocation `json:"ram"`
+	Mounts  []*Mount       `json:"mounts,omitempty"`
 }
 
 // EnvVar
@@ -107,11 +107,14 @@ type Port struct {
 	ExternalNumber int `json:"external_number"`
 }
 
-// ResourceAllocation
-//==============================================================================
-type ResourceAllocation struct {
-	Min uint `json:"min"`
-	Max uint `json:"max"`
+type CpuAllocation struct {
+	Min *CoresValue `json:"min"`
+	Max *CoresValue `json:"max"`
+}
+
+type RamAllocation struct {
+	Min *BytesValue `json:"min"`
+	Max *BytesValue `json:"max"`
 }
 
 // Release
