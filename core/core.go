@@ -46,6 +46,8 @@ func SetLogLevel(level string) {
 		panic(err)
 	}
 	Log.Level = levelInt
+
+	// guber.Log.SetLevel(level)
 }
 
 // NOTE this used to be core.New(), but due to how we load in values from the
