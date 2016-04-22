@@ -178,7 +178,43 @@ func (r *InstanceResource) Action(name string) *Action {
 
 // decorate implements the Resource interface
 func (r *InstanceResource) decorate() error {
-	return r.setStatus()
+	pod, err := r.pod()
+	if err != nil {
+		return err
+	}
+
+	if pod != nil && pod.IsReady() {
+		r.Status = common.InstanceStatusStarted
+	} else {
+		r.Status = common.InstanceStatusStopped
+		return nil // don't get stats below
+	}
+
+	stats, err := pod.HeapsterStats()
+
+	if err != nil {
+		Log.Errorf("Could not load Heapster stats for pod %s", r.Name)
+		// return err
+	} else {
+
+		// TODO repeated in Node
+
+		cpuUsage := stats.Stats["cpu-usage"]
+		memUsage := stats.Stats["memory-usage"]
+
+		if cpuUsage != nil && memUsage != nil {
+			r.CPU = &common.ResourceMetrics{
+				Usage: cpuUsage.Minute.Average,
+				Limit: stats.Stats["cpu-limit"].Minute.Average,
+			}
+			r.RAM = &common.ResourceMetrics{
+				Usage: memUsage.Minute.Average,
+				Limit: stats.Stats["memory-limit"].Minute.Average,
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *InstanceResource) App() *AppResource {
@@ -187,19 +223,6 @@ func (r *InstanceResource) App() *AppResource {
 
 func (r *InstanceResource) Component() *ComponentResource {
 	return r.collection.component()
-}
-
-func (r *InstanceResource) setStatus() error {
-	pod, err := r.pod()
-	if err != nil {
-		return err
-	}
-	if pod != nil && pod.IsReady() {
-		r.Status = common.InstanceStatusStarted
-		return nil
-	}
-	r.Status = common.InstanceStatusStopped
-	return nil
 }
 
 func (r *InstanceResource) IsStarted() bool {
