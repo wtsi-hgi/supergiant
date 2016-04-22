@@ -105,7 +105,7 @@ func (c *TaskCollection) Get(id common.ID) (*TaskResource, error) {
 
 // Update updates the Task in etcd.
 func (c *TaskCollection) Update(id common.ID, r *TaskResource) error {
-	return c.core.db.update(c, id, r)
+	return c.core.db.patch(c, id, r)
 }
 
 // Delete deletes the Task in etcd.

@@ -1,9 +1,14 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/go-validator/validator"
 
 	"github.com/supergiant/supergiant/common"
 )
@@ -15,18 +20,10 @@ type Locatable interface {
 }
 
 type Collection interface {
-	// locationKey() string
-	// parent() Locatable
-	// child(string) Locatable
-
 	initializeResource(Resource)
 }
 
 type Resource interface {
-	// locationKey() string
-	// parent() Locatable
-	// child(string) Locatable
-
 	Action(string) *Action
 	decorate() error
 }
@@ -149,4 +146,198 @@ func setCreatedTimestamp(r Resource) {
 
 func setUpdatedTimestamp(r Resource) {
 	getFieldValue(r, "Updated").Set(newTimestampValue())
+}
+
+// // This zeros out field values with db:"-" tag, and omitsempty with JSON.
+// func stripNonDbFields(m Resource) interface{} { // we return a copy here so we don't strip fields on the actual object
+// 	rv := reflect.ValueOf(m).Elem()
+//
+// 	rxp, _ := regexp.Compile("(.+)Resource")
+// 	typeName := rxp.FindStringSubmatch(rv.Type().Name())[1]
+//
+// 	oldT := rv.FieldByName(typeName).Elem()
+// 	newT := reflect.New(oldT.Type())
+// 	newT.Elem().Set(oldT)
+//
+// 	out := newT.Interface()
+//
+// 	val := reflect.ValueOf(out).Elem()
+// 	val.Set(newT.Elem())
+//
+// 	t := val.Type()
+//
+// 	for i := 0; i < val.NumField(); i++ {
+// 		tag := string(t.Field(i).Tag)
+//
+// 		if strings.Contains(tag, "db:\"-\"") {
+// 			field := val.Field(i)
+// 			field.Set(reflect.Zero(field.Type()))
+// 		}
+// 	}
+//
+// 	return out
+// }
+
+func taggedResourceFieldOf(field reflect.StructField, fieldValue reflect.Value) *taggedResourceField {
+	tag := field.Tag.Get("sg")
+	parts := strings.Split(tag, ",")
+
+	out := new(taggedResourceField)
+	out.Field = fieldValue
+
+	for _, part := range parts {
+		subparts := strings.Split(part, "=")
+		switch len(subparts) {
+		case 1:
+
+			switch subparts[0] {
+			case "readonly":
+				out.Readonly = true
+			case "nostore":
+				out.NoStore = true
+			case "private":
+				out.Private = true
+			default:
+				panic("Do not recognize tag key " + subparts[0])
+			}
+
+		case 2: // e.g. default=10
+
+			switch kind := fieldValue.Kind(); kind {
+			case reflect.String:
+				out.Default = subparts[1] // already a string
+			case reflect.Int:
+				integer, err := strconv.Atoi(subparts[1])
+				if err != nil {
+					panic(err)
+				}
+				out.Default = integer
+			default:
+				panic("Cannot parse tag default with value " + subparts[1])
+			}
+
+		default:
+			panic("Could not parse Resource tag " + tag)
+		}
+	}
+
+	return out
+}
+
+func gatherTaggedResourceFieldsInto(obj reflect.Value, taggedFields *[]*taggedResourceField) {
+	objType := obj.Type() // *common.App on first iteration
+
+	for i := 0; i < obj.NumField(); i++ {
+		field := objType.Field(i)
+		fieldValue := obj.Field(i)
+
+		// 1. if we see an SG tag, pass it to the tag parsing func, and continue
+		// 2. if no SG tag, AND it's a struct (or ptr to), then we have to call recursively
+		// 3. if no SG tag, and it's NOT a struct, we don't care
+
+		if tag := field.Tag.Get("sg"); tag != "" {
+			taggedField := taggedResourceFieldOf(field, fieldValue)
+			*taggedFields = append(*taggedFields, taggedField)
+			continue
+		}
+
+		if fieldValue.Kind() == reflect.Ptr { // && fieldValue.Elem().Kind() == reflect.Struct {
+			fieldValue = fieldValue.Elem()
+		}
+
+		if fieldValue.Kind() == reflect.Struct {
+			gatherTaggedResourceFieldsInto(fieldValue, taggedFields)
+		}
+	}
+}
+
+type taggedResourceField struct {
+	Field    reflect.Value
+	Readonly bool
+	NoStore  bool
+	Private  bool
+	Default  interface{}
+}
+
+func taggedResourceFieldsOf(r Resource) (taggedFields []*taggedResourceField) {
+	// &AppResource{    	<-- resourceValue
+	// 	App: &App{				<-- commonValue
+	// 		Name: "test",
+	// 	},
+	// }
+	resourceValue := reflect.ValueOf(r).Elem()
+	rxp, _ := regexp.Compile("(.+)Resource")
+	commonName := rxp.FindStringSubmatch(resourceValue.Type().Name())[1]
+	commonValue := resourceValue.FieldByName(commonName).Elem()
+
+	gatherTaggedResourceFieldsInto(commonValue, &taggedFields)
+	return
+}
+
+// ZeroReadonlyFields takes a Resource with pointer, and zeroes any fields with
+// the tag sg:"readonly".
+func ZeroReadonlyFields(r Resource) {
+	for _, tf := range taggedResourceFieldsOf(r) {
+		if tf.Readonly {
+			tf.Field.Set(reflect.Zero(tf.Field.Type()))
+		}
+	}
+}
+
+// ZeroPrivateFields takes a Resource with pointer, and zeroes any fields with
+// the tag sg:"private".
+func ZeroPrivateFields(r Resource) {
+	for _, tf := range taggedResourceFieldsOf(r) {
+		if tf.Private {
+			tf.Field.Set(reflect.Zero(tf.Field.Type()))
+		}
+	}
+}
+
+// copyWithoutNoStoreFields takes a Resource with pointer, and returns a copy
+// with zero values for any fields with the tag sg:"nostore".
+//
+// NOTE nostore has to be used in conjunction with json:"omitempty" in order to
+// prevent an empty value being stored in the DB. The alternative is to return
+// a copy of the Resource in the form of a map, but that seems kinda difficult.
+func copyWithoutNoStoreFields(r Resource) Resource {
+	origR := reflect.ValueOf(r).Elem()
+	newR := reflect.New(origR.Type())
+
+	in := origR.Interface()
+	out := newR.Interface()
+
+	marshalled, err := json.Marshal(in)
+	if err != nil {
+		panic(err)
+	}
+	if err = json.Unmarshal(marshalled, out); err != nil {
+		panic(err)
+	}
+
+	resource := out.(Resource)
+
+	for _, tf := range taggedResourceFieldsOf(resource) {
+		if tf.NoStore {
+			tf.Field.Set(reflect.Zero(tf.Field.Type()))
+		}
+	}
+
+	return resource
+}
+
+// setDefaultFields takes a Resource with a pointer and sets the default value
+// on all fields with the tag sg:"default=something".
+func setDefaultFields(r Resource) {
+	for _, tf := range taggedResourceFieldsOf(r) {
+		if d := tf.Default; d != nil {
+			tf.Field.Set(reflect.ValueOf(d).Elem())
+		}
+	}
+}
+
+// validateFields takes a Resource with a pointer and runs a validation on every
+// field with the validate:"..." tag.
+func validateFields(r Resource) error {
+	return validator.Validate(r)
 }

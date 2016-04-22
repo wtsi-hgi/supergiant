@@ -17,6 +17,8 @@ func (c *AppController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(app)
+
 	err := c.core.Apps().Create(app)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -66,6 +68,8 @@ func (c *AppController) Update(w http.ResponseWriter, r *http.Request) {
 	if err := unmarshalBodyInto(w, r, app); err != nil {
 		return
 	}
+
+	core.ZeroReadonlyFields(app)
 
 	if err := app.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)

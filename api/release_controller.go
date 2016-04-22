@@ -22,6 +22,8 @@ func (c *ReleaseController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(release)
+
 	err = component.Releases().Create(release)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -107,6 +109,8 @@ func (c *ReleaseController) Update(w http.ResponseWriter, r *http.Request) {
 	if err := unmarshalBodyInto(w, r, release); err != nil {
 		return
 	}
+
+	core.ZeroReadonlyFields(release)
 
 	if err := release.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)

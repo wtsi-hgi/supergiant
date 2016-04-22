@@ -75,7 +75,7 @@ func (c *ImageRegistryCollection) Get(name common.ID) (*ImageRegistryResource, e
 
 // Update updates the ImageRegistry in etcd.
 func (c *ImageRegistryCollection) Update(name common.ID, r *ImageRegistryResource) error {
-	return c.core.db.update(c, name, r)
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete deletes the ImageRegistry in etcd.

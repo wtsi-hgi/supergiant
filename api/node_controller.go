@@ -17,6 +17,8 @@ func (c *NodeController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(node)
+
 	err := c.core.Nodes().Create(node)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -66,6 +68,8 @@ func (c *NodeController) Update(w http.ResponseWriter, r *http.Request) {
 	if err := unmarshalBodyInto(w, r, node); err != nil {
 		return
 	}
+
+	core.ZeroReadonlyFields(node)
 
 	if err := node.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)

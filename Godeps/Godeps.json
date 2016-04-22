@@ -164,6 +164,10 @@
 			"Rev": "193d1ecb466bf97aae8b454a5cfc192941c64809"
 		},
 		{
+			"ImportPath": "github.com/go-validator/validator",
+			"Rev": "3e4f037f12a1221a0864cf0dd2e81c452ab22448"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Rev": "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
 		},

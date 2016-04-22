@@ -88,7 +88,7 @@ func (c *ComponentCollection) Get(name common.ID) (*ComponentResource, error) {
 
 // Update saves the Component in etcd through an update.
 func (c *ComponentCollection) Update(name common.ID, r *ComponentResource) error {
-	return c.core.db.update(c, name, r)
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete cascades delete calls to current and target releases, and deletes the

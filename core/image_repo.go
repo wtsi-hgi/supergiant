@@ -69,7 +69,7 @@ func (c *ImageRepoCollection) Get(name common.ID) (*ImageRepoResource, error) {
 
 // Update updates the ImageRepo in etcd.
 func (c *ImageRepoCollection) Update(name common.ID, r *ImageRepoResource) error {
-	return c.core.db.update(c, name, r)
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete deletes the ImageRepo in etcd.

@@ -114,7 +114,7 @@ func (c *NodeCollection) Get(id common.ID) (*NodeResource, error) {
 
 // Update updates the Node in etcd.
 func (c *NodeCollection) Update(id common.ID, r *NodeResource) error {
-	return c.core.db.update(c, id, r)
+	return c.core.db.patch(c, id, r)
 }
 
 // Delete deletes the Node in etcd.

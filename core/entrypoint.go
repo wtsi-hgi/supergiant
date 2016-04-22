@@ -80,7 +80,7 @@ func (c *EntrypointCollection) Create(r *EntrypointResource) error {
 	}
 
 	r.Address = *address
-	r.Update()
+	c.core.db.update(c, r.Domain, r)
 
 	return nil
 }
@@ -96,7 +96,7 @@ func (c *EntrypointCollection) Get(domain common.ID) (*EntrypointResource, error
 
 // Update saves the Entrypoint in etcd through an update.
 func (c *EntrypointCollection) Update(domain common.ID, r *EntrypointResource) error {
-	return c.core.db.update(c, domain, r)
+	return c.core.db.patch(c, domain, r)
 }
 
 // Delete cascades deletes to all Components, deletes the Kube Namespace, and

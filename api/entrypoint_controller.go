@@ -17,6 +17,8 @@ func (c *EntrypointController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(entrypoint)
+
 	err := c.core.Entrypoints().Create(entrypoint)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -57,6 +59,30 @@ func (c *EntrypointController) Show(w http.ResponseWriter, r *http.Request) {
 	renderWithStatusOK(w, body)
 }
 
+func (c *EntrypointController) Update(w http.ResponseWriter, r *http.Request) {
+	entrypoint, err := loadEntrypoint(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	if err := unmarshalBodyInto(w, r, entrypoint); err != nil {
+		return
+	}
+
+	core.ZeroReadonlyFields(entrypoint)
+
+	if err := entrypoint.Update(); err != nil {
+		renderError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	body, err := marshalBody(w, entrypoint)
+	if err != nil {
+		return
+	}
+	renderWithStatusAccepted(w, body)
+}
+
 func (c *EntrypointController) Delete(w http.ResponseWriter, r *http.Request) {
 	entrypoint, err := loadEntrypoint(c.core, w, r)
 	if err != nil {
@@ -66,12 +92,4 @@ func (c *EntrypointController) Delete(w http.ResponseWriter, r *http.Request) {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
-
-	// TODO what do we return on immediate deletes like this? generic OK message?
-
-	// body, err := marshalBody(w, app)
-	// if err != nil {
-	// 	return
-	// }
-	// renderWithStatusAccepted(w, body)
 }

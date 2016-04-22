@@ -53,17 +53,17 @@ func TestAppCreate(t *testing.T) {
 		})
 
 		core := newMockCore(fakeEtcd)
-		apps := core.Apps()
-
 		core.k8s = new(mock.FakeGuber).OnNamespaceCreate(func(namespace *guber.Namespace) error {
 			namespaceCreated = namespace.Metadata.Name
 			return nil
 		})
 
-		app := apps.New()
-		app.Name = common.IDString("test")
+		apps := core.Apps()
 
-		Convey("When Create() is called", func() {
+		Convey("When an App is created", func() {
+			app := apps.New()
+			app.Name = common.IDString("test")
+
 			err := apps.Create(app)
 
 			Convey("The App should be created in etcd with a Created Timestamp", func() {
@@ -74,6 +74,19 @@ func TestAppCreate(t *testing.T) {
 
 			Convey("A Kubernetes Namespace should be created", func() {
 				So(namespaceCreated, ShouldEqual, "test")
+			})
+		})
+
+		// Error handling
+
+		Convey("When an App is created with an invalid name", func() {
+			app := apps.New()
+			app.Name = common.IDString("this gonna break")
+
+			err := apps.Create(app)
+
+			Convey("A validation error should be returned", func() {
+				So(err.Error(), ShouldEqual, "App.Name: regular expression mismatch")
 			})
 		})
 	})
@@ -112,10 +125,23 @@ func TestAppUpdate(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
 		etcdKeyUpdated := ""
 
-		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
 			etcdKeyUpdated = key
 			return nil
 		})
+
+		fakeEtcd.ReturnValueOnGet(
+			`{
+				"name": "test",
+				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
+				"updated": null,
+				"tags": {}
+			}`,
+			nil,
+		)
+
 		core := newMockCore(fakeEtcd)
 		apps := core.Apps()
 
@@ -126,9 +152,9 @@ func TestAppUpdate(t *testing.T) {
 			err := app.Update()
 
 			Convey("The App should be updated in etcd with an Updated Timestamp", func() {
+				So(err, ShouldBeNil)
 				So(etcdKeyUpdated, ShouldEqual, "/supergiant/apps/test")
 				So(app.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
-				So(err, ShouldBeNil)
 			})
 		})
 	})

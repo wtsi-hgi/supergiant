@@ -31,3 +31,9 @@ func StringID(id ID) string {
 func IDString(str string) ID {
 	return &str
 }
+
+func NewMeta() *Meta {
+	return &Meta{
+		Tags: make(Tags),
+	}
+}
