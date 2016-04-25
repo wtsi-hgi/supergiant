@@ -38,6 +38,31 @@ func autoscalingGroup(c *Core, id *string) (*autoscaling.Group, error) {
 	return resp.AutoScalingGroups[0], nil
 }
 
+func autoscalingGroupInstanceTypes(c *Core) (instanceTypes []string, err error) {
+	groups, err := autoscalingGroups(c)
+	if err != nil {
+		return nil, err
+	}
+	var launchConfigNames []*string
+	for _, group := range groups {
+		launchConfigNames = append(launchConfigNames, group.LaunchConfigurationName)
+	}
+
+	input := &autoscaling.DescribeLaunchConfigurationsInput{
+		LaunchConfigurationNames: launchConfigNames,
+	}
+	resp, err := c.autoscaling.DescribeLaunchConfigurations(input)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, launchConfig := range resp.LaunchConfigurations {
+		instanceTypes = append(instanceTypes, *launchConfig.InstanceType)
+	}
+
+	return instanceTypes, nil
+}
+
 func autoscalingGroupInstanceType(c *Core, group *autoscaling.Group) string {
 	input := &autoscaling.DescribeLaunchConfigurationsInput{
 		LaunchConfigurationNames: []*string{group.LaunchConfigurationName},

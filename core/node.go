@@ -2,12 +2,15 @@ package core
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 )
 
@@ -80,7 +83,7 @@ func (c *NodeCollection) Create(r *NodeResource) error {
 	// This refreshes the entire database on every create. It should ideally poll
 	// in the background.
 	//
-	if err := r.collection.populate(); err != nil {
+	if err := c.populate(); err != nil {
 		return err
 	}
 
@@ -361,4 +364,45 @@ func (r *NodeResource) deleteServer() error {
 		return nil
 	}
 	return err
+}
+
+func (r *NodeResource) hasPodsWithReservedResources() (bool, error) {
+	q := &guber.QueryParams{
+		FieldSelector: "spec.nodeName=" + r.Name + ",status.phase=Running",
+	}
+	// TODO does this actually return pods in multiple namespaces?
+	pods, err := r.core.k8s.Pods("").Query(q)
+	if err != nil {
+		return false, err
+	}
+
+	rxp := regexp.MustCompile("[0-9]+")
+
+	for _, pod := range pods.Items {
+		for _, container := range pod.Spec.Containers {
+			reqs := container.Resources.Requests
+			values := [2]string{
+				reqs.CPU,
+				reqs.Memory,
+			}
+
+			for _, val := range values {
+				numstr := rxp.FindString(val)
+				num := 0
+				var err error
+				if numstr != "" {
+					num, err = strconv.Atoi(numstr)
+					if err != nil {
+						return false, err
+					}
+				}
+
+				if num > 0 {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
 }

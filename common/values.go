@@ -40,7 +40,7 @@ func TimestampFromString(str string) *Timestamp {
 // CPU / RAM resource values
 
 type BytesValue struct {
-	bytes int64
+	Bytes int64
 }
 
 const (
@@ -59,7 +59,7 @@ func (b *BytesValue) UnmarshalJSON(raw []byte) error {
 	rxp := regexp.MustCompile(`^"?([0-9]+(?:\.[0-9]+)?)([KMG]i)?"?$`)
 
 	if !rxp.MatchString(str) {
-		return fmt.Errorf("Cannot parse bytes value from %s", str)
+		return fmt.Errorf(`Bytes value %s does not match regex ^"?([0-9]+(?:\.[0-9]+)?)([KMG]i)?"?$`, str)
 	}
 
 	match := rxp.FindStringSubmatch(str)
@@ -71,11 +71,11 @@ func (b *BytesValue) UnmarshalJSON(raw []byte) error {
 
 	switch match[2] {
 	case "":
-		b.bytes = int64(float)
+		b.Bytes = int64(float)
 	case "Mi":
-		b.bytes = int64(float * float64(mebibytes))
+		b.Bytes = int64(float * float64(mebibytes))
 	case "Gi":
-		b.bytes = int64(float * float64(gibibytes))
+		b.Bytes = int64(float * float64(gibibytes))
 	default:
 		return fmt.Errorf("Cannot parse bytes value from %s", str)
 	}
@@ -83,16 +83,20 @@ func (b *BytesValue) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-func (v *BytesValue) mebibytes() int64 {
-	return v.bytes / mebibytes
+func (v *BytesValue) Mebibytes() float64 {
+	return float64(v.Bytes) / float64(mebibytes)
+}
+
+func (v *BytesValue) Gibibytes() float64 {
+	return float64(v.Bytes) / float64(gibibytes)
 }
 
 func (v *BytesValue) ToKubeMebibytes() string {
-	return fmt.Sprintf("%dMi", v.mebibytes())
+	return fmt.Sprintf("%dMi", int(v.Mebibytes()))
 }
 
 type CoresValue struct {
-	millicores int
+	Millicores int
 }
 
 const millicores = 1000
@@ -119,7 +123,7 @@ func (c *CoresValue) UnmarshalJSON(raw []byte) error {
 		if err != nil {
 			return err
 		}
-		c.millicores = int(num)
+		c.Millicores = int(num)
 
 	case rxpCores.MatchString(str):
 
@@ -127,7 +131,7 @@ func (c *CoresValue) UnmarshalJSON(raw []byte) error {
 		if err != nil {
 			return err
 		}
-		c.millicores = int(num * millicores)
+		c.Millicores = int(num * millicores)
 
 	default:
 		return fmt.Errorf("Could not parse cores value from %s", str)
@@ -141,5 +145,9 @@ func (c *CoresValue) UnmarshalJSON(raw []byte) error {
 // }
 
 func (v *CoresValue) ToKubeMillicores() string {
-	return fmt.Sprintf("%dm", v.millicores)
+	return fmt.Sprintf("%dm", v.Millicores)
+}
+
+func (v *CoresValue) Cores() float64 {
+	return float64(millicores) / float64(millicores)
 }

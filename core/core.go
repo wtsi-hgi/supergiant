@@ -80,6 +80,8 @@ func (c *Core) Initialize() {
 	// TODO expose as worker num option in main
 	go NewSupervisor(c, 4).Run()
 
+	go newCapacityService(c).Run()
+
 	// TODO
 	if err := c.Nodes().populate(); err != nil {
 		panic(err)
