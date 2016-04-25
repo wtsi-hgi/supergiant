@@ -34,12 +34,12 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
     {
       "image": "qbox/qbox-docker:2.1.1",
       "cpu": {
-        "min": 2,
-        "max": 4
+        "min": 0,
+        "max": 0.5
       },
       "ram": {
-        "min": "12Gi",
-        "max": "16Gi"
+        "min": "1.5Gi",
+        "max": "2Gi"
       },
       "mounts": [
         {

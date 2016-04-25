@@ -49,13 +49,13 @@ const (
 	gibibytes       = mebibytes * kibibytes
 )
 
-func (b *BytesValue) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + b.ToKubeMebibytes() + `"`), nil
+func BytesFromString(str string) *BytesValue {
+	b := new(BytesValue)
+	b.fromString(str)
+	return b
 }
 
-func (b *BytesValue) UnmarshalJSON(raw []byte) error {
-	str := string(raw)
-
+func (b *BytesValue) fromString(str string) error {
 	rxp := regexp.MustCompile(`^"?([0-9]+(?:\.[0-9]+)?)([KMG]i)?"?$`)
 
 	if !rxp.MatchString(str) {
@@ -83,6 +83,14 @@ func (b *BytesValue) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+func (b *BytesValue) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + b.ToKubeMebibytes() + `"`), nil
+}
+
+func (b *BytesValue) UnmarshalJSON(raw []byte) error {
+	return b.fromString(string(raw))
+}
+
 func (v *BytesValue) Mebibytes() float64 {
 	return float64(v.Bytes) / float64(mebibytes)
 }
@@ -101,13 +109,13 @@ type CoresValue struct {
 
 const millicores = 1000
 
-func (c *CoresValue) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + c.ToKubeMillicores() + `"`), nil
+func CoresFromString(str string) *CoresValue {
+	c := new(CoresValue)
+	c.fromString(str)
+	return c
 }
 
-func (c *CoresValue) UnmarshalJSON(raw []byte) error {
-	str := string(raw)
-
+func (c *CoresValue) fromString(str string) error {
 	rxpMillicores := regexp.MustCompile(`^"([0-9]+)m"$`)        // 1000m
 	rxpCores := regexp.MustCompile(`^"?([0-9]+(\.[0-9]+)?)"?$`) // 1 (can have quotes)
 
@@ -140,9 +148,13 @@ func (c *CoresValue) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-// func (v *CoresValue) cores() float64 {
-// 	return float64(v.millicores) / float64(millicores)
-// }
+func (c *CoresValue) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + c.ToKubeMillicores() + `"`), nil
+}
+
+func (c *CoresValue) UnmarshalJSON(raw []byte) error {
+	return c.fromString(string(raw))
+}
 
 func (v *CoresValue) ToKubeMillicores() string {
 	return fmt.Sprintf("%dm", v.Millicores)
