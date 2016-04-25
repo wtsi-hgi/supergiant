@@ -51,7 +51,7 @@ const (
 
 func BytesFromString(str string) *BytesValue {
 	b := new(BytesValue)
-	b.fromString(str)
+	b.fromString(str) // NOTE error ignored
 	return b
 }
 
