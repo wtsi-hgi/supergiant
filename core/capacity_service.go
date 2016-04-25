@@ -228,6 +228,9 @@ func (s *capacityService) incomingPods() (incomingPods []*guber.Pod, err error) 
 		incomingCount := len(incomingPods)
 
 		if incomingCount > 0 && elapsed < waitBeforeScale {
+
+			Log.Debugf("Waiting to add nodes for %d pods", incomingCount)
+
 			time.Sleep(2 * time.Second)
 		} else {
 			break
