@@ -130,7 +130,13 @@ type projectedNode struct {
 func (pnode *projectedNode) usedRAM() (u float64) {
 	for _, pod := range pnode.Pods {
 		for _, container := range pod.Spec.Containers {
-			memStr := container.Resources.Requests.Memory
+
+			// NOTE we use limits here, and not requests, because we want to spin up
+			// nodes that are at least slightly bigger than the user thinks the pod
+			// could utilize. This will ensure that the user's limit CAN BE FILLED AT
+			// ALL. This is at the core of our increased-utilization strategy.
+
+			memStr := container.Resources.Limits.Memory
 			b := new(common.BytesValue)
 			if err := b.UnmarshalJSON([]byte(memStr)); err != nil {
 				panic(err)
@@ -144,7 +150,10 @@ func (pnode *projectedNode) usedRAM() (u float64) {
 func (pnode *projectedNode) usedCPU() (u float64) {
 	for _, pod := range pnode.Pods {
 		for _, container := range pod.Spec.Containers {
-			cpuStr := container.Resources.Requests.CPU
+
+			// NOTE above in usedRAM
+
+			cpuStr := container.Resources.Limits.CPU
 			c := new(common.CoresValue)
 			if err := c.UnmarshalJSON([]byte(cpuStr)); err != nil {
 				panic(err)
