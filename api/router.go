@@ -7,12 +7,12 @@ import (
 )
 
 func NewRouter(core *core.Core) *mux.Router {
-	// StrictSlash will redirect /apps to /apps/
-	// otherwise mux will simply not match /apps/
 	r := mux.NewRouter()
-	r.StrictSlash(true)
 
 	s := r.PathPrefix("/v0").Subrouter()
+
+	// this redirects /apps/ to /apps
+	s.StrictSlash(true)
 
 	imageRepos := &ImageRepoController{core}
 	entrypoints := &EntrypointController{core}

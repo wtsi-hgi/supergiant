@@ -33,6 +33,13 @@ go run main.go \
 
 See [example.sh](example.sh) and [api/router.go](api/router.go).
 
+# Tests
+
+*Better coverage is on the way, we promise.*
+
+```shell
+godep go test ./...
+```
 
 # License
 
