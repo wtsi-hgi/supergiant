@@ -16,17 +16,18 @@ import (
 )
 
 type Core struct {
-	EtcdEndpoints    []string
-	K8sHost          string
-	K8sUser          string
-	K8sPass          string
-	K8sInsecureHTTPS bool
-	AwsRegion        string
-	AwsAZ            string
-	AwsSgID          string
-	AwsSubnetID      string
-	AwsAccessKey     string
-	AwsSecretKey     string
+	EtcdEndpoints          []string
+	K8sHost                string
+	K8sUser                string
+	K8sPass                string
+	K8sInsecureHTTPS       bool
+	AwsRegion              string
+	AwsAZ                  string
+	AwsSgID                string
+	AwsSubnetID            string
+	AwsAccessKey           string
+	AwsSecretKey           string
+	CapacityServiceEnabled bool
 
 	db          *database
 	k8s         guber.Client
@@ -80,7 +81,9 @@ func (c *Core) Initialize() {
 	// TODO expose as worker num option in main
 	go NewSupervisor(c, 4).Run()
 
-	go newCapacityService(c).Run()
+	if c.CapacityServiceEnabled {
+		go newCapacityService(c).Run()
+	}
 
 	// TODO
 	if err := c.Nodes().populate(); err != nil {

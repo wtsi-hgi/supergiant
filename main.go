@@ -114,6 +114,11 @@ func main() {
 			Usage:       "Skip verification if HTTPS mode when connecting to Kubernetes.",
 			Destination: &c.K8sInsecureHTTPS,
 		},
+		cli.BoolFlag{
+			Name:        "enable-capacity-service",
+			Usage:       "Enable the automatic creation/deletion of servers to meet requested capacity.",
+			Destination: &c.CapacityServiceEnabled,
+		},
 		cli.StringFlag{
 			Name:  "log-level",
 			Value: "info",
