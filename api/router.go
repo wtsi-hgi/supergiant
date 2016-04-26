@@ -6,6 +6,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// type restAction fn func(http.ResponseWriter, *http.Request) error
+//
+// func handleAction(fn restAction) func(http.ResponseWriter, *http.Request) {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		if err := fn(w, r); err != nil {
+// 			renderError(w, err, http.StatusInternalServerError)
+// 		}
+// 	}
+// }
+
 func NewRouter(core *core.Core) *mux.Router {
 	r := mux.NewRouter()
 
@@ -26,6 +36,7 @@ func NewRouter(core *core.Core) *mux.Router {
 	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Create).Methods("POST")
 	s.HandleFunc("/registries/dockerhub/repos", imageRepos.Index).Methods("GET")
 	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Show).Methods("GET")
+	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Update).Methods("PUT")
 	s.HandleFunc("/registries/dockerhub/repos/{name}", imageRepos.Delete).Methods("DELETE")
 
 	s.HandleFunc("/nodes", nodes.Create).Methods("POST")
@@ -37,6 +48,7 @@ func NewRouter(core *core.Core) *mux.Router {
 	s.HandleFunc("/entrypoints", entrypoints.Create).Methods("POST")
 	s.HandleFunc("/entrypoints", entrypoints.Index).Methods("GET")
 	s.HandleFunc("/entrypoints/{domain}", entrypoints.Show).Methods("GET")
+	s.HandleFunc("/entrypoints/{domain}", entrypoints.Update).Methods("PUT")
 	s.HandleFunc("/entrypoints/{domain}", entrypoints.Delete).Methods("DELETE")
 
 	s.HandleFunc("/apps", apps.Create).Methods("POST")

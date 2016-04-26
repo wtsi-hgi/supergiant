@@ -136,7 +136,7 @@ func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
 
 // Update saves the Release in etcd through an update.
 func (c *ReleaseCollection) Update(name common.ID, r *ReleaseResource) error {
-	return c.core.db.update(c, name, r)
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in

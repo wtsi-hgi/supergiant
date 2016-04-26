@@ -192,8 +192,13 @@ func unmarshalBodyInto(w http.ResponseWriter, r *http.Request, out interface{}) 
 // marshalBody marshals an interface into a JSON body or renders an HTTP Bad
 // Request error.
 func marshalBody(w http.ResponseWriter, in interface{}) (string, error) {
+
+	// // TODO we should just make a separate method for Resource-specific use
+	// if r, isResource := in.(core.Resource); isResource {
+	// 	core.ZeroPrivateFields(r)
+	// }
+
 	out, err := json.MarshalIndent(in, "", "  ")
-	// out, err := json.Marshal(in)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return "", err

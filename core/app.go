@@ -87,7 +87,7 @@ func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 
 // Update updates the App in etcd.
 func (c *AppCollection) Update(name common.ID, r *AppResource) error {
-	return c.core.db.update(c, name, r)
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete deletes the App in etcd, and deletes the namespace and all Components.

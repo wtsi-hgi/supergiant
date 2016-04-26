@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-// ID is defined as a string pointer in order to check for nil in the context of
-// relations. NOTE this may not be best practice.
-type ID *string
-
 type Timestamp struct {
 	time.Time
 }

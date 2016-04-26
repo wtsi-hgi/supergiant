@@ -15,6 +15,7 @@ func TestImageRepoList(t *testing.T) {
 			[]string{
 				`{
 					"name": "test",
+					"key": "key",
 					"created": "Tue, 12 Apr 2016 03:54:56 UTC",
 					"updated": null,
 					"tags": {}
@@ -31,6 +32,7 @@ func TestImageRepoList(t *testing.T) {
 			Convey("The return value should be an ImageRepoList with 1 ImageRepo", func() {
 				expected := repos.New()
 				expected.Name = common.IDString("test")
+				expected.Key = "key"
 				expected.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
 
 				So(list.Items, ShouldHaveLength, 1)
@@ -55,6 +57,7 @@ func TestImageRepoCreate(t *testing.T) {
 
 		repo := repos.New()
 		repo.Name = common.IDString("test")
+		repo.Key = "key"
 
 		Convey("When Create() is called", func() {
 			err := repos.Create(repo)
@@ -73,6 +76,7 @@ func TestImageRepoGet(t *testing.T) {
 		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(
 			`{
 				"name": "test",
+				"key": "key",
 				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
 				"updated": null,
 				"tags": {}
@@ -85,6 +89,7 @@ func TestImageRepoGet(t *testing.T) {
 		Convey("When Get() is called with the ImageRepo name", func() {
 			expected := repos.New()
 			expected.Name = common.IDString("test")
+			expected.Key = "key"
 			expected.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
 
 			repo, err := repos.Get(expected.Name)
@@ -101,23 +106,38 @@ func TestImageRepoUpdate(t *testing.T) {
 	Convey("Given an ImageRepoCollection with an ImageRepoResource", t, func() {
 		etcdKeyUpdated := ""
 
-		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
 			etcdKeyUpdated = key
 			return nil
 		})
+
+		fakeEtcd.ReturnValueOnGet(
+			`{
+				"name": "test",
+				"key": "key",
+				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
+				"updated": null,
+				"tags": {}
+			}`,
+			nil,
+		)
+
 		core := newMockCore(fakeEtcd)
 		repos := core.ImageRepos()
 
 		repo := repos.New()
 		repo.Name = common.IDString("test")
+		repo.Key = "key"
 
 		Convey("When Update() is called", func() {
 			err := repo.Update()
 
 			Convey("The ImageRepo should be updated in etcd with an Updated Timestamp", func() {
+				So(err, ShouldBeNil)
 				So(etcdKeyUpdated, ShouldEqual, "/supergiant/repos/dockerhub/test")
 				So(repo.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
-				So(err, ShouldBeNil)
 			})
 		})
 	})

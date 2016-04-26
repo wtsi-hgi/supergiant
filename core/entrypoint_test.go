@@ -165,10 +165,23 @@ func TestEntrypointUpdate(t *testing.T) {
 	Convey("Given an EntrypointCollection with an EntrypointResource", t, func() {
 		etcdKeyUpdated := ""
 
-		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
 			etcdKeyUpdated = key
 			return nil
 		})
+
+		fakeEtcd.ReturnValueOnGet(
+			`{
+				"domain": "example.com",
+				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
+				"updated": null,
+				"tags": {}
+			}`,
+			nil,
+		)
+
 		core := newMockCore(fakeEtcd)
 		entrypoints := core.Entrypoints()
 
@@ -179,9 +192,9 @@ func TestEntrypointUpdate(t *testing.T) {
 			err := entrypoint.Update()
 
 			Convey("The Entrypoint should be updated in etcd with an Updated Timestamp", func() {
+				So(err, ShouldBeNil)
 				So(etcdKeyUpdated, ShouldEqual, "/supergiant/entrypoints/example.com")
 				So(entrypoint.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
-				So(err, ShouldBeNil)
 			})
 		})
 	})

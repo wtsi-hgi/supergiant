@@ -17,6 +17,8 @@ func (c *ImageRepoController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(repo)
+
 	err := c.core.ImageRepos().Create(repo)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -37,10 +39,10 @@ func (c *ImageRepoController) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO we need a consistent way of stripping sensitive fields from API responses.
-	// And we also need a validation that key is not saved empty -- because this could cause that if someone updates tags or something.
+	// TODO this _could_ be stuffed in marshalBody... but List is what breaks it.
+	// It's like we need a separate method core.ZeroPrivateFieldsOnList
 	for _, repo := range repos.Items {
-		repo.Key = ""
+		core.ZeroPrivateFields(repo)
 	}
 
 	body, err := marshalBody(w, repos)
@@ -56,15 +58,40 @@ func (c *ImageRepoController) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO we need a consistent way of stripping sensitive fields from API responses.
-	// And we also need a validation that key is not saved empty -- because this could cause that if someone updates tags or something.
-	repo.Key = ""
+	// see TODO above
+	core.ZeroPrivateFields(repo)
 
 	body, err := marshalBody(w, repo)
 	if err != nil {
 		return
 	}
 	renderWithStatusOK(w, body)
+}
+
+func (c *ImageRepoController) Update(w http.ResponseWriter, r *http.Request) {
+	repo, err := loadImageRepo(c.core, w, r)
+	if err != nil {
+		return
+	}
+
+	if err := unmarshalBodyInto(w, r, repo); err != nil {
+		return
+	}
+
+	core.ZeroReadonlyFields(repo)
+
+	if err := repo.Update(); err != nil {
+		renderError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	core.ZeroPrivateFields(repo)
+
+	body, err := marshalBody(w, repo)
+	if err != nil {
+		return
+	}
+	renderWithStatusAccepted(w, body)
 }
 
 func (c *ImageRepoController) Delete(w http.ResponseWriter, r *http.Request) {

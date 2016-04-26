@@ -22,6 +22,8 @@ func (c *ComponentController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	core.ZeroReadonlyFields(component)
+
 	err = app.Components().Create(component)
 	if err != nil {
 		renderError(w, err, http.StatusInternalServerError)
@@ -76,6 +78,8 @@ func (c *ComponentController) Update(w http.ResponseWriter, r *http.Request) {
 	if err := unmarshalBodyInto(w, r, component); err != nil {
 		return
 	}
+
+	core.ZeroReadonlyFields(component)
 
 	if err := component.Update(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
