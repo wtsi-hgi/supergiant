@@ -331,7 +331,7 @@ func copyWithoutNoStoreFields(r Resource) Resource {
 func setDefaultFields(r Resource) {
 	for _, tf := range taggedResourceFieldsOf(r) {
 		if d := tf.Default; d != nil {
-			tf.Field.Set(reflect.ValueOf(d).Elem())
+			tf.Field.Set(reflect.ValueOf(d))
 		}
 	}
 }

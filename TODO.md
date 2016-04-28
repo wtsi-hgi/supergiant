@@ -34,23 +34,21 @@
 
 ## v0.5.x
 
-* show instance metrics
+* ~~show instance metrics~~
 
-* cluster info API: node IPs, instance types, etc.  (eventually billing stuff)
+* ~~cluster info API: node IPs, instance types, etc.  (eventually billing stuff)~~
 
 ## v0.6.x
 
-*will probably use this release to organize some docs / tests*
+* ~~use AWS meta endpoint to get required info~~
 
-* use AWS meta endpoint to get required info
+* ~~model validations~~
+
+* ~~TTL on failed tasks~~
 
 * show resource types on all API responses
 
-* model validations
-
-* TTL on failed tasks
-
-* TTL on old releases
+* Swagger
 
 ## v0.7.x
 
@@ -77,13 +75,3 @@
 * bluegreen release
 
 <hr>
-
-### Misc
-
-* godep (dependency versioning)
-
-* unit tests / godoc
-
-* API best-practices / Swagger
-
-* docs/ folder

@@ -6,16 +6,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// type restAction fn func(http.ResponseWriter, *http.Request) error
-//
-// func handleAction(fn restAction) func(http.ResponseWriter, *http.Request) {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		if err := fn(w, r); err != nil {
-// 			renderError(w, err, http.StatusInternalServerError)
-// 		}
-// 	}
-// }
-
 func NewRouter(core *core.Core) *mux.Router {
 	r := mux.NewRouter()
 
