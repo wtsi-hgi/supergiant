@@ -112,7 +112,7 @@ func CoresFromString(str string) *CoresValue {
 }
 
 func (c *CoresValue) fromString(str string) error {
-	rxpMillicores := regexp.MustCompile(`^"([0-9]+)m"$`)        // 1000m
+	rxpMillicores := regexp.MustCompile(`^"?([0-9]+)m"?$`)      // 1000m
 	rxpCores := regexp.MustCompile(`^"?([0-9]+(\.[0-9]+)?)"?$`) // 1 (can have quotes)
 
 	getNumMatch := func(rxp *regexp.Regexp) (float64, error) {
