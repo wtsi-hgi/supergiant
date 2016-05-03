@@ -202,14 +202,21 @@ func (r *InstanceResource) decorate() error {
 		cpuUsage := stats.Stats["cpu-usage"]
 		memUsage := stats.Stats["memory-usage"]
 
+		// NOTE we took out the limit displayed by Heapster, and replaced it with
+		// the actual limit value assigned to the pod. Heapster was returning limit
+		// values less than the usage, which was causing errors when calculating
+		// percentages.
+
 		if cpuUsage != nil && memUsage != nil {
 			r.CPU = &common.ResourceMetrics{
 				Usage: cpuUsage.Minute.Average,
-				Limit: stats.Stats["cpu-limit"].Minute.Average,
+				Limit: totalCpuLimit(pod).Millicores,
+				// Limit: stats.Stats["cpu-limit"].Minute.Average,
 			}
 			r.RAM = &common.ResourceMetrics{
 				Usage: memUsage.Minute.Average,
-				Limit: stats.Stats["memory-limit"].Minute.Average,
+				Limit: int(totalRamLimit(pod).Bytes),
+				// Limit: stats.Stats["memory-limit"].Minute.Average,
 			}
 		}
 	}

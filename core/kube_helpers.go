@@ -178,3 +178,20 @@ func asKubeSecret(m *ImageRepoResource) *guber.Secret {
 		},
 	}
 }
+
+// Misc
+func totalCpuLimit(pod *guber.Pod) *common.CoresValue {
+	cores := new(common.CoresValue)
+	for _, container := range pod.Spec.Containers {
+		cores.Millicores += common.CoresFromString(container.Resources.Limits.CPU).Millicores
+	}
+	return cores
+}
+
+func totalRamLimit(pod *guber.Pod) *common.BytesValue {
+	bytes := new(common.BytesValue)
+	for _, container := range pod.Spec.Containers {
+		bytes.Bytes += common.BytesFromString(container.Resources.Limits.Memory).Bytes
+	}
+	return bytes
+}
