@@ -248,6 +248,7 @@ func (s *capacityService) Run() {
 		incomingPods, err := s.incomingPods()
 		if err != nil {
 			Log.Errorf("Capacity service error when fetching incoming pods: %s", err)
+			continue
 		}
 
 		var projectedNodes []*projectedNode
@@ -307,7 +308,7 @@ func (s *capacityService) Run() {
 			}
 
 			//==========================================================================
-			// merge if found, OR scall down to the smallest instance size it can use and commit it
+			// merge if found, OR scale down to the smallest instance size it can use and commit it
 			//==========================================================================
 
 			if pnode2 != nil {

@@ -192,7 +192,7 @@ func (c *ComponentCollection) Deploy(ri Resource) (err error) {
 	// If we're all good, we set target to current, and remove target.
 	r.CurrentReleaseTimestamp = r.TargetReleaseTimestamp
 	r.TargetReleaseTimestamp = nil
-	return r.Update()
+	return c.core.db.update(c, r.Name, r)
 }
 
 //------------------------------------------------------------------------------
