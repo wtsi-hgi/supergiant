@@ -58,12 +58,12 @@ func (s *Supervisor) Run() {
 
 func (s *Supervisor) startWorker(tasks <-chan *TaskResource) {
 	for task := range tasks {
-		// // recover from panic, capture error and report
-		// defer func() {
-		// 	if err := recover(); err != nil {
-		// 		recordError(task, err.(error))
-		// 	}
-		// }()
+		// recover from panic, capture error and report
+		defer func() {
+			if err := recover(); err != nil {
+				recordError(task, err.(error))
+			}
+		}()
 
 		action := task.ToAction().initialize(s.core)
 
