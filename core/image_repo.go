@@ -1,6 +1,10 @@
 package core
 
-import "github.com/supergiant/supergiant/common"
+import (
+	"fmt"
+
+	"github.com/supergiant/supergiant/common"
+)
 
 type ImageReposInterface interface {
 	List() (*ImageRepoList, error)
@@ -8,6 +12,7 @@ type ImageReposInterface interface {
 	Create(*ImageRepoResource) error
 	Get(common.ID) (*ImageRepoResource, error)
 	Update(common.ID, *ImageRepoResource) error
+	Patch(common.ID, *ImageRepoResource) error
 	Delete(*ImageRepoResource) error
 }
 
@@ -69,6 +74,11 @@ func (c *ImageRepoCollection) Get(name common.ID) (*ImageRepoResource, error) {
 
 // Update updates the ImageRepo in etcd.
 func (c *ImageRepoCollection) Update(name common.ID, r *ImageRepoResource) error {
+	return c.core.db.update(c, name, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *ImageRepoCollection) Patch(name common.ID, r *ImageRepoResource) error {
 	return c.core.db.patch(c, name, r)
 }
 
@@ -93,7 +103,7 @@ func (c *ImageRepoCollection) parent() Locatable {
 func (c *ImageRepoCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -112,24 +122,23 @@ func (r *ImageRepoResource) parent() Locatable {
 func (r *ImageRepoResource) child(key string) (l Locatable) {
 	switch key {
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
-	return
 }
 
 // Action implements the Resource interface.
 func (r *ImageRepoResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for ImageRepo", name)
+		panic(fmt.Errorf("No action %s for ImageRepo", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -142,6 +151,11 @@ func (r *ImageRepoResource) decorate() (err error) {
 // Update is a proxy method to ImageRepoCollection's Update.
 func (r *ImageRepoResource) Update() error {
 	return r.collection.Update(r.Name, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *ImageRepoResource) Patch() error {
+	return r.collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to ImageRepoCollection's Delete.

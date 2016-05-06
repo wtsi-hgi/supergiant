@@ -80,7 +80,7 @@ func (c *ImageRepoController) Update(w http.ResponseWriter, r *http.Request) {
 
 	core.ZeroReadonlyFields(repo)
 
-	if err := repo.Update(); err != nil {
+	if err := repo.Patch(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

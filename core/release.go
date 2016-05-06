@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -19,6 +20,7 @@ type ReleasesInterface interface {
 	MergeCreate(*ReleaseResource) error
 	Get(common.ID) (*ReleaseResource, error)
 	Update(common.ID, *ReleaseResource) error
+	Patch(common.ID, *ReleaseResource) error
 	Delete(*ReleaseResource) error
 }
 
@@ -126,16 +128,21 @@ func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) error {
 }
 
 // Get takes an id and returns an ReleaseResource if it exists.
-func (c *ReleaseCollection) Get(id common.ID) (*ReleaseResource, error) {
+func (c *ReleaseCollection) Get(timestamp common.ID) (*ReleaseResource, error) {
 	r := c.New()
-	if err := c.core.db.get(c, id, r); err != nil {
+	if err := c.core.db.get(c, timestamp, r); err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
 // Update saves the Release in etcd through an update.
-func (c *ReleaseCollection) Update(name common.ID, r *ReleaseResource) error {
+func (c *ReleaseCollection) Update(timestamp common.ID, r *ReleaseResource) error {
+	return c.core.db.update(c, timestamp, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *ReleaseCollection) Patch(name common.ID, r *ReleaseResource) error {
 	return c.core.db.patch(c, name, r)
 }
 
@@ -193,7 +200,7 @@ func (c *ReleaseCollection) parent() Locatable {
 func (c *ReleaseCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -214,24 +221,24 @@ func (r *ReleaseResource) child(key string) (l Locatable) {
 	case "instances":
 		l = r.Instances().(Locatable)
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
 }
 
 // Action implements the Resource interface.
 func (r *ReleaseResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for Release", name)
+		panic(fmt.Errorf("No action %s for Release", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -266,6 +273,11 @@ func (r *ReleaseResource) decorate() error {
 // Update is a proxy method to ReleaseCollection's Update.
 func (r *ReleaseResource) Update() error {
 	return r.collection.Update(r.Timestamp, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *ReleaseResource) Patch() error {
+	return r.collection.Patch(r.Timestamp, r)
 }
 
 // Delete is a proxy method to ReleaseCollection's Delete.

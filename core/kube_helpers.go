@@ -172,9 +172,9 @@ func asKubeSecret(m *ImageRepoResource) *guber.Secret {
 		Metadata: &guber.Metadata{
 			Name: common.StringID(m.Name),
 		},
-		Type: "kubernetes.io/dockercfg",
+		Type: "kubernetes.io/dockerconfigjson",
 		Data: map[string]string{
-			".dockercfg": m.Key,
+			".dockerconfigjson": m.Key,
 		},
 	}
 }
@@ -183,7 +183,9 @@ func asKubeSecret(m *ImageRepoResource) *guber.Secret {
 func totalCpuLimit(pod *guber.Pod) *common.CoresValue {
 	cores := new(common.CoresValue)
 	for _, container := range pod.Spec.Containers {
-		cores.Millicores += common.CoresFromString(container.Resources.Limits.CPU).Millicores
+		if container.Resources != nil && container.Resources.Limits != nil {
+			cores.Millicores += common.CoresFromString(container.Resources.Limits.CPU).Millicores
+		}
 	}
 	return cores
 }
@@ -191,7 +193,9 @@ func totalCpuLimit(pod *guber.Pod) *common.CoresValue {
 func totalRamLimit(pod *guber.Pod) *common.BytesValue {
 	bytes := new(common.BytesValue)
 	for _, container := range pod.Spec.Containers {
-		bytes.Bytes += common.BytesFromString(container.Resources.Limits.Memory).Bytes
+		if container.Resources != nil && container.Resources.Limits != nil {
+			bytes.Bytes += common.BytesFromString(container.Resources.Limits.Memory).Bytes
+		}
 	}
 	return bytes
 }

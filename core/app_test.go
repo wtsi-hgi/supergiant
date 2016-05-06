@@ -125,22 +125,10 @@ func TestAppUpdate(t *testing.T) {
 	Convey("Given an AppCollection with an AppResource", t, func() {
 		etcdKeyUpdated := ""
 
-		fakeEtcd := new(mock.FakeEtcd)
-
-		fakeEtcd.OnUpdate(func(key string, val string) error {
+		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
 			etcdKeyUpdated = key
 			return nil
 		})
-
-		fakeEtcd.ReturnValueOnGet(
-			`{
-				"name": "test",
-				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
-				"updated": null,
-				"tags": {}
-			}`,
-			nil,
-		)
 
 		core := newMockCore(fakeEtcd)
 		apps := core.Apps()
@@ -254,6 +242,7 @@ type FakeComponentCollection struct {
 	CreateFn func() error
 	GetFn    func() (*ComponentResource, error)
 	UpdateFn func() error
+	PatchFn  func() error
 	DeleteFn func(Resource) error
 	DeployFn func(Resource) error
 }
@@ -280,6 +269,10 @@ func (f *FakeComponentCollection) Get(common.ID) (*ComponentResource, error) {
 
 func (f *FakeComponentCollection) Update(common.ID, *ComponentResource) error {
 	return f.UpdateFn()
+}
+
+func (f *FakeComponentCollection) Patch(common.ID, *ComponentResource) error {
+	return f.PatchFn()
 }
 
 func (f *FakeComponentCollection) Delete(r Resource) error {

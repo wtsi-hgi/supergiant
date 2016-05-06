@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 )
@@ -11,6 +13,7 @@ type AppsInterface interface {
 	Create(*AppResource) error
 	Get(common.ID) (*AppResource, error)
 	Update(common.ID, *AppResource) error
+	Patch(common.ID, *AppResource) error
 	Delete(Resource) error
 }
 
@@ -87,6 +90,11 @@ func (c *AppCollection) Get(name common.ID) (*AppResource, error) {
 
 // Update updates the App in etcd.
 func (c *AppCollection) Update(name common.ID, r *AppResource) error {
+	return c.core.db.update(c, name, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *AppCollection) Patch(name common.ID, r *AppResource) error {
 	return c.core.db.patch(c, name, r)
 }
 
@@ -137,7 +145,7 @@ func (c *AppCollection) parent() (l Locatable) {
 func (c *AppCollection) child(key string) Locatable {
 	app, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return app
 }
@@ -158,7 +166,7 @@ func (r *AppResource) child(key string) (l Locatable) {
 	case "components":
 		l = r.Components().(Locatable)
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
 }
@@ -170,7 +178,7 @@ func (r *AppResource) Action(name string) *Action {
 	case "delete":
 		fn = ActionPerformer(r.collection.Delete)
 	default:
-		Log.Panicf("No action %s for App", name)
+		panic(fmt.Errorf("No action %s for App", name))
 	}
 	return &Action{
 		ActionName: name,
@@ -190,6 +198,11 @@ func (r *AppResource) decorate() (err error) {
 // Update is a proxy method to AppCollection's Update.
 func (r *AppResource) Update() error {
 	return r.collection.Update(r.Name, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *AppResource) Patch() error {
+	return r.collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to AppCollection's Delete.

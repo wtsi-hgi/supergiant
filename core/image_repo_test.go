@@ -106,23 +106,10 @@ func TestImageRepoUpdate(t *testing.T) {
 	Convey("Given an ImageRepoCollection with an ImageRepoResource", t, func() {
 		etcdKeyUpdated := ""
 
-		fakeEtcd := new(mock.FakeEtcd)
-
-		fakeEtcd.OnUpdate(func(key string, val string) error {
+		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
 			etcdKeyUpdated = key
 			return nil
 		})
-
-		fakeEtcd.ReturnValueOnGet(
-			`{
-				"name": "test",
-				"key": "key",
-				"created": "Tue, 12 Apr 2016 03:54:56 UTC",
-				"updated": null,
-				"tags": {}
-			}`,
-			nil,
-		)
 
 		core := newMockCore(fakeEtcd)
 		repos := core.ImageRepos()

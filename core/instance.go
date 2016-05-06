@@ -131,7 +131,7 @@ func (c *InstanceCollection) parent() Locatable {
 func (c *InstanceCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -150,9 +150,8 @@ func (r *InstanceResource) parent() Locatable {
 func (r *InstanceResource) child(key string) (l Locatable) {
 	switch key {
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
-	return
 }
 
 // Action implements the Resource interface.
@@ -164,7 +163,7 @@ func (r *InstanceResource) Action(name string) *Action {
 	case "stop":
 		fn = ActionPerformer(r.collection.Stop)
 	default:
-		Log.Panicf("No action %s for Instance", name)
+		panic(fmt.Errorf("No action %s for Instance", name))
 	}
 	return &Action{
 		ActionName: name,

@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
@@ -114,7 +116,7 @@ func (c *Core) child(key string) (l Locatable) {
 	case "tasks":
 		l = c.Tasks().(Locatable)
 	default:
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return
 }

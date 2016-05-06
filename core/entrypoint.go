@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/supergiant/supergiant/common"
@@ -16,6 +17,7 @@ type EntrypointsInterface interface {
 	Create(*EntrypointResource) error
 	Get(common.ID) (*EntrypointResource, error)
 	Update(common.ID, *EntrypointResource) error
+	Patch(common.ID, *EntrypointResource) error
 	Delete(*EntrypointResource) error
 }
 
@@ -96,7 +98,12 @@ func (c *EntrypointCollection) Get(domain common.ID) (*EntrypointResource, error
 
 // Update saves the Entrypoint in etcd through an update.
 func (c *EntrypointCollection) Update(domain common.ID, r *EntrypointResource) error {
-	return c.core.db.patch(c, domain, r)
+	return c.core.db.update(c, domain, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *EntrypointCollection) Patch(name common.ID, r *EntrypointResource) error {
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete cascades deletes to all Components, deletes the Kube Namespace, and
@@ -127,7 +134,7 @@ func (c *EntrypointCollection) parent() (l Locatable) {
 func (c *EntrypointCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -146,24 +153,23 @@ func (r *EntrypointResource) parent() Locatable {
 func (r *EntrypointResource) child(key string) (l Locatable) {
 	switch key {
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
-	return
 }
 
 // Action implements the Resource interface.
 func (r *EntrypointResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for Entrypoint", name)
+		panic(fmt.Errorf("No action %s for Entrypoint", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -176,6 +182,11 @@ func (r *EntrypointResource) decorate() (err error) {
 // Update is a proxy method to EntrypointCollection's Update.
 func (r *EntrypointResource) Update() error {
 	return r.collection.Update(r.Domain, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *EntrypointResource) Patch() error {
+	return r.collection.Patch(r.Domain, r)
 }
 
 // Delete is a proxy method to EntrypointCollection's Delete.

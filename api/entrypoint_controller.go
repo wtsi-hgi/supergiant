@@ -71,7 +71,7 @@ func (c *EntrypointController) Update(w http.ResponseWriter, r *http.Request) {
 
 	core.ZeroReadonlyFields(entrypoint)
 
-	if err := entrypoint.Update(); err != nil {
+	if err := entrypoint.Patch(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
