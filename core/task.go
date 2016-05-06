@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/supergiant/supergiant/common"
 )
@@ -13,6 +14,7 @@ type TasksInterface interface {
 	Create(*TaskResource) error
 	Get(common.ID) (*TaskResource, error)
 	Update(common.ID, *TaskResource) error
+	Patch(common.ID, *TaskResource) error
 	Delete(*TaskResource) error
 }
 
@@ -105,7 +107,12 @@ func (c *TaskCollection) Get(id common.ID) (*TaskResource, error) {
 
 // Update updates the Task in etcd.
 func (c *TaskCollection) Update(id common.ID, r *TaskResource) error {
-	return c.core.db.patch(c, id, r)
+	return c.core.db.update(c, id, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *TaskCollection) Patch(name common.ID, r *TaskResource) error {
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete deletes the Task in etcd.
@@ -130,7 +137,7 @@ func (c *TaskCollection) parent() (l Locatable) {
 func (c *TaskCollection) child(key string) Locatable {
 	task, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return task
 }
@@ -149,9 +156,8 @@ func (r *TaskResource) parent() Locatable {
 func (r *TaskResource) child(key string) (l Locatable) {
 	switch key {
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
-	return
 }
 
 // Action implements the Resource interface.
@@ -159,17 +165,17 @@ func (r *TaskResource) child(key string) (l Locatable) {
 // own, since they are Resources themselves. The ToAction() method is very, very
 // different from this method, and is used to convert a Task into the Action.
 func (r *TaskResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for Task", name)
+		panic(fmt.Errorf("No action %s for Task", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -198,6 +204,11 @@ func (r *TaskResource) Delete() error {
 // Update saves the Task in etcd through an update.
 func (r *TaskResource) Update() error {
 	return r.collection.Update(r.ID, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *TaskResource) Patch() error {
+	return r.collection.Patch(r.ID, r)
 }
 
 func (r *TaskResource) IsQueued() bool {

@@ -1,6 +1,10 @@
 package core
 
-import "github.com/supergiant/supergiant/common"
+import (
+	"fmt"
+
+	"github.com/supergiant/supergiant/common"
+)
 
 type ImageRegistriesInterface interface {
 	List() (*ImageRegistryList, error)
@@ -8,6 +12,7 @@ type ImageRegistriesInterface interface {
 	Create(*ImageRegistryResource) error
 	Get(common.ID) (*ImageRegistryResource, error)
 	Update(common.ID, *ImageRegistryResource) error
+	Patch(common.ID, *ImageRegistryResource) error
 	Delete(*ImageRegistryResource) error
 }
 
@@ -75,6 +80,11 @@ func (c *ImageRegistryCollection) Get(name common.ID) (*ImageRegistryResource, e
 
 // Update updates the ImageRegistry in etcd.
 func (c *ImageRegistryCollection) Update(name common.ID, r *ImageRegistryResource) error {
+	return c.core.db.update(c, name, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *ImageRegistryCollection) Patch(name common.ID, r *ImageRegistryResource) error {
 	return c.core.db.patch(c, name, r)
 }
 
@@ -99,7 +109,7 @@ func (c *ImageRegistryCollection) parent() (l Locatable) {
 func (c *ImageRegistryCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -120,24 +130,24 @@ func (r *ImageRegistryResource) child(key string) (l Locatable) {
 	case "repos":
 		l = r.ImageRepos().(Locatable)
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
 }
 
 // Action implements the Resource interface.
 func (r *ImageRegistryResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for ImageRegistry", name)
+		panic(fmt.Errorf("No action %s for ImageRegistry", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -150,6 +160,11 @@ func (r *ImageRegistryResource) decorate() (err error) {
 // Update is a proxy method to ImageRegistryCollection's Update.
 func (r *ImageRegistryResource) Update() error {
 	return r.collection.Update(r.Name, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *ImageRegistryResource) Patch() error {
+	return r.collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to ImageRegistryCollection's Delete.

@@ -26,7 +26,7 @@ type Component struct {
 // both "definitions" that create "instances" of the real thing
 type Release struct {
 	// NOTE Timestamp here does not use the Timestamp type.
-	Timestamp ID `json:"timestamp" sg:"readonly"`
+	Timestamp ID `json:"timestamp"`
 
 	// TODO
 	// InstanceGroup is used as a labeling mechanism for instances. If nil,
@@ -98,7 +98,7 @@ type Entrypoint struct {
 }
 
 type Task struct {
-	ID         ID     `json:"id" sg:"readonly"`
+	ID         ID     `json:"id"`
 	ActionData string `json:"action_data" validate:"nonzero"`
 
 	MaxAttempts int `json:"max_attempts" validate:"min=1" sg:"default=10"`
@@ -127,7 +127,7 @@ type ImageRepo struct {
 }
 
 type Node struct {
-	ID   ID     `json:"id" sg:"readonly"`
+	ID   ID     `json:"id"`
 	Name string `json:"name" sg:"readonly"`
 	// This is the only input for Node
 	Class      string `json:"class" validate:"nonzero"`
@@ -186,7 +186,7 @@ type VolumeBlueprint struct {
 
 type ContainerBlueprint struct {
 	Image   string         `json:"image" validate:"nonzero,regexp=^[-\\w\\.\\/]+(:[-\\w\\.]+)?$"`
-	Name    string         `json:"name,omitempty"` // TODO can we do regex validations, that only fire if the value is provided? (i.e. not-nonzero)
+	Name    string         `json:"name,omitempty" validate:"regexp=^[-\\w\\.\\/]+(:[-\\w\\.]+)?$"`
 	Command []string       `json:"command,omitempty"`
 	Ports   []*Port        `json:"ports,omitempty"`
 	Env     []*EnvVar      `json:"env,omitempty"`

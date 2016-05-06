@@ -31,6 +31,7 @@ type NodesInterface interface {
 	Create(*NodeResource) error
 	Get(common.ID) (*NodeResource, error)
 	Update(common.ID, *NodeResource) error
+	Patch(common.ID, *NodeResource) error
 	Delete(*NodeResource) error
 }
 
@@ -114,7 +115,12 @@ func (c *NodeCollection) Get(id common.ID) (*NodeResource, error) {
 
 // Update updates the Node in etcd.
 func (c *NodeCollection) Update(id common.ID, r *NodeResource) error {
-	return c.core.db.patch(c, id, r)
+	return c.core.db.update(c, id, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *NodeCollection) Patch(name common.ID, r *NodeResource) error {
+	return c.core.db.patch(c, name, r)
 }
 
 // Delete deletes the Node in etcd.
@@ -187,7 +193,7 @@ func (c *NodeCollection) parent() (l Locatable) {
 func (c *NodeCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -206,24 +212,23 @@ func (r *NodeResource) parent() Locatable {
 func (r *NodeResource) child(key string) (l Locatable) {
 	switch key {
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
-	return
 }
 
 // Action implements the Resource interface.
 func (r *NodeResource) Action(name string) *Action {
-	var fn ActionPerformer
+	// var fn ActionPerformer
 	switch name {
 	default:
-		Log.Panicf("No action %s for Node", name)
+		panic(fmt.Errorf("No action %s for Node", name))
 	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
+	// return &Action{
+	// 	ActionName: name,
+	// 	core:       r.core,
+	// 	resource:   r,
+	// 	performer:  fn,
+	// }
 }
 
 //------------------------------------------------------------------------------
@@ -274,6 +279,11 @@ func (r *NodeResource) decorate() error {
 // Update is a proxy method to NodeCollection's Update.
 func (r *NodeResource) Update() error {
 	return r.collection.Update(r.ID, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *NodeResource) Patch() error {
+	return r.collection.Patch(r.ID, r)
 }
 
 // Delete is a proxy method to NodeCollection's Delete.

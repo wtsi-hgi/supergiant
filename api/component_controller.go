@@ -81,7 +81,7 @@ func (c *ComponentController) Update(w http.ResponseWriter, r *http.Request) {
 
 	core.ZeroReadonlyFields(component)
 
-	if err := component.Update(); err != nil {
+	if err := component.Patch(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

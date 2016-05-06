@@ -71,7 +71,7 @@ func (c *NodeController) Update(w http.ResponseWriter, r *http.Request) {
 
 	core.ZeroReadonlyFields(node)
 
-	if err := node.Update(); err != nil {
+	if err := node.Patch(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

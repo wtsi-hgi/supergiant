@@ -16,6 +16,7 @@ type ComponentsInterface interface {
 	Create(*ComponentResource) error
 	Get(common.ID) (*ComponentResource, error)
 	Update(common.ID, *ComponentResource) error
+	Patch(common.ID, *ComponentResource) error
 	Deploy(Resource) error
 	Delete(Resource) error
 }
@@ -88,6 +89,11 @@ func (c *ComponentCollection) Get(name common.ID) (*ComponentResource, error) {
 
 // Update saves the Component in etcd through an update.
 func (c *ComponentCollection) Update(name common.ID, r *ComponentResource) error {
+	return c.core.db.update(c, name, r)
+}
+
+// Patch partially updates the App in etcd.
+func (c *ComponentCollection) Patch(name common.ID, r *ComponentResource) error {
 	return c.core.db.patch(c, name, r)
 }
 
@@ -211,7 +217,7 @@ func (c *ComponentCollection) parent() Locatable {
 func (c *ComponentCollection) child(key string) Locatable {
 	r, err := c.Get(common.IDString(key))
 	if err != nil {
-		Log.Panicf("No child with key %s for %T", key, c)
+		panic(fmt.Errorf("No child with key %s for %T", key, c))
 	}
 	return r
 }
@@ -232,7 +238,7 @@ func (r *ComponentResource) child(key string) (l Locatable) {
 	case "releases":
 		l = r.Releases().(Locatable)
 	default:
-		Log.Panicf("No child with key %s for %T", key, r)
+		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
 }
@@ -246,7 +252,7 @@ func (r *ComponentResource) Action(name string) *Action {
 	case "delete":
 		fn = ActionPerformer(r.collection.Delete)
 	default:
-		Log.Panicf("No action %s for Component", name)
+		panic(fmt.Errorf("No action %s for Component", name))
 	}
 	return &Action{
 		ActionName: name,
@@ -284,6 +290,11 @@ func (r *ComponentResource) decorate() error {
 // Update is a proxy method to ComponentCollection's Update.
 func (r *ComponentResource) Update() error {
 	return r.collection.Update(r.Name, r)
+}
+
+// Patch is a proxy method to collection Patch.
+func (r *ComponentResource) Patch() error {
+	return r.collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to ComponentCollection's Delete.

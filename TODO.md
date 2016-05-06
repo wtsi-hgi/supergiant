@@ -52,6 +52,9 @@
 
 ## v0.7.x
 
+* volume names should have full resource path, and most other cloud assets
+  should have a unique prefix for the whole Supergiant install
+
 * cancel / revert deploys
 
 ## v0.8.x

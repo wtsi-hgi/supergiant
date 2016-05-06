@@ -112,7 +112,7 @@ func (c *ReleaseController) Update(w http.ResponseWriter, r *http.Request) {
 
 	core.ZeroReadonlyFields(release)
 
-	if err := release.Update(); err != nil {
+	if err := release.Patch(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
