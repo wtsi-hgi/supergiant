@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -11,20 +12,20 @@ import (
 	etcd "github.com/coreos/etcd/client"
 )
 
-type database struct {
+type db struct {
 	keys *etcdClient
 }
 
-func newDB(etcdEndpoints []string) *database {
-	return &database{newEtcdClient(etcdEndpoints)}
+func newdb(etcdEndpoints []string) *db {
+	return &db{newetcdClient(etcdEndpoints)}
 }
 
 // TODO this is weird
-func (db *database) setKeysAPI(kapi etcd.KeysAPI) {
+func (db *db) setKeysAPI(kapi etcd.KeysAPI) {
 	db.keys.kapi = kapi
 }
 
-func (db *database) list(r Collection, out interface{}) error {
+func (db *db) list(r Collection, out interface{}) error {
 	key := etcdKey(r.(Locatable))
 	resp, err := db.keys.get(key)
 	if err != nil && !isEtcdNotFoundErr(err) {
@@ -36,7 +37,7 @@ func (db *database) list(r Collection, out interface{}) error {
 	return decodeList(r, resp, out)
 }
 
-func (db *database) get(r Collection, id common.ID, out Resource) error {
+func (db *db) get(r Collection, id common.ID, out Resource) error {
 	key := etcdKey(r.(Locatable)) + "/" + common.StringID(id) // TODO
 	resp, err := db.keys.get(key)
 	if err != nil {
@@ -45,7 +46,7 @@ func (db *database) get(r Collection, id common.ID, out Resource) error {
 	return unmarshalNodeInto(r, resp.Node, out)
 }
 
-func (db *database) create(r Collection, id common.ID, m Resource) error {
+func (db *db) create(r Collection, id common.ID, m Resource) error {
 	// NOTE we have to do this here to initialize Collection on the Resource
 	r.initializeResource(m)
 
@@ -73,7 +74,7 @@ func (db *database) create(r Collection, id common.ID, m Resource) error {
 	return m.decorate()
 }
 
-func (db *database) update(r Collection, id common.ID, m Resource) error {
+func (db *db) update(r Collection, id common.ID, m Resource) error {
 	// NOTE we have to do this here to initialize Collection on the Resource
 	r.initializeResource(m)
 
@@ -101,7 +102,7 @@ func (db *database) update(r Collection, id common.ID, m Resource) error {
 }
 
 // This works like a typical RESTful PATCH operation, a merge-update
-func (db *database) patch(c Collection, id common.ID, r Resource) error {
+func (db *db) patch(c Collection, id common.ID, r Resource) error {
 	oldR := reflect.New(reflect.ValueOf(r).Elem().Type()).Interface().(Resource)
 	if err := db.get(c, id, oldR); err != nil {
 		return err
@@ -114,13 +115,13 @@ func (db *database) patch(c Collection, id common.ID, r Resource) error {
 	return db.update(c, id, r)
 }
 
-func (db *database) delete(r Collection, id common.ID) error {
+func (db *db) delete(r Collection, id common.ID) error {
 	key := etcdKey(r.(Locatable)) + "/" + common.StringID(id) // TODO
 	_, err := db.keys.delete(key)
 	return err
 }
 
-func (db *database) compareAndSwap(r Collection, id common.ID, old Resource, new Resource) error {
+func (db *db) compareAndSwap(r Collection, id common.ID, old Resource, new Resource) error {
 	key := etcdKey(old.(Locatable))
 
 	oldVal, err := marshalResource(old)
@@ -146,9 +147,19 @@ func marshalResource(m Resource) (string, error) {
 	return string(out), nil
 }
 
+// To distinguish from all the other JSON unmarshalling errors
+type dbUnmarshallingError struct {
+	resource Resource
+	jsonErr  error
+}
+
+func (e *dbUnmarshallingError) Error() string {
+	return fmt.Sprintf("Error unmarshalling from etcd node into resource type %T: %s", e.resource, e.jsonErr)
+}
+
 func unmarshalNodeInto(r Collection, node *etcd.Node, m Resource) error {
 	if err := json.Unmarshal([]byte(node.Value), m); err != nil {
-		return err
+		return &dbUnmarshallingError{m, err}
 	}
 	r.initializeResource(m)
 	return m.decorate()

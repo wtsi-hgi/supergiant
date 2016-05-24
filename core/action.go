@@ -19,7 +19,7 @@ type Action struct {
 }
 
 // initialize takes a *Core, and loads resource and performer on the Action.
-// It is used by Supervisor when retrying a Task loaded from the DB.
+// It is used by Supervisor when retrying a Task loaded from the db.
 // It returns the *Action purely for the sake of doing initialize(c).Perform()
 func (a *Action) initialize(c *Core) *Action {
 	a.core = c

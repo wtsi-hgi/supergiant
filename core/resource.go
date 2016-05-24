@@ -298,7 +298,7 @@ func ZeroPrivateFields(r Resource) {
 // with zero values for any fields with the tag sg:"nostore".
 //
 // NOTE nostore has to be used in conjunction with json:"omitempty" in order to
-// prevent an empty value being stored in the DB. The alternative is to return
+// prevent an empty value being stored in the db. The alternative is to return
 // a copy of the Resource in the form of a map, but that seems kinda difficult.
 func copyWithoutNoStoreFields(r Resource) Resource {
 	origR := reflect.ValueOf(r).Elem()

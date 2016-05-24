@@ -26,7 +26,7 @@ curl -XPOST localhost:8080/v0/apps/jenkins/components/jenkins/releases -d '{
         {
           "protocol": "HTTP",
           "number": 8080,
-          "external_number": 33666,
+          "external_number": 80,
           "public": true,
           "entrypoint_domain": "example.com"
         }

@@ -39,8 +39,11 @@ func interpolatedEnvVars(m *common.ContainerBlueprint, instance *InstanceResourc
 	return envVars
 }
 
-func ImageRepoName(m *common.ContainerBlueprint) string {
-	return strings.Split(m.Image, "/")[0]
+func imageRepoName(m *common.ContainerBlueprint) string {
+	if segments := strings.Split(m.Image, "/"); len(segments) > 1 {
+		return segments[0]
+	}
+	return "" // official dockerhub repo
 }
 
 func asKubeContainer(m *common.ContainerBlueprint, instance *InstanceResource) *guber.Container { // NOTE how instance must be passed here

@@ -325,7 +325,9 @@ func (r *ReleaseResource) IsStopped() bool {
 
 func (r *ReleaseResource) imageRepoNames() (repoNames []string) { // TODO convert Image into Value object w/ repo, image, version
 	for _, container := range r.Containers {
-		repoNames = append(repoNames, ImageRepoName(container))
+		if repoName := imageRepoName(container); repoName != "" {
+			repoNames = append(repoNames, repoName)
+		}
 	}
 	return uniqStrs(repoNames)
 }

@@ -24,6 +24,7 @@ func TestComponentList(t *testing.T) {
 		)
 		core := newMockCore(fakeEtcd)
 
+		core.AppsInterface = &AppCollection{core}
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
 
@@ -56,6 +57,7 @@ func TestComponentCreate(t *testing.T) {
 
 		core := newMockCore(fakeEtcd)
 
+		core.AppsInterface = &AppCollection{core}
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
 
@@ -89,6 +91,7 @@ func TestComponentGet(t *testing.T) {
 		)
 		core := newMockCore(fakeEtcd)
 
+		core.AppsInterface = &AppCollection{core}
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
 
@@ -120,6 +123,7 @@ func TestComponentUpdate(t *testing.T) {
 
 		core := newMockCore(fakeEtcd)
 
+		core.AppsInterface = &AppCollection{core}
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
 
@@ -149,6 +153,7 @@ func TestComponentDelete(t *testing.T) {
 		})
 		core := newMockCore(fakeEtcd)
 
+		core.AppsInterface = &AppCollection{core}
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
 
