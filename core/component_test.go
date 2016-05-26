@@ -165,7 +165,7 @@ func TestComponentDelete(t *testing.T) {
 			core:      core,
 		}
 
-		fakeReleases.ReturnValuesOnGet([]*common.Release{
+		fakeReleases.ReturnValuesOnList([]*common.Release{
 			&common.Release{
 				Timestamp: common.IDString("20160412035456"),
 			},
@@ -189,77 +189,4 @@ func TestComponentDelete(t *testing.T) {
 			})
 		})
 	})
-}
-
-// Mock
-
-func (f *FakeReleaseCollection) ReturnValuesOnGet(components []*common.Release) *FakeReleaseCollection {
-	var items []*ReleaseResource
-	for _, component := range components {
-		items = append(items, &ReleaseResource{
-			core:       f.core,
-			collection: f,
-			Release:    component,
-		})
-	}
-	f.ListFn = func() (*ReleaseList, error) {
-		return &ReleaseList{Items: items}, nil
-	}
-	return f
-}
-
-func (f *FakeReleaseCollection) OnDelete(clbk func(*ReleaseResource) error) *FakeReleaseCollection {
-	f.DeleteFn = func(r *ReleaseResource) error {
-		return clbk(r)
-	}
-	return f
-}
-
-type FakeReleaseCollection struct {
-	core          *Core
-	component     *ComponentResource
-	ListFn        func() (*ReleaseList, error)
-	NewFn         func() *ReleaseResource
-	CreateFn      func() error
-	MergeCreateFn func() error
-	GetFn         func() (*ReleaseResource, error)
-	UpdateFn      func() error
-	PatchFn       func() error
-	DeleteFn      func(*ReleaseResource) error
-}
-
-func (f *FakeReleaseCollection) Component() *ComponentResource {
-	return f.component
-}
-
-func (f *FakeReleaseCollection) List() (*ReleaseList, error) {
-	return f.ListFn()
-}
-
-func (f *FakeReleaseCollection) New() *ReleaseResource {
-	return f.NewFn()
-}
-
-func (f *FakeReleaseCollection) Create(*ReleaseResource) error {
-	return f.CreateFn()
-}
-
-func (f *FakeReleaseCollection) MergeCreate(*ReleaseResource) error {
-	return f.MergeCreateFn()
-}
-
-func (f *FakeReleaseCollection) Get(common.ID) (*ReleaseResource, error) {
-	return f.GetFn()
-}
-
-func (f *FakeReleaseCollection) Update(common.ID, *ReleaseResource) error {
-	return f.UpdateFn()
-}
-
-func (f *FakeReleaseCollection) Patch(common.ID, *ReleaseResource) error {
-	return f.PatchFn()
-}
-
-func (f *FakeReleaseCollection) Delete(r *ReleaseResource) error {
-	return f.DeleteFn(r)
 }

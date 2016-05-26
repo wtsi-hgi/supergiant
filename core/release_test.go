@@ -12,7 +12,8 @@ import (
 )
 
 var fakeRelease = &common.Release{
-	InstanceCount: 1,
+	InstanceCount:          1,
+	TerminationGracePeriod: 666,
 	Volumes: []*common.VolumeBlueprint{
 		&common.VolumeBlueprint{
 			Name: common.IDString("data"),
@@ -40,6 +41,7 @@ var fakeRelease = &common.Release{
 }
 var fakeReleaseJSON = `{
   "instance_count": 1,
+	"termination_grace_period": 666,
   "volumes": [
     {
       "name": "data",
@@ -165,6 +167,99 @@ func TestReleaseCreate(t *testing.T) {
 
 			Convey("An error is returned", func() {
 				So(err.Error(), ShouldEqual, "Component already has a target Release")
+			})
+		})
+	})
+}
+
+func TestReleaseMergeCreate(t *testing.T) {
+	Convey("Given a ReleaseCollection and a new ReleaseResource", t, func() {
+		etcdKeyCreated := ""
+		updatedTargetReleaseTimestamp := ""
+
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnCreate(func(key string, val string) error {
+			etcdKeyCreated = key
+			return nil
+		})
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
+			re := regexp.MustCompile(`"target_release_id":"([0-9]+)"`)
+			updatedTargetReleaseTimestamp = re.FindStringSubmatch(val)[1]
+			return nil
+		})
+
+		core := newMockCore(fakeEtcd)
+
+		// Kube Services are fetched on decorate()
+		core.k8s = new(mock.FakeGuber).ReturnOnServiceGet(nil, new(guber.Error404)) // service does not exist
+
+		core.AppsInterface = &AppCollection{core}
+		core.EntrypointsInterface = &EntrypointCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("component-test")
+
+		// releases := component.Releases()
+
+		fakeCopy := *fakeRelease
+
+		fakeCurrentRelease := &fakeCopy
+		fakeCurrentRelease.Meta = common.NewMeta()
+
+		fakeCurrentRelease.Timestamp = common.IDString("20160519152252")
+		fakeCurrentRelease.Meta.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
+		fakeCurrentRelease.Committed = true
+
+		component.ReleasesInterface = new(FakeReleaseCollection).ReturnOnGet(fakeCurrentRelease, nil)
+		component.CurrentReleaseTimestamp = fakeCurrentRelease.Timestamp
+
+		// we do this and not component.Releases() because we mock it above
+		releases := &ReleaseCollection{core, component}
+
+		release := releases.New()
+		release.TerminationGracePeriod = 420
+
+		Convey("When MergeCreate() is called", func() {
+			err := releases.MergeCreate(release)
+
+			Convey("The Release should be created in etcd", func() {
+				So(err, ShouldBeNil)
+				So(etcdKeyCreated, ShouldStartWith, "/supergiant/releases/test/component-test/201")
+			})
+
+			Convey("The Release should have certain different Timestamp, Meta.Created, and Committed values", func() {
+				So(*release.Timestamp, ShouldStartWith, "201") // e.g. 20160519152252
+				So(*release.Timestamp, ShouldNotEqual, *fakeCurrentRelease.Timestamp)
+
+				So(release.Created, ShouldHaveSameTypeAs, new(common.Timestamp))
+				So(*release.Created, ShouldNotEqual, *fakeCurrentRelease.Created)
+
+				So(release.Committed, ShouldBeFalse)
+			})
+
+			// TODO this really tests that release.collection.Create is called
+			Convey("Component should be updated with new TargetReleaseTimestamp", func() {
+				So(updatedTargetReleaseTimestamp, ShouldEqual, *release.Timestamp)
+			})
+
+			Convey("The Release should have values merged with CurrentRelease", func() {
+				So(release.Containers[0].Image, ShouldEqual, "mysql") // old
+				So(release.TerminationGracePeriod, ShouldEqual, 420)  // new
+			})
+		})
+
+		Convey("When Component has no CurrentReleaseTimestamp, and MergeCreate() is called", func() {
+			component.CurrentReleaseTimestamp = nil
+			err := releases.MergeCreate(release)
+
+			Convey("An error is returned", func() {
+				So(err.Error(), ShouldEqual, "Attempting MergeCreate with no current Release")
 			})
 		})
 	})

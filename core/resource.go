@@ -330,7 +330,8 @@ func copyWithoutNoStoreFields(r Resource) Resource {
 // on all fields with the tag sg:"default=something".
 func setDefaultFields(r Resource) {
 	for _, tf := range taggedResourceFieldsOf(r) {
-		if d := tf.Default; d != nil {
+		existingValueIsZero := tf.Field.Interface() == reflect.Zero(tf.Field.Type()).Interface()
+		if d := tf.Default; d != nil && existingValueIsZero {
 			tf.Field.Set(reflect.ValueOf(d))
 		}
 	}
