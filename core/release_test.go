@@ -1,22 +1,17 @@
 package core
 
 import (
+	"regexp"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	etcd "github.com/coreos/etcd/client"
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 	"github.com/supergiant/supergiant/core/mock"
 )
 
 var fakeRelease = &common.Release{
-	Meta: &common.Meta{
-		Created: common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC"),
-	},
-	Timestamp:     common.IDString("20160412035456"),
-	InstanceGroup: common.IDString("20160412035456"),
 	InstanceCount: 1,
 	Volumes: []*common.VolumeBlueprint{
 		&common.VolumeBlueprint{
@@ -44,9 +39,6 @@ var fakeRelease = &common.Release{
 	},
 }
 var fakeReleaseJSON = `{
-  "created": "Tue, 12 Apr 2016 03:54:56 UTC",
-  "timestamp": "20160412035456",
-  "instance_group": "20160412035456",
   "instance_count": 1,
   "volumes": [
     {
@@ -86,7 +78,7 @@ func TestReleaseList(t *testing.T) {
 		core.EntrypointsInterface = &EntrypointCollection{core}
 		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
 		core.dockerhub = core.ImageRegistries().New()
-		core.dockerhub.ImageReposInterface = new(FakeImageRepoCollection).ReturnOnGet(nil, &etcd.Error{Code: etcd.ErrorCodeKeyNotFound})
+		// core.dockerhub.ImageReposInterface = new(FakeImageRepoCollection).ReturnOnGet(nil, &etcd.Error{Code: etcd.ErrorCodeKeyNotFound})
 
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
@@ -103,6 +95,76 @@ func TestReleaseList(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(list.Items, ShouldHaveLength, 1)
 				So(list.Items[0].Release, ShouldResemble, fakeRelease)
+			})
+		})
+	})
+}
+
+func TestReleaseCreate(t *testing.T) {
+	Convey("Given a ReleaseCollection and a new ReleaseResource", t, func() {
+		etcdKeyCreated := ""
+		updatedTargetReleaseTimestamp := ""
+
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnCreate(func(key string, val string) error {
+			etcdKeyCreated = key
+			return nil
+		})
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
+			re := regexp.MustCompile(`"target_release_id":"([0-9]+)"`)
+			updatedTargetReleaseTimestamp = re.FindStringSubmatch(val)[1]
+			return nil
+		})
+
+		core := newMockCore(fakeEtcd)
+
+		// Kube Services are fetched on decorate()
+		core.k8s = new(mock.FakeGuber).ReturnOnServiceGet(nil, new(guber.Error404)) // service does not exist
+
+		core.AppsInterface = &AppCollection{core}
+		core.EntrypointsInterface = &EntrypointCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		// core.dockerhub = core.ImageRegistries().New()
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("component-test")
+
+		releases := component.Releases()
+
+		fakeCopy := *fakeRelease
+		release := releases.New()
+		release.Release = &fakeCopy
+		release.Meta = common.NewMeta() // because fakeCopy has no Meta
+
+		Convey("When Create() is called", func() {
+			err := releases.Create(release)
+
+			Convey("The Release should be created in etcd", func() {
+				So(err, ShouldBeNil)
+				So(etcdKeyCreated, ShouldStartWith, "/supergiant/releases/test/component-test/201")
+				So(release.Created, ShouldHaveSameTypeAs, new(common.Timestamp))
+			})
+
+			Convey("The Release should have a new Release Timestamp", func() {
+				So(*release.Timestamp, ShouldStartWith, "201") // e.g. 20160519152252
+			})
+
+			Convey("Component should be updated with new TargetReleaseTimestamp", func() {
+				So(updatedTargetReleaseTimestamp, ShouldEqual, *release.Timestamp)
+			})
+		})
+
+		Convey("When Component already has a TargetReleaseTimestamp, and Create() is called", func() {
+			component.TargetReleaseTimestamp = common.IDString("something")
+			err := releases.Create(release)
+
+			Convey("An error is returned", func() {
+				So(err.Error(), ShouldEqual, "Component already has a target Release")
 			})
 		})
 	})

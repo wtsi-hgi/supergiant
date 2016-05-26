@@ -90,6 +90,15 @@ func (c *Core) Initialize() {
 	c.elb = elb.New(awsSession, awsConf)
 	c.autoscaling = autoscaling.New(awsSession, awsConf)
 
+	c.AppsInterface = &AppCollection{c}
+	c.EntrypointsInterface = &EntrypointCollection{c}
+	c.ImageRegistriesInterface = &ImageRegistryCollection{c}
+	c.NodesInterface = &NodeCollection{c}
+	c.TasksInterface = &TaskCollection{c}
+
+	c.dockerhub = c.ImageRegistries().New()
+	c.dockerhub.Name = common.IDString("dockerhub")
+
 	// TODO expose as worker num option in main
 	go NewSupervisor(c, 4).Run()
 
@@ -101,15 +110,6 @@ func (c *Core) Initialize() {
 	if err := c.Nodes().populate(); err != nil {
 		panic(err)
 	}
-
-	c.AppsInterface = &AppCollection{c}
-	c.EntrypointsInterface = &EntrypointCollection{c}
-	c.ImageRegistriesInterface = &ImageRegistryCollection{c}
-	c.NodesInterface = &NodeCollection{c}
-	c.TasksInterface = &TaskCollection{c}
-
-	c.dockerhub = c.ImageRegistries().New()
-	c.dockerhub.Name = common.IDString("dockerhub")
 }
 
 // Core implements the Locatable interface, but is only utilized for the child()
