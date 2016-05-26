@@ -11,63 +11,6 @@ import (
 	"github.com/supergiant/supergiant/core/mock"
 )
 
-var fakeRelease = &common.Release{
-	InstanceCount:          1,
-	TerminationGracePeriod: 666,
-	Volumes: []*common.VolumeBlueprint{
-		&common.VolumeBlueprint{
-			Name: common.IDString("data"),
-			Type: "gp2",
-			Size: 20,
-		},
-	},
-	Containers: []*common.ContainerBlueprint{
-		&common.ContainerBlueprint{
-			Image: "mysql",
-			Ports: []*common.Port{
-				&common.Port{
-					Protocol: "TCP",
-					Number:   3306,
-				},
-			},
-			Mounts: []*common.Mount{
-				&common.Mount{
-					Volume: common.IDString("data"),
-					Path:   "/var/lib/mysql",
-				},
-			},
-		},
-	},
-}
-var fakeReleaseJSON = `{
-  "instance_count": 1,
-	"termination_grace_period": 666,
-  "volumes": [
-    {
-      "name": "data",
-      "type": "gp2",
-      "size": 20
-    }
-  ],
-  "containers": [
-    {
-      "image": "mysql",
-      "ports": [
-        {
-          "protocol": "TCP",
-          "number": 3306
-        }
-      ],
-      "mounts": [
-        {
-          "volume": "data",
-          "path": "/var/lib/mysql"
-        }
-      ]
-    }
-  ]
-}`
-
 func TestReleaseList(t *testing.T) {
 	Convey("Given a ReleaseCollection with 1 Release", t, func() {
 		fakeEtcd := new(mock.FakeEtcd).ReturnValuesOnGet([]string{fakeReleaseJSON}, nil)
@@ -96,7 +39,7 @@ func TestReleaseList(t *testing.T) {
 			Convey("The return value should be a ReleaseList with 1 Release", func() {
 				So(err, ShouldBeNil)
 				So(list.Items, ShouldHaveLength, 1)
-				So(list.Items[0].Release, ShouldResemble, fakeRelease)
+				So(list.Items[0].Release, ShouldResemble, fakeRelease())
 			})
 		})
 	})
@@ -138,10 +81,8 @@ func TestReleaseCreate(t *testing.T) {
 
 		releases := component.Releases()
 
-		fakeCopy := *fakeRelease
 		release := releases.New()
-		release.Release = &fakeCopy
-		release.Meta = common.NewMeta() // because fakeCopy has no Meta
+		release.Release = fakeRelease()
 
 		Convey("When Create() is called", func() {
 			err := releases.Create(release)
@@ -205,12 +146,7 @@ func TestReleaseMergeCreate(t *testing.T) {
 		component := app.Components().New()
 		component.Name = common.IDString("component-test")
 
-		// releases := component.Releases()
-
-		fakeCopy := *fakeRelease
-
-		fakeCurrentRelease := &fakeCopy
-		fakeCurrentRelease.Meta = common.NewMeta()
+		fakeCurrentRelease := fakeRelease()
 
 		fakeCurrentRelease.Timestamp = common.IDString("20160519152252")
 		fakeCurrentRelease.Meta.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
@@ -263,4 +199,108 @@ func TestReleaseMergeCreate(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestReleaseGet(t *testing.T) {
+	Convey("Given a ReleaseCollection with 1 Release", t, func() {
+		fakeEtcd := new(mock.FakeEtcd).ReturnValueOnGet(fakeReleaseJSON, nil)
+		core := newMockCore(fakeEtcd)
+
+		// Kube Services are fetched on decorate()
+		core.k8s = new(mock.FakeGuber).ReturnOnServiceGet(nil, new(guber.Error404)) // service does not exist
+
+		core.AppsInterface = &AppCollection{core}
+		core.EntrypointsInterface = &EntrypointCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		// core.dockerhub.ImageReposInterface = new(FakeImageRepoCollection).ReturnOnGet(nil, &etcd.Error{Code: etcd.ErrorCodeKeyNotFound})
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("test")
+
+		releases := component.Releases()
+
+		Convey("When Get() is called", func() {
+			release, err := releases.Get(common.IDString("buttman"))
+
+			Convey("The return value should be the Release", func() {
+				So(err, ShouldBeNil)
+				So(release.Release, ShouldResemble, fakeRelease())
+			})
+		})
+	})
+}
+
+//------------------------------------------------------------------------------
+var fakeReleaseJSON = `{
+	"created": null,
+	"tags": {
+		"test": "tag"
+	},
+	"instance_count": 1,
+	"termination_grace_period": 666,
+	"volumes": [
+		{
+			"name": "data",
+			"type": "gp2",
+			"size": 20
+		}
+	],
+	"containers": [
+		{
+			"image": "mysql",
+			"ports": [
+				{
+					"protocol": "TCP",
+					"number": 3306
+				}
+			],
+			"mounts": [
+				{
+					"volume": "data",
+					"path": "/var/lib/mysql"
+				}
+			]
+		}
+	]
+}`
+
+// method so we don't have to worry about deep copying
+func fakeRelease() *common.Release {
+	return &common.Release{
+		Meta: &common.Meta{
+			Tags: map[string]string{
+				"test": "tag",
+			},
+		},
+		InstanceCount:          1,
+		TerminationGracePeriod: 666,
+		Volumes: []*common.VolumeBlueprint{
+			&common.VolumeBlueprint{
+				Name: common.IDString("data"),
+				Type: "gp2",
+				Size: 20,
+			},
+		},
+		Containers: []*common.ContainerBlueprint{
+			&common.ContainerBlueprint{
+				Image: "mysql",
+				Ports: []*common.Port{
+					&common.Port{
+						Protocol: "TCP",
+						Number:   3306,
+					},
+				},
+				Mounts: []*common.Mount{
+					&common.Mount{
+						Volume: common.IDString("data"),
+						Path:   "/var/lib/mysql",
+					},
+				},
+			},
+		},
+	}
 }
