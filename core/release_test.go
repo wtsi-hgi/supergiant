@@ -22,8 +22,6 @@ func TestReleaseList(t *testing.T) {
 		core.AppsInterface = &AppCollection{core}
 		core.EntrypointsInterface = &EntrypointCollection{core}
 		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
-		core.dockerhub = core.ImageRegistries().New()
-		// core.dockerhub.ImageReposInterface = new(FakeImageRepoCollection).ReturnOnGet(nil, &etcd.Error{Code: etcd.ErrorCodeKeyNotFound})
 
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
@@ -71,7 +69,6 @@ func TestReleaseCreate(t *testing.T) {
 		core.AppsInterface = &AppCollection{core}
 		core.EntrypointsInterface = &EntrypointCollection{core}
 		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
-		// core.dockerhub = core.ImageRegistries().New()
 
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
@@ -212,8 +209,6 @@ func TestReleaseGet(t *testing.T) {
 		core.AppsInterface = &AppCollection{core}
 		core.EntrypointsInterface = &EntrypointCollection{core}
 		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
-		core.dockerhub = core.ImageRegistries().New()
-		// core.dockerhub.ImageReposInterface = new(FakeImageRepoCollection).ReturnOnGet(nil, &etcd.Error{Code: etcd.ErrorCodeKeyNotFound})
 
 		app := core.Apps().New()
 		app.Name = common.IDString("test")
@@ -229,6 +224,45 @@ func TestReleaseGet(t *testing.T) {
 			Convey("The return value should be the Release", func() {
 				So(err, ShouldBeNil)
 				So(release.Release, ShouldResemble, fakeRelease())
+			})
+		})
+	})
+}
+
+func TestReleaseUpdate(t *testing.T) {
+	Convey("Given an ReleaseCollection with an ReleaseResource", t, func() {
+		etcdKeyUpdated := ""
+
+		fakeEtcd := new(mock.FakeEtcd).OnUpdate(func(key string, val string) error {
+			etcdKeyUpdated = key
+			return nil
+		})
+
+		core := newMockCore(fakeEtcd)
+
+		core.k8s = new(mock.FakeGuber).ReturnOnServiceGet(nil, new(guber.Error404))
+
+		core.AppsInterface = &AppCollection{core}
+		core.EntrypointsInterface = &EntrypointCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("component-test")
+
+		release := component.Releases().New()
+		release.Release = fakeRelease()
+		release.Timestamp = common.IDString("20160519152252")
+
+		Convey("When Update() is called", func() {
+			err := release.Update()
+
+			Convey("The Release should be updated in etcd with an Updated Timestamp", func() {
+				So(err, ShouldBeNil)
+				So(etcdKeyUpdated, ShouldEqual, "/supergiant/releases/test/component-test/"+*release.Timestamp)
+				So(component.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
 			})
 		})
 	})
