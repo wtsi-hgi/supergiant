@@ -10,13 +10,16 @@ import (
 )
 
 type InstancesInterface interface {
-	// Release() *ReleaseResource
+	App() *AppResource
+	Component() *ComponentResource
+	Release() *ReleaseResource
 
 	List() *InstanceList
 	New(common.ID) *InstanceResource
 	Get(common.ID) (*InstanceResource, error)
 	Start(Resource) error
 	Stop(Resource) error
+	Delete(*InstanceResource) error
 }
 
 type InstanceCollection struct {
@@ -26,7 +29,7 @@ type InstanceCollection struct {
 
 type InstanceResource struct {
 	core       *Core
-	collection *InstanceCollection
+	collection InstancesInterface
 	*common.Instance
 }
 
@@ -34,12 +37,16 @@ type InstanceList struct {
 	Items []*InstanceResource `json:"items"`
 }
 
-func (c *InstanceCollection) app() *AppResource {
+func (c *InstanceCollection) App() *AppResource {
 	return c.release.Component().App()
 }
 
-func (c *InstanceCollection) component() *ComponentResource {
+func (c *InstanceCollection) Component() *ComponentResource {
 	return c.release.Component()
+}
+
+func (c *InstanceCollection) Release() *ReleaseResource {
+	return c.release
 }
 
 // List returns an InstanceList.
@@ -115,6 +122,16 @@ func (c *InstanceCollection) Stop(ri Resource) error {
 	return nil
 }
 
+func (c *InstanceCollection) Delete(r *InstanceResource) (err error) {
+	if err = r.deleteReplicationControllerAndPod(); err != nil {
+		return err
+	}
+	if err = r.DeleteVolumes(); err != nil {
+		return err
+	}
+	return nil
+}
+
 //------------------------------------------------------------------------------
 
 // Key implements the Locatable interface.
@@ -143,7 +160,7 @@ func (r *InstanceResource) locationKey() string {
 
 // Parent implements the Locatable interface.
 func (r *InstanceResource) parent() Locatable {
-	return r.collection
+	return r.collection.(Locatable)
 }
 
 // Child implements the Locatable interface.
@@ -224,11 +241,11 @@ func (r *InstanceResource) decorate() error {
 }
 
 func (r *InstanceResource) App() *AppResource {
-	return r.collection.app()
+	return r.collection.App()
 }
 
 func (r *InstanceResource) Component() *ComponentResource {
-	return r.collection.component()
+	return r.collection.Component()
 }
 
 func (r *InstanceResource) IsStarted() bool {
@@ -240,14 +257,8 @@ func (r *InstanceResource) IsStopped() bool {
 }
 
 // Delete tears down the instance
-func (r *InstanceResource) Delete() (err error) {
-	if err = r.deleteReplicationControllerAndPod(); err != nil {
-		return err
-	}
-	if err = r.DeleteVolumes(); err != nil {
-		return err
-	}
-	return nil
+func (r *InstanceResource) Delete() error {
+	return r.collection.Delete(r)
 }
 
 // The following 2 are only diff from Provision() and Delete() in that they do
@@ -275,13 +286,13 @@ func (r *InstanceResource) Log() (string, error) {
 }
 
 func (r *InstanceResource) Release() *ReleaseResource {
-	return r.collection.release
+	return r.collection.Release()
 }
 
 func (r *InstanceResource) Volumes() (vols []*AwsVolume) {
 	for _, blueprint := range r.Release().Volumes {
 		vol := &AwsVolume{
-			core:      r.collection.core,
+			core:      r.core,
 			Blueprint: blueprint,
 			Instance:  r,
 		}
@@ -331,7 +342,7 @@ func (r *InstanceResource) kubeContainers() (containers []*guber.Container) {
 }
 
 func (r *InstanceResource) replicationController() (*guber.ReplicationController, error) {
-	return r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Get(r.Name)
+	return r.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Get(r.Name)
 }
 
 func (r *InstanceResource) waitForReplicationControllerReady() error {
@@ -394,7 +405,7 @@ func (r *InstanceResource) provisionReplicationController() error {
 		},
 	}
 	Log.Infof("Creating ReplicationController %s", r.Name)
-	if _, err = r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Create(rc); err != nil {
+	if _, err = r.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Create(rc); err != nil {
 		return err
 	}
 	return r.waitForReplicationControllerReady()
@@ -404,7 +415,7 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 	q := &guber.QueryParams{
 		LabelSelector: "instance=" + r.Name,
 	}
-	pods, err := r.collection.core.k8s.Pods(common.StringID(r.App().Name)).Query(q)
+	pods, err := r.core.k8s.Pods(common.StringID(r.App().Name)).Query(q)
 	if err != nil {
 		return nil, err // Not sure what the error might be here
 	}
@@ -419,9 +430,9 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	Log.Infof("Deleting ReplicationController %s", r.Name)
-	// TODO we call r.collection.core.k8s.ReplicationControllers(r.App().Name)
+	// TODO we call r.core.k8s.ReplicationControllers(r.App().Name)
 	// nough to warrant its own method
-	if err := r.collection.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil && !isKubeNotFoundErr(err) {
+	if err := r.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
 	pod, err := r.pod()

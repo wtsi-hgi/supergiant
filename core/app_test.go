@@ -24,6 +24,8 @@ func TestAppList(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
+
+		core.AppsInterface = &AppCollection{core}
 		apps := core.Apps()
 
 		Convey("When List() is called", func() {
@@ -58,6 +60,7 @@ func TestAppCreate(t *testing.T) {
 			return nil
 		})
 
+		core.AppsInterface = &AppCollection{core}
 		apps := core.Apps()
 
 		Convey("When an App is created", func() {
@@ -104,6 +107,7 @@ func TestAppGet(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
+		core.AppsInterface = &AppCollection{core}
 		apps := core.Apps()
 
 		Convey("When Get() is called with the App name", func() {
@@ -131,6 +135,7 @@ func TestAppUpdate(t *testing.T) {
 		})
 
 		core := newMockCore(fakeEtcd)
+		core.AppsInterface = &AppCollection{core}
 		apps := core.Apps()
 
 		app := apps.New()
@@ -165,6 +170,7 @@ func TestAppDelete(t *testing.T) {
 			return nil
 		})
 
+		core.AppsInterface = &AppCollection{core}
 		apps := core.Apps()
 		app := apps.New()
 		app.Name = common.IDString("test")
@@ -173,7 +179,7 @@ func TestAppDelete(t *testing.T) {
 			app:  app,
 			core: core,
 		}
-		fakeComponents.ReturnValuesOnGet([]*common.Component{
+		fakeComponents.ReturnValuesOnList([]*common.Component{
 			&common.Component{
 				Name: common.IDString("component-test"),
 			},
@@ -201,84 +207,4 @@ func TestAppDelete(t *testing.T) {
 			})
 		})
 	})
-}
-
-// TODO move to shared folder
-func newMockCore(fakeEtcd *mock.FakeEtcd) *Core {
-	return &Core{
-		db: &database{
-			&etcdClient{fakeEtcd},
-		},
-	}
-}
-
-func (f *FakeComponentCollection) ReturnValuesOnGet(components []*common.Component) *FakeComponentCollection {
-	var items []*ComponentResource
-	for _, component := range components {
-		items = append(items, &ComponentResource{
-			core:       f.core,
-			collection: f,
-			Component:  component,
-		})
-	}
-	f.ListFn = func() (*ComponentList, error) {
-		return &ComponentList{Items: items}, nil
-	}
-	return f
-}
-
-func (f *FakeComponentCollection) OnDelete(clbk func(Resource) error) *FakeComponentCollection {
-	f.DeleteFn = func(r Resource) error {
-		return clbk(r)
-	}
-	return f
-}
-
-type FakeComponentCollection struct {
-	core     *Core
-	app      *AppResource
-	ListFn   func() (*ComponentList, error)
-	NewFn    func() *ComponentResource
-	CreateFn func() error
-	GetFn    func() (*ComponentResource, error)
-	UpdateFn func() error
-	PatchFn  func() error
-	DeleteFn func(Resource) error
-	DeployFn func(Resource) error
-}
-
-func (f *FakeComponentCollection) App() *AppResource {
-	return f.app
-}
-
-func (f *FakeComponentCollection) List() (*ComponentList, error) {
-	return f.ListFn()
-}
-
-func (f *FakeComponentCollection) New() *ComponentResource {
-	return f.NewFn()
-}
-
-func (f *FakeComponentCollection) Create(*ComponentResource) error {
-	return f.CreateFn()
-}
-
-func (f *FakeComponentCollection) Get(common.ID) (*ComponentResource, error) {
-	return f.GetFn()
-}
-
-func (f *FakeComponentCollection) Update(common.ID, *ComponentResource) error {
-	return f.UpdateFn()
-}
-
-func (f *FakeComponentCollection) Patch(common.ID, *ComponentResource) error {
-	return f.PatchFn()
-}
-
-func (f *FakeComponentCollection) Delete(r Resource) error {
-	return f.DeleteFn(r)
-}
-
-func (f *FakeComponentCollection) Deploy(r Resource) error {
-	return f.DeployFn(r)
 }

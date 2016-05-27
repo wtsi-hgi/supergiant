@@ -15,7 +15,7 @@ const (
 	baseDir = "/supergiant"
 )
 
-func newEtcdClient(endpoints []string) *etcdClient {
+func newetcdClient(endpoints []string) *etcdClient {
 	client, err := etcd.New(etcd.Config{Endpoints: endpoints})
 	if err != nil {
 		panic(err)

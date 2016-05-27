@@ -24,6 +24,9 @@ func TestImageRepoList(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		core.dockerhub.Name = common.IDString("dockerhub")
 		repos := core.ImageRepos()
 
 		Convey("When List() is called", func() {
@@ -52,6 +55,9 @@ func TestImageRepoCreate(t *testing.T) {
 			return nil
 		})
 		core := newMockCore(fakeEtcd)
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		core.dockerhub.Name = common.IDString("dockerhub")
 
 		repos := core.ImageRepos()
 
@@ -84,6 +90,9 @@ func TestImageRepoGet(t *testing.T) {
 			nil,
 		)
 		core := newMockCore(fakeEtcd)
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		core.dockerhub.Name = common.IDString("dockerhub")
 		repos := core.ImageRepos()
 
 		Convey("When Get() is called with the ImageRepo name", func() {
@@ -112,6 +121,9 @@ func TestImageRepoUpdate(t *testing.T) {
 		})
 
 		core := newMockCore(fakeEtcd)
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		core.dockerhub.Name = common.IDString("dockerhub")
 		repos := core.ImageRepos()
 
 		repo := repos.New()
@@ -139,6 +151,9 @@ func TestImageRepoDelete(t *testing.T) {
 			return nil
 		})
 		core := newMockCore(fakeEtcd)
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+		core.dockerhub = core.ImageRegistries().New()
+		core.dockerhub.Name = common.IDString("dockerhub")
 
 		repos := core.ImageRepos()
 		repo := repos.New()

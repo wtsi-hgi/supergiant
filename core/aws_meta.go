@@ -26,15 +26,15 @@ func checkForAWSMeta(c *Core) {
 			Log.Info("AWS AZ Detected,", c.AwsAZ)
 		}
 	}
-	if c.AwsSgID == "" {
-		sg, err := getAWSSecurityGroupID()
-		if err != nil {
-			Log.Error(err)
-		} else {
-			c.AwsSgID = sg
-			Log.Info("AWS Security Group Detected,", c.AwsSgID)
-		}
-	}
+	// if c.AwsSgID == "" {
+	// 	sg, err := getAWSSecurityGroupID()
+	// 	if err != nil {
+	// 		Log.Error(err)
+	// 	} else {
+	// 		c.AwsSgID = sg
+	// 		Log.Info("AWS Security Group Detected,", c.AwsSgID)
+	// 	}
+	// }
 	if c.AwsSubnetID == "" {
 		sub, err := getAWSSubnetID()
 		if err != nil {
@@ -101,33 +101,33 @@ func getAWSAZ() (string, error) {
 	return az, nil
 }
 
-func getAWSSecurityGroupID() (string, error) {
-	mac, err := getMacs()
-	if err != nil {
-		return "", err
-	}
-	secgr, err := http.Get("http://169.254.169.254/latest/meta-data/network/interfaces/macs/" + mac + "/security-group-ids")
-	if err != nil {
-		return "", err
-	}
-	defer secgr.Body.Close()
-
-	sglen, err := secgr.Body.Read(nil)
-	if err != nil {
-		return "", err
-	}
-	if sglen > 1 {
-		return "", errors.New("More than one security group detected. Cannot determine security group. Please specify manually.")
-	}
-
-	sgidbyte, err := ioutil.ReadAll(secgr.Body)
-	if err != nil {
-		return "", err
-	}
-
-	sgid := string(sgidbyte)
-	return sgid, nil
-}
+// func getAWSSecurityGroupID() (string, error) {
+// 	mac, err := getMacs()
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	secgr, err := http.Get("http://169.254.169.254/latest/meta-data/network/interfaces/macs/" + mac + "/security-group-ids")
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer secgr.Body.Close()
+//
+// 	sglen, err := secgr.Body.Read(nil)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	if sglen > 1 {
+// 		return "", errors.New("More than one security group detected. Cannot determine security group. Please specify manually.")
+// 	}
+//
+// 	sgidbyte, err := ioutil.ReadAll(secgr.Body)
+// 	if err != nil {
+// 		return "", err
+// 	}
+//
+// 	sgid := string(sgidbyte)
+// 	return sgid, nil
+// }
 
 func getAWSSubnetID() (string, error) {
 	mac, err := getMacs()

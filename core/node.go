@@ -81,7 +81,7 @@ func (c *NodeCollection) Create(r *NodeResource) error {
 
 	// TODO
 	//
-	// This refreshes the entire database on every create. It should ideally poll
+	// This refreshes the entire db on every create. It should ideally poll
 	// in the background.
 	//
 	if err := c.populate(); err != nil {

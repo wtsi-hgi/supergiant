@@ -31,11 +31,21 @@ type Core struct {
 	AwsSecretKey           string
 	CapacityServiceEnabled bool
 
-	db          *database
+	db *db
+
 	k8s         guber.Client
 	ec2         *ec2.EC2
 	elb         elbiface.ELBAPI
 	autoscaling autoscalingiface.AutoScalingAPI
+
+	AppsInterface            AppsInterface
+	EntrypointsInterface     EntrypointsInterface
+	ImageRegistriesInterface ImageRegistriesInterface
+	NodesInterface           NodesInterface
+	TasksInterface           TasksInterface
+
+	// NOTE this goes away when Dockerhub is not the only ImageRegistry
+	dockerhub *ImageRegistryResource
 }
 
 var (
@@ -57,7 +67,7 @@ func SetLogLevel(level string) {
 // cli package, I needed to first actually initialize a Core struct and then
 // configure.
 func (c *Core) Initialize() {
-	c.db = newDB(c.EtcdEndpoints)
+	c.db = newdb(c.EtcdEndpoints)
 	c.k8s = guber.NewClient(c.K8sHost, c.K8sUser, c.K8sPass, c.K8sInsecureHTTPS)
 
 	checkForAWSMeta(c)
@@ -79,6 +89,15 @@ func (c *Core) Initialize() {
 	c.ec2 = ec2.New(awsSession, awsConf)
 	c.elb = elb.New(awsSession, awsConf)
 	c.autoscaling = autoscaling.New(awsSession, awsConf)
+
+	c.AppsInterface = &AppCollection{c}
+	c.EntrypointsInterface = &EntrypointCollection{c}
+	c.ImageRegistriesInterface = &ImageRegistryCollection{c}
+	c.NodesInterface = &NodeCollection{c}
+	c.TasksInterface = &TaskCollection{c}
+
+	c.dockerhub = c.ImageRegistries().New()
+	c.dockerhub.Name = common.IDString("dockerhub")
 
 	// TODO expose as worker num option in main
 	go NewSupervisor(c, 4).Run()
@@ -124,28 +143,26 @@ func (c *Core) child(key string) (l Locatable) {
 // Top-level resources
 
 func (c *Core) Apps() AppsInterface {
-	return &AppCollection{c}
+	return c.AppsInterface
 }
 
 func (c *Core) Entrypoints() EntrypointsInterface {
-	return &EntrypointCollection{c}
+	return c.EntrypointsInterface
 }
 
 func (c *Core) ImageRegistries() ImageRegistriesInterface {
-	return &ImageRegistryCollection{c}
+	return c.ImageRegistriesInterface
 }
 
 // TODO this goes away when Dockerhub is not the only ImageRegistry
 func (c *Core) ImageRepos() ImageReposInterface {
-	registry := c.ImageRegistries().New()
-	registry.Name = common.IDString("dockerhub")
-	return registry.ImageRepos()
+	return c.dockerhub.ImageRepos()
 }
 
 func (c *Core) Nodes() NodesInterface {
-	return &NodeCollection{c}
+	return c.NodesInterface
 }
 
 func (c *Core) Tasks() TasksInterface {
-	return &TaskCollection{c}
+	return c.TasksInterface
 }

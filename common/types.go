@@ -14,7 +14,7 @@ type Component struct {
 
 	CustomDeployScript *CustomDeployScript `json:"custom_deploy_script"`
 
-	CurrentReleaseTimestamp ID `json:"current_release_id" sg:"readonly"`
+	CurrentReleaseTimestamp ID `json:"current_release_id" sg:"readonly"` // TODO this should be release_timestamp, not release_id
 	TargetReleaseTimestamp  ID `json:"target_release_id" sg:"readonly"`
 
 	Addresses *ComponentAddresses `json:"addresses,omitempty" sg:"readonly,nostore"`

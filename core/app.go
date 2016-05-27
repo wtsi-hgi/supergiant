@@ -22,9 +22,9 @@ type AppCollection struct {
 }
 
 type AppResource struct {
-	core       *Core
-	collection *AppCollection
 	*common.App
+	collection *AppCollection
+	core       *Core
 
 	// Relations
 	ComponentsInterface ComponentsInterface `json:"-"`
@@ -39,8 +39,8 @@ type AppList struct {
 // initializeResource implements the Collection interface.
 func (c *AppCollection) initializeResource(in Resource) {
 	r := in.(*AppResource)
-	r.collection = c
 	r.core = c.core
+	r.collection = c
 	r.ComponentsInterface = &ComponentCollection{
 		core: c.core,
 		app:  r,

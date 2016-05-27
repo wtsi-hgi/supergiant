@@ -18,13 +18,26 @@ curl -XPOST localhost:8080/v0/apps/supergiant-io/components -d '{
 }'
 
 curl -XPOST localhost:8080/v0/apps/supergiant-io/components/mysql/releases -d '{
+  "volumes": [
+    {
+      "name": "data",
+      "type": "gp2",
+      "size": 20
+    }
+  ],
   "containers": [
     {
-      "image": "mysql/mysql-server",
+      "image": "mysql:5.6.30",
       "ports": [
         {
           "protocol": "TCP",
           "number": 3306
+        }
+      ],
+      "mounts": [
+        {
+          "volume": "data",
+          "path": "/var/lib/mysql"
         }
       ],
       "env": [
@@ -63,7 +76,7 @@ curl -XPOST localhost:8080/v0/apps/supergiant-io/components/craft/releases -d '{
         {
           "protocol": "HTTP",
           "number": 80,
-          "external_number": 35555,
+          "external_number": 80,
           "public": true,
           "entrypoint_domain": "example.com"
         }

@@ -45,9 +45,11 @@ func (c *ComponentCollection) initializeResource(in Resource) {
 	r := in.(*ComponentResource)
 	r.collection = c
 	r.core = c.core
-	r.ReleasesInterface = &ReleaseCollection{
-		core:      c.core,
-		component: r,
+	if r.ReleasesInterface == nil { // don't want to reset for testing purposes
+		r.ReleasesInterface = &ReleaseCollection{
+			core:      c.core,
+			component: r,
+		}
 	}
 }
 

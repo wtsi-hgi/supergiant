@@ -26,10 +26,18 @@ func (f *FakeAwsELB) OnConfigureHealthCheck(clbk func(*elb.ConfigureHealthCheckI
 	return f
 }
 
+func (f *FakeAwsELB) OnDeleteLoadBalancerListeners(clbk func(*elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error)) *FakeAwsELB {
+	f.DeleteLoadBalancerListenersFn = func(input *elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error) {
+		return clbk(input)
+	}
+	return f
+}
+
 type FakeAwsELB struct {
-	CreateLoadBalancerFn   func(*elb.CreateLoadBalancerInput) (*elb.CreateLoadBalancerOutput, error)
-	DeleteLoadBalancerFn   func(*elb.DeleteLoadBalancerInput) (*elb.DeleteLoadBalancerOutput, error)
-	ConfigureHealthCheckFn func(*elb.ConfigureHealthCheckInput) (*elb.ConfigureHealthCheckOutput, error)
+	CreateLoadBalancerFn          func(*elb.CreateLoadBalancerInput) (*elb.CreateLoadBalancerOutput, error)
+	DeleteLoadBalancerFn          func(*elb.DeleteLoadBalancerInput) (*elb.DeleteLoadBalancerOutput, error)
+	ConfigureHealthCheckFn        func(*elb.ConfigureHealthCheckInput) (*elb.ConfigureHealthCheckOutput, error)
+	DeleteLoadBalancerListenersFn func(*elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error)
 }
 
 func (f *FakeAwsELB) AddTagsRequest(*elb.AddTagsInput) (*request.Request, *elb.AddTagsOutput) {
@@ -116,8 +124,8 @@ func (f *FakeAwsELB) DeleteLoadBalancerListenersRequest(*elb.DeleteLoadBalancerL
 	return nil, nil
 }
 
-func (f *FakeAwsELB) DeleteLoadBalancerListeners(*elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error) {
-	return nil, nil
+func (f *FakeAwsELB) DeleteLoadBalancerListeners(input *elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error) {
+	return f.DeleteLoadBalancerListenersFn(input)
 }
 
 func (f *FakeAwsELB) DeleteLoadBalancerPolicyRequest(*elb.DeleteLoadBalancerPolicyInput) (*request.Request, *elb.DeleteLoadBalancerPolicyOutput) {

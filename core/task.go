@@ -79,7 +79,7 @@ func (c *TaskCollection) Start(action *Action) (*TaskResource, error) {
 	task.MaxAttempts = 10
 
 	// NOTE we could set status to RUNNING here, and simply fire off directly
-	// to Supervisor in order to prevent re-loading the Resource from the DB
+	// to Supervisor in order to prevent re-loading the Resource from the db
 	// before performing the action. However, that could introduce complications
 	// if the task fails to start -- at that point it would still be flagged
 	// RUNNING, and never picked up by the Supervisor.
@@ -218,7 +218,7 @@ func (r *TaskResource) IsQueued() bool {
 // Claim updates the Task status to "RUNNING" and returns nil. compareAndSwap is
 // used to prevent a race condition and ensure only one worker performs the task.
 func (r *TaskResource) Claim() error {
-	// NOTE we de-ref the task because the DB will strip the ID (maybe a TODO)
+	// NOTE we de-ref the task because the db will strip the ID (maybe a TODO)
 	prev := *r
 
 	// NOTE we have to do this instead of the above, because nested pointers are

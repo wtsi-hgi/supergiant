@@ -25,7 +25,9 @@ func TestEntrypointList(t *testing.T) {
 			},
 			nil,
 		)
+
 		core := newMockCore(fakeEtcd)
+		core.EntrypointsInterface = &EntrypointCollection{core}
 		entrypoints := core.Entrypoints()
 
 		Convey("When List() is called", func() {
@@ -99,6 +101,7 @@ func TestEntrypointCreate(t *testing.T) {
 
 		core.AwsSubnetID = "subnet-69420666"
 
+		core.EntrypointsInterface = &EntrypointCollection{core}
 		entrypoints := core.Entrypoints()
 
 		entrypoint := entrypoints.New()
@@ -143,7 +146,9 @@ func TestEntrypointGet(t *testing.T) {
 			}`,
 			nil,
 		)
+
 		core := newMockCore(fakeEtcd)
+		core.EntrypointsInterface = &EntrypointCollection{core}
 		entrypoints := core.Entrypoints()
 
 		Convey("When Get() is called with the Entrypoint name", func() {
@@ -171,6 +176,7 @@ func TestEntrypointUpdate(t *testing.T) {
 		})
 
 		core := newMockCore(fakeEtcd)
+		core.EntrypointsInterface = &EntrypointCollection{core}
 		entrypoints := core.Entrypoints()
 
 		entrypoint := entrypoints.New()
@@ -230,6 +236,7 @@ func TestEntrypointDelete(t *testing.T) {
 
 		core.AwsSubnetID = "subnet-69420666"
 
+		core.EntrypointsInterface = &EntrypointCollection{core}
 		entrypoints := core.Entrypoints()
 
 		entrypoint := entrypoints.New()

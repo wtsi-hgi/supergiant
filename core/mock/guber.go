@@ -21,9 +21,32 @@ func (f *FakeGuber) OnNamespaceDelete(clbk func(string) error) *FakeGuber {
 	})
 }
 
+func (f *FakeGuber) ReturnOnServiceGet(r *guber.Service, err error) *FakeGuber {
+	return f.mockServices(&FakeGuberServices{
+		GetFn: func(name string) (*guber.Service, error) {
+			return r, err
+		},
+	})
+}
+
+// func (f *FakeGuber) OnServiceDelete(clbk func(string) error) *FakeGuber {
+// 	return f.mockServices(&FakeGuberServices{
+// 		DeleteFn: func(name string) error {
+// 			return clbk(name)
+// 		},
+// 	})
+// }
+
 func (f *FakeGuber) mockNamespaces(namespaces *FakeGuberNamespaces) *FakeGuber {
 	f.NamespacesFn = func() guber.NamespaceCollection {
 		return namespaces
+	}
+	return f
+}
+
+func (f *FakeGuber) mockServices(services *FakeGuberServices) *FakeGuber {
+	f.ServicesFn = func(_ string) guber.ServiceCollection {
+		return services
 	}
 	return f
 }
@@ -106,5 +129,48 @@ func (f *FakeGuberNamespaces) Update(name string, r *guber.Namespace) (*guber.Na
 }
 
 func (f *FakeGuberNamespaces) Delete(name string) error {
+	return f.DeleteFn(name)
+}
+
+type FakeGuberServices struct {
+	MetaFn   func() *guber.CollectionMeta
+	NewFn    func() *guber.Service
+	CreateFn func(e *guber.Service) (*guber.Service, error)
+	QueryFn  func(q *guber.QueryParams) (*guber.ServiceList, error)
+	ListFn   func() (*guber.ServiceList, error)
+	GetFn    func(name string) (*guber.Service, error)
+	UpdateFn func(name string, r *guber.Service) (*guber.Service, error)
+	DeleteFn func(name string) error
+}
+
+func (f *FakeGuberServices) Meta() *guber.CollectionMeta {
+	return f.MetaFn()
+}
+
+func (f *FakeGuberServices) New() *guber.Service {
+	return f.NewFn()
+}
+
+func (f *FakeGuberServices) Create(e *guber.Service) (*guber.Service, error) {
+	return f.CreateFn(e)
+}
+
+func (f *FakeGuberServices) Query(q *guber.QueryParams) (*guber.ServiceList, error) {
+	return f.QueryFn(q)
+}
+
+func (f *FakeGuberServices) List() (*guber.ServiceList, error) {
+	return f.ListFn()
+}
+
+func (f *FakeGuberServices) Get(name string) (*guber.Service, error) {
+	return f.GetFn(name)
+}
+
+func (f *FakeGuberServices) Update(name string, r *guber.Service) (*guber.Service, error) {
+	return f.UpdateFn(name, r)
+}
+
+func (f *FakeGuberServices) Delete(name string) error {
 	return f.DeleteFn(name)
 }
