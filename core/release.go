@@ -54,9 +54,11 @@ func (c *ReleaseCollection) initializeResource(in Resource) {
 	r := in.(*ReleaseResource)
 	r.collection = c
 	r.core = c.core
-	r.InstancesInterface = &InstanceCollection{
-		core:    c.core,
-		release: r,
+	if r.InstancesInterface == nil { // don't want to reset for testing purposes
+		r.InstancesInterface = &InstanceCollection{
+			core:    c.core,
+			release: r,
+		}
 	}
 }
 
@@ -299,10 +301,7 @@ func (r *ReleaseResource) Component() *ComponentResource {
 }
 
 func (r *ReleaseResource) Instances() InstancesInterface {
-	return &InstanceCollection{
-		core:    r.core,
-		release: r,
-	}
+	return r.InstancesInterface
 }
 
 func (r *ReleaseResource) IsStarted() bool {

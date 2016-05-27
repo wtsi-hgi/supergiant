@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/elb"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/supergiant/guber"
@@ -263,6 +264,182 @@ func TestReleaseUpdate(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(etcdKeyUpdated, ShouldEqual, "/supergiant/releases/test/component-test/"+*release.Timestamp)
 				So(component.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
+			})
+		})
+	})
+}
+
+func TestReleasePatch(t *testing.T) {
+	Convey("Given an ReleaseCollection with a ReleaseResource", t, func() {
+		etcdKeyUpdated := ""
+
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnUpdate(func(key string, val string) error {
+			etcdKeyUpdated = key
+			return nil
+		})
+
+		fakeEtcd.ReturnValueOnGet(fakeReleaseJSON, nil)
+
+		core := newMockCore(fakeEtcd)
+
+		core.k8s = new(mock.FakeGuber).ReturnOnServiceGet(nil, new(guber.Error404))
+
+		core.AppsInterface = &AppCollection{core}
+		core.EntrypointsInterface = &EntrypointCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("component-test")
+
+		release := component.Releases().New()
+		release.Timestamp = common.IDString("20160519152252")
+		release.TerminationGracePeriod = 100
+
+		Convey("When Patch() is called", func() {
+			err := release.Patch()
+
+			Convey("The Release should be updated in etcd with an Updated Timestamp", func() {
+				So(err, ShouldBeNil)
+				So(etcdKeyUpdated, ShouldEqual, "/supergiant/releases/test/component-test/"+*release.Timestamp)
+				So(component.Updated, ShouldHaveSameTypeAs, new(common.Timestamp))
+			})
+
+			Convey("The Release should have new attributes merged into the old", func() {
+				So(release.Containers[0].Image, ShouldEqual, "mysql") // old
+				So(release.TerminationGracePeriod, ShouldEqual, 100)  // new
+			})
+		})
+	})
+}
+
+func TestReleaseDelete(t *testing.T) {
+	Convey("Given an ReleaseCollection with a ReleaseResource", t, func() {
+		etcdKeyDeleted := ""
+		nulledTargetReleaseTimestamp := false
+		loadBalancerPortRemoved := 0
+		var servicesDeleted []string
+		instanceDeleted := ""
+
+		fakeEtcd := new(mock.FakeEtcd)
+
+		fakeEtcd.OnDelete(func(key string) error {
+			etcdKeyDeleted = key
+			return nil
+		})
+
+		// For component
+		fakeEtcd.OnUpdate(func(key string, val string) error {
+			re := regexp.MustCompile(`"target_release_id":null`)
+			nulledTargetReleaseTimestamp = re.Match([]byte(val))
+			return nil
+		})
+
+		core := newMockCore(fakeEtcd)
+
+		fakeGuber := new(mock.FakeGuber)
+
+		fakeGuberServices := new(mock.FakeGuberServices)
+
+		fakeGuberServices.GetFn = func(name string) (*guber.Service, error) {
+			return &guber.Service{
+				Spec: &guber.ServiceSpec{
+					Ports: []*guber.ServicePort{
+						&guber.ServicePort{
+							Port:     3306,
+							NodePort: 34678,
+						},
+					},
+				},
+			}, nil
+		}
+
+		fakeGuberServices.DeleteFn = func(name string) error {
+			servicesDeleted = append(servicesDeleted, name)
+			return nil
+		}
+
+		fakeGuber.ServicesFn = func(_ string) guber.ServiceCollection {
+			return fakeGuberServices
+		}
+
+		core.k8s = fakeGuber
+
+		core.AppsInterface = &AppCollection{core}
+		core.ImageRegistriesInterface = &ImageRegistryCollection{core}
+
+		// mock the entrypoint for public port (just for access to removeFromELB method)
+		entrypoint := new(common.Entrypoint)
+		entrypoint.Domain = common.IDString("test.com")
+		core.EntrypointsInterface = (&FakeEntrypointCollection{core: core}).ReturnOnGet(entrypoint, nil)
+
+		core.elb = new(mock.FakeAwsELB).OnDeleteLoadBalancerListeners(func(input *elb.DeleteLoadBalancerListenersInput) (*elb.DeleteLoadBalancerListenersOutput, error) {
+			loadBalancerPortRemoved = int(*input.LoadBalancerPorts[0])
+			return nil, nil
+		})
+
+		app := core.Apps().New()
+		app.Name = common.IDString("test")
+
+		component := app.Components().New()
+		component.Name = common.IDString("component-test")
+
+		release := component.Releases().New()
+		release.Release = fakeRelease()
+		release.Timestamp = common.IDString("20160519152252")
+		release.Committed = true
+
+		port := release.Containers[0].Ports[0]
+		port.Public = true
+		port.EntrypointDomain = common.IDString("test.com")
+
+		release.decorate() // NOTE have to decorate to load memoized entrypoints slice
+
+		component.TargetReleaseTimestamp = release.Timestamp
+
+		fakeInstances := new(FakeInstanceCollection)
+
+		fakeInstances.ReturnValuesOnList([]*common.Instance{
+			&common.Instance{
+				ID:       common.IDString("0"),
+				BaseName: "component-test-0",
+				Name:     "component-test-0-20160519152252",
+			},
+		})
+
+		fakeInstances.OnDelete(func(r *InstanceResource) error {
+			instanceDeleted = common.StringID(r.ID)
+			return nil
+		})
+
+		release.InstancesInterface = fakeInstances
+
+		Convey("When Delete() is called", func() {
+			err := release.Delete()
+
+			Convey("The Release should be deleted in etcd", func() {
+				So(err, ShouldBeNil)
+				So(etcdKeyDeleted, ShouldEqual, "/supergiant/releases/test/component-test/"+*release.Timestamp)
+			})
+
+			Convey("The Release timestamp should be set to nil on Component", func() {
+				So(nulledTargetReleaseTimestamp, ShouldBeTrue)
+			})
+
+			Convey("The external ports should be removed from the ELB", func() {
+				So(loadBalancerPortRemoved, ShouldEqual, 34678)
+			})
+
+			Convey("The K8S services should be deleted", func() {
+				So(servicesDeleted, ShouldResemble, []string{"component-test-public", "component-test"})
+			})
+
+			Convey("The instances should be deleted", func() {
+				So(instanceDeleted, ShouldEqual, "0")
 			})
 		})
 	})

@@ -233,3 +233,131 @@ func (f *FakeReleaseCollection) Patch(common.ID, *ReleaseResource) error {
 func (f *FakeReleaseCollection) Delete(r *ReleaseResource) error {
 	return f.DeleteFn(r)
 }
+
+// Entrypoints
+//==============================================================================
+
+func (f *FakeEntrypointCollection) ReturnOnGet(t *common.Entrypoint, err error) *FakeEntrypointCollection {
+	f.GetFn = func() (*EntrypointResource, error) {
+		if err != nil {
+			return nil, err
+		}
+		return &EntrypointResource{
+			core:       f.core,
+			collection: f,
+			Entrypoint: t,
+		}, nil
+	}
+	return f
+}
+
+type FakeEntrypointCollection struct {
+	core     *Core
+	ListFn   func() (*EntrypointList, error)
+	NewFn    func() *EntrypointResource
+	CreateFn func() error
+	GetFn    func() (*EntrypointResource, error)
+	UpdateFn func() error
+	PatchFn  func() error
+	DeleteFn func(*EntrypointResource) error
+}
+
+func (f *FakeEntrypointCollection) List() (*EntrypointList, error) {
+	return f.ListFn()
+}
+
+func (f *FakeEntrypointCollection) New() *EntrypointResource {
+	return f.NewFn()
+}
+
+func (f *FakeEntrypointCollection) Create(*EntrypointResource) error {
+	return f.CreateFn()
+}
+
+func (f *FakeEntrypointCollection) Get(common.ID) (*EntrypointResource, error) {
+	return f.GetFn()
+}
+
+func (f *FakeEntrypointCollection) Update(common.ID, *EntrypointResource) error {
+	return f.UpdateFn()
+}
+
+func (f *FakeEntrypointCollection) Patch(common.ID, *EntrypointResource) error {
+	return f.PatchFn()
+}
+
+func (f *FakeEntrypointCollection) Delete(r *EntrypointResource) error {
+	return f.DeleteFn(r)
+}
+
+// Instances
+//==============================================================================
+
+func (f *FakeInstanceCollection) ReturnValuesOnList(ts []*common.Instance) *FakeInstanceCollection {
+	var items []*InstanceResource
+	for _, t := range ts {
+		items = append(items, &InstanceResource{
+			core:       f.core,
+			collection: f,
+			Instance:   t,
+		})
+	}
+	f.ListFn = func() *InstanceList {
+		return &InstanceList{Items: items}
+	}
+	return f
+}
+
+func (f *FakeInstanceCollection) OnDelete(clbk func(*InstanceResource) error) *FakeInstanceCollection {
+	f.DeleteFn = func(r *InstanceResource) error {
+		return clbk(r)
+	}
+	return f
+}
+
+type FakeInstanceCollection struct {
+	core     *Core
+	release  *ReleaseResource
+	ListFn   func() *InstanceList
+	NewFn    func(common.ID) *InstanceResource
+	GetFn    func(common.ID) (*InstanceResource, error)
+	StartFn  func(Resource) error
+	StopFn   func(Resource) error
+	DeleteFn func(*InstanceResource) error
+}
+
+func (f *FakeInstanceCollection) App() *AppResource {
+	return f.release.Component().App()
+}
+
+func (f *FakeInstanceCollection) Component() *ComponentResource {
+	return f.release.Component()
+}
+
+func (f *FakeInstanceCollection) Release() *ReleaseResource {
+	return f.release
+}
+
+func (f *FakeInstanceCollection) List() *InstanceList {
+	return f.ListFn()
+}
+
+func (f *FakeInstanceCollection) New(id common.ID) *InstanceResource {
+	return f.NewFn(id)
+}
+
+func (f *FakeInstanceCollection) Get(id common.ID) (*InstanceResource, error) {
+	return f.GetFn(id)
+}
+
+func (f *FakeInstanceCollection) Start(ri Resource) error {
+	return f.StartFn(ri)
+}
+
+func (f *FakeInstanceCollection) Stop(ri Resource) error {
+	return f.StopFn(ri)
+}
+
+func (f *FakeInstanceCollection) Delete(r *InstanceResource) error {
+	return f.DeleteFn(r)
+}

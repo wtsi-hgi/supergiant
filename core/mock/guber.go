@@ -29,6 +29,14 @@ func (f *FakeGuber) ReturnOnServiceGet(r *guber.Service, err error) *FakeGuber {
 	})
 }
 
+// func (f *FakeGuber) OnServiceDelete(clbk func(string) error) *FakeGuber {
+// 	return f.mockServices(&FakeGuberServices{
+// 		DeleteFn: func(name string) error {
+// 			return clbk(name)
+// 		},
+// 	})
+// }
+
 func (f *FakeGuber) mockNamespaces(namespaces *FakeGuberNamespaces) *FakeGuber {
 	f.NamespacesFn = func() guber.NamespaceCollection {
 		return namespaces
