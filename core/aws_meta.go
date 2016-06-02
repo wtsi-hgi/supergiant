@@ -1,150 +1,55 @@
 package core
 
 import (
-	"errors"
 	"io/ioutil"
 	"net/http"
 )
 
 func checkForAWSMeta(c *Core) {
-	// Discover AWS ENV
-	if c.AwsRegion == "" {
-		region, err := getAWSRegion()
-		if err != nil {
-			Log.Error(err)
-		} else {
-			c.AwsRegion = region
-			Log.Info("AWS Region Detected,", c.AwsRegion)
-		}
-	}
 	if c.AwsAZ == "" {
 		az, err := getAWSAZ()
 		if err != nil {
 			Log.Error(err)
 		} else {
 			c.AwsAZ = az
-			Log.Info("AWS AZ Detected,", c.AwsAZ)
+			c.AwsRegion = az[:len(az)-1]
+			Log.Info("AWS Availability Zone detected", c.AwsAZ)
 		}
 	}
-	// if c.AwsSgID == "" {
-	// 	sg, err := getAWSSecurityGroupID()
-	// 	if err != nil {
-	// 		Log.Error(err)
-	// 	} else {
-	// 		c.AwsSgID = sg
-	// 		Log.Info("AWS Security Group Detected,", c.AwsSgID)
-	// 	}
-	// }
 	if c.AwsSubnetID == "" {
 		sub, err := getAWSSubnetID()
 		if err != nil {
-			Log.Info("ERROR:", err)
+			Log.Error(err)
 		} else {
 			c.AwsSubnetID = sub
-			Log.Info("INFO: AWS Security Group Detected,", c.AwsSubnetID)
+			Log.Info("AWS Security Group detected", c.AwsSubnetID)
 		}
 	}
 }
 
 // This file contains simple functions to discover metadata from the cloud provider.
-func getMacs() (string, error) {
-	macr, err := http.Get("http://169.254.169.254/latest/meta-data/network/interfaces/macs/")
-	if err != nil {
-		return "", err
-	}
-	defer macr.Body.Close()
-
-	maclen, err := macr.Body.Read(nil)
-	if err != nil {
-		return "", err
-	}
-	if maclen > 1 {
-		return "", errors.New("More than one mac address detected. Cannot determine Securtiy Group. Please specify manually.")
-	}
-
-	macbyte, err := ioutil.ReadAll(macr.Body)
-	if err != nil {
-		return "", err
-	}
-	mac := string(macbyte)
-	return mac, nil
-}
-func getAWSRegion() (string, error) {
-	resp, err := http.Get("http://169.254.169.254/latest/meta-data/placement/availability-zone")
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	az := string(body)
-	region := az[:len(az)-1]
-
-	return region, nil
-}
 
 func getAWSAZ() (string, error) {
-	resp, err := http.Get("http://169.254.169.254/latest/meta-data/placement/availability-zone")
+	return getAwsMeta("placement/availability-zone")
+}
+
+func getAWSSubnetID() (string, error) {
+	mac, err := getAwsMeta("network/interfaces/macs")
+	if err != nil {
+		return "", err
+	}
+	return getAwsMeta("network/interfaces/macs/" + mac + "/subnet-id")
+}
+
+func getAwsMeta(path string) (string, error) {
+	resp, err := http.Get("http://169.254.169.254/latest/meta-data/" + path)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
-	az := string(body)
-	return az, nil
-}
-
-// func getAWSSecurityGroupID() (string, error) {
-// 	mac, err := getMacs()
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	secgr, err := http.Get("http://169.254.169.254/latest/meta-data/network/interfaces/macs/" + mac + "/security-group-ids")
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	defer secgr.Body.Close()
-//
-// 	sglen, err := secgr.Body.Read(nil)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	if sglen > 1 {
-// 		return "", errors.New("More than one security group detected. Cannot determine security group. Please specify manually.")
-// 	}
-//
-// 	sgidbyte, err := ioutil.ReadAll(secgr.Body)
-// 	if err != nil {
-// 		return "", err
-// 	}
-//
-// 	sgid := string(sgidbyte)
-// 	return sgid, nil
-// }
-
-func getAWSSubnetID() (string, error) {
-	mac, err := getMacs()
-	if err != nil {
-		return "", err
-	}
-	secgr, err := http.Get("http://169.254.169.254/latest/meta-data/network/interfaces/macs/" + mac + "/subnet-id")
-	if err != nil {
-		return "", err
-	}
-	defer secgr.Body.Close()
-
-	sgidbyte, err := ioutil.ReadAll(secgr.Body)
-	if err != nil {
-		return "", err
-	}
-
-	subid := string(sgidbyte)
-	return subid, nil
+	return string(body), nil
 }
