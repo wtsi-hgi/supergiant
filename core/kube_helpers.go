@@ -175,9 +175,9 @@ func asKubeSecret(m *ImageRepoResource) *guber.Secret {
 		Metadata: &guber.Metadata{
 			Name: common.StringID(m.Name),
 		},
-		Type: "kubernetes.io/dockerconfigjson",
+		Type: "kubernetes.io/" + m.SecretType,
 		Data: map[string]string{
-			".dockerconfigjson": m.Key,
+			"." + m.SecretType: m.Key,
 		},
 	}
 }

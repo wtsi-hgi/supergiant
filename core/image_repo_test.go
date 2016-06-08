@@ -129,6 +129,7 @@ func TestImageRepoUpdate(t *testing.T) {
 		repo := repos.New()
 		repo.Name = common.IDString("test")
 		repo.Key = "key"
+		repo.SecretType = "dockercfg"
 
 		Convey("When Update() is called", func() {
 			err := repo.Update()

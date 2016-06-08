@@ -120,8 +120,9 @@ type ImageRegistry struct {
 
 // TODO this should really be renamed to Org probably
 type ImageRepo struct {
-	Name ID     `json:"name" validate:"nonzero"`
-	Key  string `json:"key" validate:"nonzero" sg:"private"`
+	Name       ID     `json:"name" validate:"nonzero"`
+	Key        string `json:"key" validate:"nonzero" sg:"private"`
+	SecretType string `json:"secret_type" validate:"regexp=^(dockercfg|dockerconfigjson)$" sg:"default=dockercfg"`
 
 	*Meta
 }
