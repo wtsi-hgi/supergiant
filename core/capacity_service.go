@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -104,8 +103,9 @@ func newCapacityService(c *Core) *capacityService {
 		panic(err)
 	}
 
-	for _, instanceTypeID := range instanceTypeIDs {
-		for _, it := range instanceTypes {
+	// We iterate on all instanceTypes here first to preserve the cost order
+	for _, it := range instanceTypes {
+		for _, instanceTypeID := range instanceTypeIDs {
 			if it.ID == instanceTypeID {
 
 				Log.Infof("Capacity service registered AWS instance type %s", it.ID)
@@ -136,11 +136,16 @@ func (pnode *projectedNode) usedRAM() (u float64) {
 			// could utilize. This will ensure that the user's limit CAN BE FILLED AT
 			// ALL. This is at the core of our increased-utilization strategy.
 
+			if container.Resources.Limits == nil {
+				continue
+			}
+
 			memStr := container.Resources.Limits.Memory
 			b := new(common.BytesValue)
 			if err := b.UnmarshalJSON([]byte(memStr)); err != nil {
 				panic(err)
 			}
+
 			u += b.Gibibytes()
 		}
 	}
@@ -152,6 +157,10 @@ func (pnode *projectedNode) usedCPU() (u float64) {
 		for _, container := range pod.Spec.Containers {
 
 			// NOTE above in usedRAM
+
+			if container.Resources.Limits == nil {
+				continue
+			}
 
 			cpuStr := container.Resources.Limits.CPU
 			c := new(common.CoresValue)
@@ -166,7 +175,11 @@ func (pnode *projectedNode) usedCPU() (u float64) {
 
 func (pnode *projectedNode) usedVolumes() (u int) {
 	for _, pod := range pnode.Pods {
-		u += len(pod.Spec.Volumes)
+		for _, vol := range pod.Spec.Volumes {
+			if vol.AwsElasticBlockStore != nil {
+				u++
+			}
+		}
 	}
 	return
 }
@@ -229,7 +242,7 @@ func (s *capacityService) incomingPods() (incomingPods []*guber.Pod, err error) 
 
 		if incomingCount > 0 && elapsed < waitBeforeScale {
 
-			Log.Debugf("Waiting to add nodes for %d pods", incomingCount)
+			Log.Debugf("Waiting to add nodes for %d pods; %.2f seconds elapsed", incomingCount, elapsed.Seconds())
 
 			time.Sleep(2 * time.Second)
 		} else {
@@ -243,7 +256,7 @@ func (s *capacityService) incomingPods() (incomingPods []*guber.Pod, err error) 
 func (s *capacityService) Run() {
 	for _ = range time.NewTicker(1 * time.Second).C {
 
-		// Log.Debug("Capacity service loop")
+		// Log.Debug("Fetching incoming pods")
 
 		incomingPods, err := s.incomingPods()
 		if err != nil {
@@ -266,15 +279,6 @@ func (s *capacityService) Run() {
 				pnode2      *projectedNode
 				pnode2Index int
 			)
-
-			for _, pnode := range projectedNodes {
-				fmt.Println("-------------------------------------------------------------")
-				fmt.Println(pnode)
-				for _, pod := range pnode.Pods {
-					fmt.Println(pod)
-				}
-				fmt.Println("-------------------------------------------------------------")
-			}
 
 			//==========================================================================
 			// find an uncommitted nodeAndPod
@@ -328,12 +332,7 @@ func (s *capacityService) Run() {
 
 				}
 			}
-
 		}
-
-		// if err := s.core.Nodes().populate(); err != nil {
-		// 	Log.Errorf("Capacity service error when populating Nodes: %s", err)
-		// }
 
 		existingNodes, err := s.core.Nodes().List()
 		if err != nil {
@@ -362,6 +361,20 @@ func (s *capacityService) Run() {
 			}
 		}
 
+		// for _, pnode := range projectedNodes {
+		// 	fmt.Println(pnode.Size.ID)
+		// 	for _, pod := range pnode.Pods {
+		// 		fmt.Println(pod.Metadata.Name)
+		// 		for _, container := range pod.Spec.Containers {
+		// 			if container.Resources != nil && container.Resources.Limits != nil {
+		// 				fmt.Println(container.Resources.Limits.CPU)
+		// 				fmt.Println(container.Resources.Limits.Memory)
+		// 			}
+		// 		}
+		// 	}
+		// 	fmt.Println("")
+		// }
+
 		for _, pnode := range projectedNodes {
 			node := &NodeResource{
 				Node: &common.Node{
@@ -376,7 +389,7 @@ func (s *capacityService) Run() {
 
 			alreadySpinningUp := false
 			for _, existingNode := range existingNodes.Items {
-				if existingNode.Class == node.Class && (existingNode.Status == "NOT_READY" || time.Since(node.ProviderCreationTimestamp.Time) < minAgeToExist) {
+				if existingNode.Class == node.Class && (existingNode.Status == "NOT_READY" || time.Since(existingNode.ProviderCreationTimestamp.Time) < minAgeToExist) {
 					// This may be a node that is already being created, or NOTE it could
 					// be a broken node that we erroneously identify as spinning up.
 					alreadySpinningUp = true
@@ -386,6 +399,8 @@ func (s *capacityService) Run() {
 			if alreadySpinningUp {
 				continue
 			}
+
+			Log.Infof("Capacity service is creating node with class %s", node.Class)
 
 			if err := s.core.Nodes().Create(node); err != nil {
 				Log.Errorf("Capacity service error when creating Node: %s", err)
