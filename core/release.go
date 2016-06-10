@@ -469,7 +469,7 @@ func (r *ReleaseResource) provisionSecret(repo *ImageRepoResource) error {
 	return err
 }
 
-func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {
+func (r *ReleaseResource) InternalPorts() (ports []*Port) {
 	if r.InternalService == nil {
 		return ports
 	}
@@ -479,7 +479,7 @@ func (r *ReleaseResource) InternalPorts() (ports []*InternalPort) {
 	return ports
 }
 
-func (r *ReleaseResource) ExternalPorts() (ports []*ExternalPort) {
+func (r *ReleaseResource) ExternalPorts() (ports []*Port) {
 	for _, port := range r.containerPorts(true) {
 		entrypoint, ok := r.entrypoints[*port.EntrypointDomain]
 
@@ -524,72 +524,59 @@ func (r *ReleaseResource) removeExternalPortsFromEntrypoint() error {
 	return nil
 }
 
+func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
+	for _, pA := range setA {
+		unique := true
+		for _, pB := range setB {
+			if reflect.DeepEqual(*pA.Port, *pB.Port) {
+				unique = false
+				break
+			}
+		}
+		if unique {
+			ports = append(ports, pA)
+		}
+	}
+	return
+}
+
+// TODO move the following to kube helpers?
+
+func addPortsToService(core *Core, svc *guber.Service, ports []*Port) error {
+	Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
+	for _, port := range ports {
+		svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
+	}
+	return svc.Save()
+}
+
+func removePortsFromService(core *Core, svc *guber.Service, ports []*Port) error {
+	Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
+	for _, port := range ports {
+		for i, svcPort := range svc.Spec.Ports {
+			if svcPort.Port == port.Number {
+				svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
+			}
+		}
+	}
+	return svc.Save()
+}
+
 // AddNewPorts adds any new ports defined in containers to the existing
 // Services. This is used as a part of the deployment process, and is used in
 // conjunction with RemoveOldPorts.
 // We use the config returned from the services themselves, as opposed to just
 // updating the config, because auto-assigned ports need to be preserved.
-func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
-	newRInternalPorts := newR.InternalPorts()
-	oldRInternalPorts := oldR.InternalPorts()
-	var newInternalPorts []*InternalPort
-	for _, np := range newRInternalPorts {
-		new := true
-		for _, op := range oldRInternalPorts {
-			if reflect.DeepEqual(*np.Port, *op.Port) {
-				new = false
-				break
-			}
-		}
-		if new {
-			newInternalPorts = append(newInternalPorts, np)
-		}
-	}
-
-	newRExternalPorts := newR.ExternalPorts()
-	oldRExternalPorts := oldR.ExternalPorts()
-	var newExternalPorts []*ExternalPort
-	for _, np := range newRExternalPorts {
-		new := true
-		for _, op := range oldRExternalPorts {
-			if reflect.DeepEqual(*np.Port, *op.Port) {
-				new = false
-				break
-			}
-		}
-		if new {
-			newExternalPorts = append(newExternalPorts, np)
-		}
-	}
+func (r *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
+	newInternalPorts := findPortsUniqueToSetA(r.InternalPorts(), oldR.InternalPorts())
+	newExternalPorts := findPortsUniqueToSetA(r.ExternalPorts(), oldR.ExternalPorts())
 
 	if len(newInternalPorts) > 0 {
-		svc := newR.InternalService
-		Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
-
-		for _, port := range newInternalPorts {
-			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
-		}
-
-		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
-		if err != nil {
-			return err
-		}
-		newR.InternalService = svc
+		addPortsToService(r.core, r.InternalService, newInternalPorts)
 	}
 
 	if len(newExternalPorts) > 0 {
-		svc := newR.ExternalService
-		Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
-
-		for _, port := range newExternalPorts {
-			svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
-		}
-
-		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
-		if err != nil {
-			return err
-		}
-		newR.ExternalService = svc
+		addPortsToService(r.core, r.ExternalService, newExternalPorts)
 
 		for _, port := range newExternalPorts {
 			if err := port.addToELB(); err != nil {
@@ -601,75 +588,16 @@ func (newR *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
 	return nil
 }
 
-func (newR *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
-	newRInternalPorts := newR.InternalPorts()
-	oldRInternalPorts := oldR.InternalPorts()
-	var oldInternalPorts []*InternalPort
-	for _, op := range oldRInternalPorts {
-		old := true
-		for _, np := range newRInternalPorts {
-			if reflect.DeepEqual(*np.Port, *op.Port) {
-				old = false
-				break
-			}
-		}
-		if old {
-			oldInternalPorts = append(oldInternalPorts, op)
-		}
-	}
-	newRExternalPorts := newR.ExternalPorts()
-	oldRExternalPorts := oldR.ExternalPorts()
-	var oldExternalPorts []*ExternalPort
-	for _, op := range oldRExternalPorts {
-		old := true
-		for _, np := range newRExternalPorts {
-			if reflect.DeepEqual(*np.Port, *op.Port) {
-				old = false
-				break
-			}
-		}
-		if old {
-			oldExternalPorts = append(oldExternalPorts, op)
-		}
-	}
+func (r *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
+	oldInternalPorts := findPortsUniqueToSetA(oldR.InternalPorts(), r.InternalPorts())
+	oldExternalPorts := findPortsUniqueToSetA(oldR.ExternalPorts(), r.ExternalPorts())
 
 	if len(oldInternalPorts) > 0 {
-		svc := newR.InternalService
-		Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
-
-		for _, port := range oldInternalPorts {
-			for i, svcPort := range svc.Spec.Ports {
-				// remove ports from Service spec
-				if svcPort.Port == port.Number {
-					svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
-				}
-			}
-		}
-		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
-		if err != nil {
-			return err
-		}
-		newR.InternalService = svc
+		addPortsToService(r.core, r.InternalService, oldInternalPorts)
 	}
 
 	if len(oldExternalPorts) > 0 {
-		svc := newR.ExternalService
-		Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
-
-		for _, port := range oldExternalPorts {
-			for i, svcPort := range svc.Spec.Ports {
-				// remove ports from Service spec
-				if svcPort.Port == port.Number {
-					svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
-				}
-			}
-		}
-
-		svc, err := newR.core.k8s.Services(svc.Metadata.Namespace).Update(svc.Metadata.Name, svc)
-		if err != nil {
-			return err
-		}
-		newR.ExternalService = svc
+		removePortsFromService(r.core, oldR.ExternalService, oldExternalPorts)
 
 		for _, port := range oldExternalPorts {
 			if err := port.removeFromELB(); err != nil {
@@ -695,6 +623,9 @@ func (r *ReleaseResource) Provision() error {
 	if err := r.provisionExternalService(); err != nil {
 		return err
 	}
+	// if err := r.provisionInstanceServices(); err != nil {
+	// 	return err
+	// }
 
 	if err := r.addExternalPortsToEntrypoint(); err != nil {
 		return err

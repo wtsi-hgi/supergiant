@@ -140,7 +140,6 @@ func (c *CoresValue) fromString(str string) error {
 	default:
 		return fmt.Errorf("Could not parse cores value from %s", str)
 	}
-
 	return nil
 }
 
@@ -157,5 +156,5 @@ func (v *CoresValue) ToKubeMillicores() string {
 }
 
 func (v *CoresValue) Cores() float64 {
-	return float64(millicores) / float64(millicores)
+	return float64(v.Millicores) / float64(millicores)
 }

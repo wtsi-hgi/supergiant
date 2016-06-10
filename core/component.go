@@ -328,7 +328,7 @@ func (r *ComponentResource) externalAddresses() (addrs []*common.PortAddress, er
 		return nil, err
 	}
 	for _, port := range release.ExternalPorts() {
-		addrs = append(addrs, port.address())
+		addrs = append(addrs, port.externalAddress())
 	}
 	return addrs, nil
 }
@@ -339,7 +339,7 @@ func (r *ComponentResource) internalAddresses() (addrs []*common.PortAddress, er
 		return nil, err
 	}
 	for _, port := range release.InternalPorts() {
-		addrs = append(addrs, port.address())
+		addrs = append(addrs, port.internalAddress())
 	}
 	return addrs, nil
 }
