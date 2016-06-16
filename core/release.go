@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -37,9 +36,7 @@ type ReleaseResource struct {
 	// Relations
 	InstancesInterface InstancesInterface `json:"-"`
 
-	// TODO these are shared between releases, it's kinda funky right now
-	ExternalService *guber.Service `json:"-"`
-	InternalService *guber.Service `json:"-"`
+	serviceSet *ServiceSet
 
 	imageRepos  []*ImageRepoResource
 	entrypoints map[string]*EntrypointResource // a map for quick lookup
@@ -122,6 +119,7 @@ func (c *ReleaseCollection) MergeCreate(r *ReleaseResource) error {
 	}
 
 	// TODO
+	r.InstanceGroup = nil
 	r.Committed = false
 	r.Created = nil
 	r.Updated = nil
@@ -152,10 +150,7 @@ func (c *ReleaseCollection) Patch(name common.ID, r *ReleaseResource) error {
 // etcd.
 func (c *ReleaseCollection) Delete(r *ReleaseResource) error {
 	if r.Committed && !r.Retired {
-		if err := r.removeExternalPortsFromEntrypoint(); err != nil {
-			return err
-		}
-		if err := r.deleteServices(); err != nil {
+		if err := r.serviceSet.delete(); err != nil {
 			return err
 		}
 
@@ -247,28 +242,36 @@ func (r *ReleaseResource) Action(name string) *Action {
 
 // decorate implements the Resource interface
 func (r *ReleaseResource) decorate() error {
-	svc, err := r.getService(r.ExternalServiceName())
-	if err != nil && !isKubeNotFoundErr(err) {
-		return err
-	}
-	r.ExternalService = svc
-
-	svc, err = r.getService(r.InternalServiceName())
-	if err != nil && !isKubeNotFoundErr(err) {
-		return err
-	}
-	r.InternalService = svc
-
 	repos, err := r.getImageRepos()
 	if err != nil {
 		return err
 	}
 	r.imageRepos = repos
 
+	var oldServiceSet *ServiceSet
+	if r.Component().TargetReleaseTimestamp != nil && r.Component().CurrentReleaseTimestamp != nil && *r.Component().TargetReleaseTimestamp == *r.Timestamp {
+		currentRelease, err := r.Component().CurrentRelease()
+		if err != nil {
+			return err
+		}
+		oldServiceSet = currentRelease.serviceSet
+	}
+
+	baseName := common.StringID(r.Component().Name)
+	r.serviceSet = &ServiceSet{
+		core:          r.core,
+		release:       r,
+		namespace:     common.StringID(r.App().Name),
+		baseName:      baseName,
+		labelSelector: map[string]string{"service": baseName},
+		previous:      oldServiceSet,
+	}
+
 	r.entrypoints, err = r.getEntrypoints()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -333,7 +336,7 @@ func (r *ReleaseResource) imageRepoNames() (repoNames []string) { // TODO conver
 
 func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, error) { // TODO convert Image into Value object w/ repo, image, version
 	entrypoints := make(map[string]*EntrypointResource)
-	for _, port := range r.containerPorts(true) {
+	for _, port := range r.serviceSet.externalPortDefs() {
 		if port.EntrypointDomain == nil {
 			continue
 		}
@@ -353,98 +356,7 @@ func (r *ReleaseResource) getEntrypoints() (map[string]*EntrypointResource, erro
 	return entrypoints, nil
 }
 
-func (r *ReleaseResource) containerPorts(public bool) (ports []*common.Port) {
-	for _, container := range r.Containers {
-		for _, port := range container.Ports {
-			if port.Public == public {
-				ports = append(ports, port)
-			}
-		}
-	}
-	return ports
-}
-
 // Operations-------------------------------------------------------------------
-func (r *ReleaseResource) getService(name string) (*guber.Service, error) {
-	return r.core.k8s.Services(common.StringID(r.App().Name)).Get(name)
-}
-
-func (r *ReleaseResource) provisionService(name string, svcType string, svcPorts []*guber.ServicePort) (*guber.Service, error) {
-	// doing this here so I don't have to repeat in both external and internal provision methods
-	if len(svcPorts) == 0 {
-		return nil, nil
-	}
-
-	service, err := r.getService(name)
-	if err == nil {
-		return service, nil // already provisioned
-	} else if !isKubeNotFoundErr(err) {
-		return nil, err
-	}
-
-	service = &guber.Service{
-		Metadata: &guber.Metadata{
-			Name: name,
-		},
-		Spec: &guber.ServiceSpec{
-			Type: svcType,
-			Selector: map[string]string{
-				"service": common.StringID(r.Component().Name),
-			},
-			Ports: svcPorts,
-		},
-	}
-	Log.Infof("Creating Service %s", name)
-	return r.core.k8s.Services(common.StringID(r.App().Name)).Create(service)
-}
-
-func (r *ReleaseResource) ExternalServiceName() string {
-	return common.StringID(r.Component().Name) + "-public"
-}
-
-func (r *ReleaseResource) InternalServiceName() string {
-	return common.StringID(r.Component().Name)
-}
-
-func (r *ReleaseResource) provisionExternalService() error {
-	var ports []*guber.ServicePort
-	for _, port := range r.containerPorts(true) {
-		ports = append(ports, asKubeServicePort(port))
-	}
-	svc, err := r.provisionService(r.ExternalServiceName(), "NodePort", ports)
-	if err != nil {
-		return err
-	}
-	// TODO repeated in initialization
-	r.ExternalService = svc
-	return nil
-}
-
-func (r *ReleaseResource) provisionInternalService() error {
-	var ports []*guber.ServicePort
-	for _, port := range r.containerPorts(false) {
-		ports = append(ports, asKubeServicePort(port))
-	}
-	svc, err := r.provisionService(r.InternalServiceName(), "ClusterIP", ports)
-	if err != nil {
-		return err
-	}
-	// TODO repeated in initialization
-	r.InternalService = svc
-	return nil
-}
-
-func (r *ReleaseResource) deleteServices() (err error) {
-	Log.Infof("Deleting Service %s", r.ExternalServiceName())
-	if err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.ExternalServiceName()); err != nil && !isKubeNotFoundErr(err) {
-		return err
-	}
-	Log.Infof("Deleting Service %s", r.InternalServiceName())
-	if err = r.core.k8s.Services(common.StringID(r.App().Name)).Delete(r.InternalServiceName()); err != nil && !isKubeNotFoundErr(err) {
-		return err
-	}
-	return nil
-}
 
 // NOTE it seems weird here, but "Provision" == "CreateUnlessExists"
 func (r *ReleaseResource) provisionSecrets() error {
@@ -469,146 +381,6 @@ func (r *ReleaseResource) provisionSecret(repo *ImageRepoResource) error {
 	return err
 }
 
-func (r *ReleaseResource) InternalPorts() (ports []*Port) {
-	if r.InternalService == nil {
-		return ports
-	}
-	for _, port := range r.containerPorts(false) {
-		ports = append(ports, newInternalPort(port, r))
-	}
-	return ports
-}
-
-func (r *ReleaseResource) ExternalPorts() (ports []*Port) {
-	for _, port := range r.containerPorts(true) {
-		entrypoint, ok := r.entrypoints[*port.EntrypointDomain]
-
-		if !ok {
-			Log.Errorf("Entrypoint %s does not exist", *port.EntrypointDomain)
-			continue
-		}
-
-		ports = append(ports, newExternalPort(port, r, entrypoint))
-	}
-	return ports
-}
-
-func (r *ReleaseResource) addExternalPortsToEntrypoint() error {
-	if r.ExternalService == nil {
-		return nil
-	}
-
-	// NOTE we find from the service so that we don't try to add not-yet serviced
-	// ports to the ELB
-	ports := r.ExternalPorts()
-
-	for _, svcPort := range r.ExternalService.Spec.Ports {
-		for _, port := range ports {
-			if port.Number == svcPort.Port {
-				if err := port.addToELB(); err != nil {
-					return err
-				}
-				return nil
-			}
-		}
-	}
-	return nil
-}
-
-func (r *ReleaseResource) removeExternalPortsFromEntrypoint() error {
-	for _, port := range r.ExternalPorts() {
-		if err := port.removeFromELB(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
-	for _, pA := range setA {
-		unique := true
-		for _, pB := range setB {
-			if reflect.DeepEqual(*pA.Port, *pB.Port) {
-				unique = false
-				break
-			}
-		}
-		if unique {
-			ports = append(ports, pA)
-		}
-	}
-	return
-}
-
-// TODO move the following to kube helpers?
-
-func addPortsToService(core *Core, svc *guber.Service, ports []*Port) error {
-	Log.Infof("Adding new ports to Service %s", svc.Metadata.Name)
-	for _, port := range ports {
-		svc.Spec.Ports = append(svc.Spec.Ports, asKubeServicePort(port.Port))
-	}
-	return svc.Save()
-}
-
-func removePortsFromService(core *Core, svc *guber.Service, ports []*Port) error {
-	Log.Infof("Removing old ports from Service %s", svc.Metadata.Name)
-	for _, port := range ports {
-		for i, svcPort := range svc.Spec.Ports {
-			if svcPort.Port == port.Number {
-				svc.Spec.Ports = append(svc.Spec.Ports[:i], svc.Spec.Ports[i+1:]...)
-			}
-		}
-	}
-	return svc.Save()
-}
-
-// AddNewPorts adds any new ports defined in containers to the existing
-// Services. This is used as a part of the deployment process, and is used in
-// conjunction with RemoveOldPorts.
-// We use the config returned from the services themselves, as opposed to just
-// updating the config, because auto-assigned ports need to be preserved.
-func (r *ReleaseResource) AddNewPorts(oldR *ReleaseResource) error {
-	newInternalPorts := findPortsUniqueToSetA(r.InternalPorts(), oldR.InternalPorts())
-	newExternalPorts := findPortsUniqueToSetA(r.ExternalPorts(), oldR.ExternalPorts())
-
-	if len(newInternalPorts) > 0 {
-		addPortsToService(r.core, r.InternalService, newInternalPorts)
-	}
-
-	if len(newExternalPorts) > 0 {
-		addPortsToService(r.core, r.ExternalService, newExternalPorts)
-
-		for _, port := range newExternalPorts {
-			if err := port.addToELB(); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (r *ReleaseResource) RemoveOldPorts(oldR *ReleaseResource) error {
-	oldInternalPorts := findPortsUniqueToSetA(oldR.InternalPorts(), r.InternalPorts())
-	oldExternalPorts := findPortsUniqueToSetA(oldR.ExternalPorts(), r.ExternalPorts())
-
-	if len(oldInternalPorts) > 0 {
-		addPortsToService(r.core, r.InternalService, oldInternalPorts)
-	}
-
-	if len(oldExternalPorts) > 0 {
-		removePortsFromService(r.core, oldR.ExternalService, oldExternalPorts)
-
-		for _, port := range oldExternalPorts {
-			if err := port.removeFromELB(); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 // Provision creates needed assets for all instances. It does not actually
 // start instances -- that is handled by deploy.go.
 func (r *ReleaseResource) Provision() error {
@@ -616,18 +388,7 @@ func (r *ReleaseResource) Provision() error {
 		return err
 	}
 
-	// Create Services
-	if err := r.provisionInternalService(); err != nil {
-		return err
-	}
-	if err := r.provisionExternalService(); err != nil {
-		return err
-	}
-	// if err := r.provisionInstanceServices(); err != nil {
-	// 	return err
-	// }
-
-	if err := r.addExternalPortsToEntrypoint(); err != nil {
+	if err := r.serviceSet.provision(); err != nil {
 		return err
 	}
 

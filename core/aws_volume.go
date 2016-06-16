@@ -143,6 +143,8 @@ func (m *AwsVolume) waitForAvailable() error {
 	vol, err := m.awsVolume()
 	if err != nil {
 		return err
+	} else if vol == nil {
+		return nil
 	}
 
 	input := &ec2.DescribeVolumesInput{

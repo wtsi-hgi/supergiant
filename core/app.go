@@ -117,14 +117,22 @@ func (c *AppCollection) Delete(ri Resource) error {
 	if err != nil {
 		return err
 	}
-	if err := r.deleteNamespace(); err != nil && !isKubeNotFoundErr(err) {
-		return err
-	}
 	for _, component := range components.Items {
 		if err := component.Delete(); err != nil {
 			return err
 		}
 	}
+
+	// TODO
+	// Ideally we would delete namespace first, because it quickly tears down all
+	// kube resources. However, in order to remove ports from ELBs, we currently
+	// need the K8S service to stick around so we know the assigned NodePort
+	// value. A solution may be simply to store the port assignment.
+
+	if err := r.deleteNamespace(); err != nil && !isKubeNotFoundErr(err) {
+		return err
+	}
+
 	return c.core.db.delete(c, r.Name)
 }
 

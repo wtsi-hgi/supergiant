@@ -150,7 +150,10 @@ func TestReleaseMergeCreate(t *testing.T) {
 		fakeCurrentRelease.Meta.Created = common.TimestampFromString("Tue, 12 Apr 2016 03:54:56 UTC")
 		fakeCurrentRelease.Committed = true
 
-		component.ReleasesInterface = new(FakeReleaseCollection).ReturnOnGet(fakeCurrentRelease, nil)
+		fakeReleases := &FakeReleaseCollection{core: core, component: component}
+		fakeReleases.ReturnOnGet(fakeCurrentRelease, nil)
+
+		component.ReleasesInterface = fakeReleases
 		component.CurrentReleaseTimestamp = fakeCurrentRelease.Timestamp
 
 		// we do this and not component.Releases() because we mock it above
@@ -435,7 +438,7 @@ func TestReleaseDelete(t *testing.T) {
 			})
 
 			Convey("The K8S services should be deleted", func() {
-				So(servicesDeleted, ShouldResemble, []string{"component-test-public", "component-test"})
+				So(servicesDeleted, ShouldResemble, []string{"component-test", "component-test-public"})
 			})
 
 			Convey("The instances should be deleted", func() {

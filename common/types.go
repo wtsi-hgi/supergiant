@@ -17,7 +17,7 @@ type Component struct {
 	CurrentReleaseTimestamp ID `json:"current_release_id" sg:"readonly"` // TODO this should be release_timestamp, not release_id
 	TargetReleaseTimestamp  ID `json:"target_release_id" sg:"readonly"`
 
-	Addresses *ComponentAddresses `json:"addresses,omitempty" sg:"readonly,nostore"`
+	Addresses *Addresses `json:"addresses,omitempty" sg:"readonly,nostore"`
 
 	*Meta
 }
@@ -80,6 +80,8 @@ type Instance struct {
 
 	CPU *ResourceMetrics `json:"cpu"`
 	RAM *ResourceMetrics `json:"ram"`
+
+	Addresses *Addresses `json:"addresses,omitempty"`
 }
 
 type Entrypoint struct {
@@ -168,7 +170,7 @@ type PortAddress struct {
 	Address string `json:"address"`
 }
 
-type ComponentAddresses struct {
+type Addresses struct {
 	External []*PortAddress `json:"external"`
 	Internal []*PortAddress `json:"internal"`
 }
@@ -212,19 +214,36 @@ type Port struct {
 	// build a map defining the accepted application protocols on top of TCP|UDP,
 	// or make a sep. field.
 	Protocol string `json:"protocol" validate:"nonzero" sg:"default=TCP"`
-	Number   int    `json:"number" validate:"nonzero,max=40000"`
-	Public   bool   `json:"public"`
+
+	// Number is the port number used by the container. If your application runs
+	// on port 80, for example, use that.
+	Number int `json:"number" validate:"nonzero,max=40000"`
+
+	// Public determines whether the port can be accessed ONLY from other
+	// Components within Supergiant (false), or from BOTH inside and outside of
+	// Supergiant (true). When true, the port can be accessed from external Node
+	// IPs. When true, and with an EntrypointDomain provided, the port will be
+	// exposed on an external load balancer.
+	Public bool `json:"public"`
+
+	// PerInstance, when true, provides each Instance of a Component with its own
+	// addressable endpoint (in addition to the normal Component-wide endpoints).
+	// When false, Instances can not be reached directly, as traffic to the port
+	// is load balanced randomly across all Instances.
+	PerInstance bool `json:"per_instance"`
 
 	// EntrypointDomain specifies which Entrypoint this Port is added to. Does not
 	// apply when Public is false.
 	EntrypointDomain ID `json:"entrypoint_domain,omitempty"`
 
 	// ExternalNumber instructs the Entrypoint to set the actual Port number
-	// specified as the external load balancer port. Does not apply when
-	// EntrypointDomain is nil.
+	// specified as the external load balancer port.
 	//
 	// TODO validation needed just like on Number, but it can't be nonzero since
 	// the value provided can be 0.
+	//
+	// NOTE Does not apply when EntrypointDomain is nil.
+	//      Does not apply to PerInstance ports.
 	ExternalNumber int `json:"external_number"`
 }
 
