@@ -31,6 +31,8 @@ type InstanceResource struct {
 	core       *Core
 	collection InstancesInterface
 	*common.Instance
+
+	serviceSet *ServiceSet
 }
 
 type InstanceList struct {
@@ -99,6 +101,17 @@ func (c *InstanceCollection) Start(ri Resource) error {
 	if err := r.prepareVolumes(); err != nil {
 		return err
 	}
+	if err := r.serviceSet.provision(); err != nil {
+		return err
+	}
+
+	if err := r.serviceSet.addNewPorts(); err != nil {
+		return err
+	}
+	if err := r.serviceSet.removeOldPorts(); err != nil {
+		return err
+	}
+
 	if err := r.provisionReplicationController(); err != nil {
 		return err
 	}
@@ -123,13 +136,16 @@ func (c *InstanceCollection) Stop(ri Resource) error {
 }
 
 func (c *InstanceCollection) Delete(r *InstanceResource) (err error) {
-	if err = r.deleteReplicationControllerAndPod(); err != nil {
+	if err := r.deleteReplicationControllerAndPod(); err != nil {
 		return err
 	}
-	if err = r.DeleteVolumes(); err != nil {
+	if err := r.serviceSet.delete(); err != nil {
 		return err
 	}
-	return nil
+	if err = r.deleteVolumes(); err != nil {
+		return
+	}
+	return
 }
 
 //------------------------------------------------------------------------------
@@ -194,6 +210,35 @@ func (r *InstanceResource) Action(name string) *Action {
 
 // decorate implements the Resource interface
 func (r *InstanceResource) decorate() error {
+	var oldServiceSet *ServiceSet
+	component := r.Release().Component()
+	if component.TargetReleaseTimestamp != nil && component.CurrentReleaseTimestamp != nil && *component.TargetReleaseTimestamp == *r.Release().Timestamp {
+		currentRelease, err := component.CurrentRelease()
+		if err != nil {
+			return err
+		}
+		var oldInstance *InstanceResource
+		for _, instance := range currentRelease.Instances().List().Items {
+			if *instance.ID == *r.ID {
+				oldInstance = instance
+				break
+			}
+		}
+		if oldInstance != nil {
+			oldServiceSet = oldInstance.serviceSet
+		}
+	}
+
+	r.serviceSet = &ServiceSet{
+		core:          r.core,
+		release:       r.Release(),
+		namespace:     common.StringID(r.App().Name),
+		baseName:      r.BaseName,
+		labelSelector: map[string]string{"instance_service": r.BaseName},
+		portFilter:    func(port *common.Port) bool { return port.PerInstance },
+		previous:      oldServiceSet,
+	}
+
 	pod, err := r.pod()
 	if err != nil {
 		return err
@@ -204,6 +249,20 @@ func (r *InstanceResource) decorate() error {
 	} else {
 		r.Status = common.InstanceStatusStopped
 		return nil // don't get stats below
+	}
+
+	externalAddrs, err := r.externalAddresses()
+	if err != nil {
+		return err
+	}
+	internalAddrs, err := r.internalAddresses()
+	if err != nil {
+		return err
+	}
+
+	r.Addresses = &common.Addresses{
+		External: externalAddrs,
+		Internal: internalAddrs,
 	}
 
 	stats, err := pod.HeapsterStats()
@@ -238,6 +297,29 @@ func (r *InstanceResource) decorate() error {
 	}
 
 	return nil
+}
+
+// TODO repeated code in component
+func (r *InstanceResource) externalAddresses() (addrs []*common.PortAddress, err error) {
+	ports, err := r.serviceSet.externalPorts()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range ports {
+		addrs = append(addrs, port.externalAddress())
+	}
+	return addrs, nil
+}
+
+func (r *InstanceResource) internalAddresses() (addrs []*common.PortAddress, err error) {
+	ports, err := r.serviceSet.internalPorts()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range ports {
+		addrs = append(addrs, port.internalAddress())
+	}
+	return addrs, nil
 }
 
 func (r *InstanceResource) App() *AppResource {
@@ -391,8 +473,9 @@ func (r *InstanceResource) provisionReplicationController() error {
 				Metadata: &guber.Metadata{
 					Name: r.Name, // pod base name is same as RC
 					Labels: map[string]string{
-						"service":  common.StringID(r.Component().Name), // for Service
-						"instance": r.Name,                              // for RC (above)
+						"service":          common.StringID(r.Component().Name), // for Service
+						"instance":         r.Name,                              // for RC (above)
+						"instance_service": r.BaseName,                          // for Instance Service
 					},
 				},
 				Spec: &guber.PodSpec{
@@ -430,26 +513,28 @@ func (r *InstanceResource) pod() (*guber.Pod, error) {
 
 func (r *InstanceResource) deleteReplicationControllerAndPod() error {
 	Log.Infof("Deleting ReplicationController %s", r.Name)
+
 	// TODO we call r.core.k8s.ReplicationControllers(r.App().Name)
 	// nough to warrant its own method
 	if err := r.core.k8s.ReplicationControllers(common.StringID(r.App().Name)).Delete(r.Name); err != nil && !isKubeNotFoundErr(err) {
 		return err
 	}
+
 	pod, err := r.pod()
 	if err != nil {
 		return err
 	}
 	if pod != nil {
-		// _ is found bool, we don't care if it was found or not, just don't want an error
 		if err := pod.Delete(); err != nil && !isKubeNotFoundErr(err) {
 			return err
 		}
 	}
+
 	return nil
 }
 
 // exposed for use in deploy_component.go
-func (r *InstanceResource) DeleteVolumes() error {
+func (r *InstanceResource) deleteVolumes() error {
 	for _, vol := range r.Volumes() {
 		if err := vol.Delete(); err != nil { // NOTE this should not be a "not found" error -- since Volumes() will naturally do an existence check
 			return err

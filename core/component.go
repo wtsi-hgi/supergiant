@@ -153,7 +153,9 @@ func (c *ComponentCollection) Deploy(ri Resource) (err error) {
 	}
 
 	if currentRelease != nil {
-		targetRelease.AddNewPorts(currentRelease)
+		if err := targetRelease.serviceSet.addNewPorts(); err != nil {
+			return err
+		}
 	}
 
 	if customDeploy := r.CustomDeployScript; customDeploy != nil {
@@ -186,12 +188,14 @@ func (c *ComponentCollection) Deploy(ri Resource) (err error) {
 		instancesRemoving := currentRelease.InstanceCount - targetRelease.InstanceCount
 		instances := currentRelease.Instances().List().Items
 		for _, instance := range instances[len(instances)-instancesRemoving:] { // TODO test that this works correctly
-			instance.DeleteVolumes()
+			instance.deleteVolumes()
 		}
 	}
 
 	if currentRelease != nil {
-		targetRelease.RemoveOldPorts(currentRelease)
+		if err := targetRelease.serviceSet.removeOldPorts(); err != nil {
+			return err
+		}
 
 		currentRelease.Retired = true
 		currentRelease.Update()
@@ -281,7 +285,7 @@ func (r *ComponentResource) decorate() error {
 		return err
 	}
 
-	r.Addresses = &common.ComponentAddresses{
+	r.Addresses = &common.Addresses{
 		External: externalAddrs,
 		Internal: internalAddrs,
 	}
@@ -327,7 +331,11 @@ func (r *ComponentResource) externalAddresses() (addrs []*common.PortAddress, er
 	if err != nil {
 		return nil, err
 	}
-	for _, port := range release.ExternalPorts() {
+	ports, err := release.serviceSet.externalPorts()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range ports {
 		addrs = append(addrs, port.externalAddress())
 	}
 	return addrs, nil
@@ -338,7 +346,11 @@ func (r *ComponentResource) internalAddresses() (addrs []*common.PortAddress, er
 	if err != nil {
 		return nil, err
 	}
-	for _, port := range release.InternalPorts() {
+	ports, err := release.serviceSet.internalPorts()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range ports {
 		addrs = append(addrs, port.internalAddress())
 	}
 	return addrs, nil

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -16,10 +17,26 @@ func protoWithDefault(protocol string) string {
 	return strings.ToLower(protocol)
 }
 
+func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
+	for _, pA := range setA {
+		unique := true
+		for _, pB := range setB {
+			if reflect.DeepEqual(*pA.Port, *pB.Port) {
+				unique = false
+				break
+			}
+		}
+		if unique {
+			ports = append(ports, pA)
+		}
+	}
+	return
+}
+
 type Port struct {
+	core *Core
 	*common.Port
-	release  *ReleaseResource
-	external bool
+	service *guber.Service
 	// entrypoint is nil if it's an internal port
 	entrypoint *EntrypointResource
 }
@@ -28,24 +45,16 @@ func (p *Port) name() string {
 	return strconv.Itoa(p.Number)
 }
 
-func newInternalPort(p *common.Port, r *ReleaseResource) *Port {
-	return &Port{p, r, false, nil}
+func newInternalPort(c *Core, p *common.Port, svc *guber.Service) *Port {
+	return &Port{c, p, svc, nil}
 }
 
-func newExternalPort(p *common.Port, r *ReleaseResource, e *EntrypointResource) *Port {
-	return &Port{p, r, true, e}
-}
-
-// a method because this will change on Release
-func (p *Port) service() *guber.Service {
-	if p.external {
-		return p.release.ExternalService
-	}
-	return p.release.InternalService
+func newExternalPort(c *Core, p *common.Port, svc *guber.Service, e *EntrypointResource) *Port {
+	return &Port{c, p, svc, e}
 }
 
 func (p *Port) internalAddress() *common.PortAddress {
-	svcMeta := p.service().Metadata
+	svcMeta := p.service.Metadata
 	host := fmt.Sprintf("%s.%s.svc.cluster.local", svcMeta.Name, svcMeta.Namespace)
 	return &common.PortAddress{
 		Port:    p.name(),
@@ -56,7 +65,7 @@ func (p *Port) internalAddress() *common.PortAddress {
 func (p *Port) externalAddress() *common.PortAddress {
 	if p.entrypoint == nil {
 		host := ""
-		nodes, err := p.release.core.Nodes().List()
+		nodes, err := p.core.Nodes().List()
 		if err != nil {
 			Log.Errorf("Error when fetching nodes for external address IP: %s", err)
 		} else if len(nodes.Items) == 0 {
@@ -79,7 +88,7 @@ func (p *Port) externalAddress() *common.PortAddress {
 // The following methods apply to external ports only
 
 func (p *Port) nodePort() int {
-	for _, port := range p.service().Spec.Ports {
+	for _, port := range p.service.Spec.Ports {
 		if port.Port == p.Number {
 			return port.NodePort
 		}
@@ -88,7 +97,7 @@ func (p *Port) nodePort() int {
 }
 
 func (p *Port) elbPort() int {
-	if p.ExternalNumber != 0 {
+	if !p.PerInstance && p.ExternalNumber != 0 {
 		return p.ExternalNumber
 	}
 	return p.nodePort()

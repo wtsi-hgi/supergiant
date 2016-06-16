@@ -57,6 +57,7 @@ curl -XPOST localhost:8080/v0/apps/test/components/elasticsearch/releases -d '{
           "number": 9200,
           "external_number": 33666,
           "public": true,
+          "per_instance": true,
           "entrypoint_domain": "example.com"
         },
         {

@@ -169,11 +169,18 @@ func (f *FakeReleaseCollection) ReturnOnGet(t *common.Release, err error) *FakeR
 		if err != nil {
 			return nil, err
 		}
-		return &ReleaseResource{
+
+		r := &ReleaseResource{
 			core:       f.core,
 			collection: f,
 			Release:    t,
-		}, nil
+		}
+
+		// TODO I think other areas need this
+		if err := r.decorate(); err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 	return f
 }
