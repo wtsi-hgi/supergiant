@@ -94,8 +94,9 @@ func RunCustomDeployment(core *Core, component *ComponentResource) error {
 		return false, nil // pod still exists, keep going
 	})
 
+	Log.Info(log)
+
 	if err != nil {
-		Log.Error(log)
 		return err
 	}
 

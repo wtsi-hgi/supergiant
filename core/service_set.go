@@ -230,6 +230,8 @@ func (s *ServiceSet) addExternalPortsToEntrypoint() error {
 	svc, err := s.externalService()
 	if err != nil {
 		return err
+	} else if svc == nil {
+		return nil
 	}
 	ports, err := s.externalPorts()
 	if err != nil {

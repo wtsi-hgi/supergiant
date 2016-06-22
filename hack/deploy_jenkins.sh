@@ -14,14 +14,6 @@ curl -XPOST localhost:8080/v0/apps/jenkins/components/jenkins/releases -d '{
   "containers": [
     {
       "image": "jenkins",
-      "cpu": {
-        "min": 0,
-        "max": 0
-      },
-      "ram": {
-        "min": 0,
-        "max": 0
-      },
       "ports": [
         {
           "protocol": "HTTP",

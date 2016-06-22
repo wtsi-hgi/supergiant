@@ -227,6 +227,10 @@ func (r *EntrypointResource) RemovePort(elbPort int) error {
 	Log.Infof("Removing port %d from ELB %s", elbPort, *r.awsName())
 
 	_, err := r.core.elb.DeleteLoadBalancerListeners(params)
+	if err != nil && strings.Contains(err.Error(), "LoadBalancerNotFound") { // TODO repeated in delete
+		Log.Warn(err)
+		return nil
+	}
 	return err
 }
 
@@ -326,5 +330,9 @@ func (r *EntrypointResource) deleteELB() error {
 		LoadBalancerName: r.awsName(),
 	}
 	_, err := r.core.elb.DeleteLoadBalancer(params)
+	if err != nil && strings.Contains(err.Error(), "LoadBalancerNotFound") {
+		Log.Warn(err)
+		return nil
+	}
 	return err
 }
