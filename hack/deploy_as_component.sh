@@ -1,43 +1,43 @@
 curl -XPOST localhost:8080/v0/entrypoints -d '{
-  "domain": "test.supergiant.io"
+  "domain": "example.com"
 }' || true
 
 curl -XPOST localhost:8080/v0/apps -d '{
-  "name": "supergiant"
+  "name": "sg-test"
 }'
 
-curl -XPOST localhost:8080/v0/apps/supergiant/components -d '{
+curl -XPOST localhost:8080/v0/apps/sg-test/components -d '{
   "name": "api"
 }'
 
-curl -XPOST localhost:8080/v0/apps/supergiant/components/api/releases -d '{
+curl -XPOST localhost:8080/v0/apps/sg-test/components/api/releases -d '{
   "instance_count": 1,
   "containers": [
     {
       "name": "api",
-      "image": "supergiant/supergiant-api:unstable-custom_deploy_fix",
+      "image": "supergiant/supergiant-api:unstable-internal_addrs_for_external_ports",
       "command": [
         "/supergiant-api",
-        "--etcd-host",
+        "--etcd-hosts",
         "http://localhost:2379",
         "--ar",
-        "us-east-1",
+        "'$AR'",
         "--az",
-        "us-east-1c",
+        "'$AZ'",
         "--sg",
-        "sg-8923f3f1",
+        "'$SG'",
         "--sid",
-        "subnet-21e06f57",
+        "'$SID'",
         "--kh",
-        "52.90.24.78",
-        "--https-mode",
+        "'$KH'",
+        "--k8s-insecure-https",
         "--ku",
-        "admin",
+        "'$KU'",
         "--kp",
-        "86J8mb3b4bDU32cX",
-        "--access-key",
+        "'$KP'",
+        "--aws-access-key",
         "'$AWS_ACCESS_KEY'",
-        "--secret-key",
+        "--aws-secret-key",
         "'$AWS_SECRET_KEY'"
       ],
       "ports": [
@@ -46,7 +46,7 @@ curl -XPOST localhost:8080/v0/apps/supergiant/components/api/releases -d '{
           "number": 8080,
           "external_number": 40000,
           "public": true,
-          "entrypoint_domain": "test.supergiant.io"
+          "entrypoint_domain": "example.com"
         }
       ]
     },
@@ -81,4 +81,4 @@ curl -XPOST localhost:8080/v0/apps/supergiant/components/api/releases -d '{
   ]
 }'
 
-curl -XPOST localhost:8080/v0/apps/supergiant/components/api/deploy
+curl -XPOST localhost:8080/v0/apps/sg-test/components/api/deploy

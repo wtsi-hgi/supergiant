@@ -346,12 +346,18 @@ func (r *ComponentResource) internalAddresses() (addrs []*common.PortAddress, er
 	if err != nil {
 		return nil, err
 	}
-	ports, err := release.serviceSet.internalPorts()
+	iPorts, err := release.serviceSet.internalPorts()
 	if err != nil {
 		return nil, err
 	}
+	ePorts, err := release.serviceSet.externalPorts() // external ports also have internal addresses
+	if err != nil {
+		return nil, err
+	}
+	ports := append(iPorts, ePorts...)
 	for _, port := range ports {
 		addrs = append(addrs, port.internalAddress())
 	}
+
 	return addrs, nil
 }

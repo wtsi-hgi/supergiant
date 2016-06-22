@@ -178,7 +178,7 @@ type Addresses struct {
 type CustomDeployScript struct {
 	Image   string   `json:"image" validate:"nonzero,regexp=^[-\\w\\.\\/]+(:[-\\w\\.]+)?$"`
 	Command []string `json:"command"` // TODO need validation here, I think we need to reqire command
-	Timeout uint     `json:"timeout" sg:"default=1800"`
+	Timeout int      `json:"timeout" sg:"default=1800"`
 }
 
 type VolumeBlueprint struct {

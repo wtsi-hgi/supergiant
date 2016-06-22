@@ -312,10 +312,15 @@ func (r *InstanceResource) externalAddresses() (addrs []*common.PortAddress, err
 }
 
 func (r *InstanceResource) internalAddresses() (addrs []*common.PortAddress, err error) {
-	ports, err := r.serviceSet.internalPorts()
+	iPorts, err := r.serviceSet.internalPorts()
 	if err != nil {
 		return nil, err
 	}
+	ePorts, err := r.serviceSet.externalPorts() // external ports also have internal addresses
+	if err != nil {
+		return nil, err
+	}
+	ports := append(iPorts, ePorts...)
 	for _, port := range ports {
 		addrs = append(addrs, port.internalAddress())
 	}
@@ -353,6 +358,22 @@ func (r *InstanceResource) Stop() error {
 	return r.collection.Stop(r)
 }
 
+// TODO we need a better way of initializing defaults on sub-resources
+func (r *InstanceResource) DefaultContainerName() string {
+	return asKubeContainer(r.Release().Containers[0], r).Name
+}
+
+// func (r *InstanceResource) Exec(container string, command string) (string, error) {
+// 	pod, err := r.pod()
+// 	if err != nil {
+// 		return "", err
+// 	}
+//
+// 	// TODO nil pointer possibility if pod is nil
+//
+// 	return pod.Exec(container, command)
+// }
+
 func (r *InstanceResource) Log() (string, error) {
 	pod, err := r.pod()
 	if err != nil {
@@ -361,10 +382,7 @@ func (r *InstanceResource) Log() (string, error) {
 
 	// TODO nil pointer possibility if pod is nil
 
-	// TODO we need a better way of initializing defaults on sub-resources
-	containerName := asKubeContainer(r.Release().Containers[0], r).Name
-
-	return pod.Log(containerName)
+	return pod.Log(r.DefaultContainerName())
 }
 
 func (r *InstanceResource) Release() *ReleaseResource {

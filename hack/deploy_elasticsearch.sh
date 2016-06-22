@@ -40,11 +40,11 @@ curl -XPOST $HOST/v0/apps/test/components/elasticsearch/releases -d '{
       "image": "qbox/qbox-docker:2.1.1",
       "cpu": {
         "min": 0,
-        "max": 250
+        "max": 0.25
       },
       "ram": {
-        "min": 1024,
-        "max": 1024
+        "min": "1Gi",
+        "max": "1Gi"
       },
       "mounts": [
         {

@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/common"
 )
 
-func protoWithDefault(protocol string) string {
-	if protocol == "" {
-		return "tcp"
-	}
-	return strings.ToLower(protocol)
-}
+// func protoWithDefault(protocol string) string {
+// 	if protocol == "" {
+// 		return "tcp"
+// 	}
+// 	return strings.ToLower(protocol)
+// }
 
 func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
 	for _, pA := range setA {
@@ -57,8 +56,9 @@ func (p *Port) internalAddress() *common.PortAddress {
 	svcMeta := p.service.Metadata
 	host := fmt.Sprintf("%s.%s.svc.cluster.local", svcMeta.Name, svcMeta.Namespace)
 	return &common.PortAddress{
-		Port:    p.name(),
-		Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.Number),
+		Port: p.name(),
+		// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.Number),
+		Address: fmt.Sprintf("%s:%d", host, p.Number),
 	}
 }
 
@@ -74,14 +74,16 @@ func (p *Port) externalAddress() *common.PortAddress {
 			host = nodes.Items[0].ExternalIP
 		}
 		return &common.PortAddress{
-			Port:    p.name(),
-			Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.nodePort()),
+			Port: p.name(),
+			// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.nodePort()),
+			Address: fmt.Sprintf("%s:%d", host, p.nodePort()),
 		}
 	}
 
 	return &common.PortAddress{
-		Port:    p.name(),
-		Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), p.entrypoint.Address, p.elbPort()),
+		Port: p.name(),
+		// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), p.entrypoint.Address, p.elbPort()),
+		Address: fmt.Sprintf("%s:%d", p.entrypoint.Address, p.elbPort()),
 	}
 }
 
