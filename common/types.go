@@ -10,7 +10,7 @@ type App struct {
 }
 
 type Component struct {
-	Name ID `json:"name" validate:"nonzero,max=24,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$"`
+	Name ID `json:"name" validate:"nonzero,max=17,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$"`
 
 	CustomDeployScript *CustomDeployScript `json:"custom_deploy_script"`
 
