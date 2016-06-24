@@ -391,6 +391,11 @@ func (r *NodeResource) hasPodsWithReservedResources() (bool, error) {
 	for _, pod := range pods.Items {
 		for _, container := range pod.Spec.Containers {
 			reqs := container.Resources.Requests
+
+			if reqs == nil {
+				continue
+			}
+
 			values := [2]string{
 				reqs.CPU,
 				reqs.Memory,
