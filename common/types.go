@@ -88,7 +88,7 @@ type Entrypoint struct {
 	// NOTE eventually the plan for Domain is to use it for DNS application.
 	// That's not hooked up yet, and thus, we aren't doing any type of validation
 	// on hostnames.
-	Domain ID `json:"domain" validate:"nonzero"` // e.g. test.example.com
+	Domain ID `json:"domain" validate:"nonzero,max=21"` // e.g. test.example.com
 
 	// the ELB address
 	Address string `json:"address" sg:"readonly"`
