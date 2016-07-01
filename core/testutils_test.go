@@ -21,7 +21,7 @@ func (f *FakeComponentCollection) ReturnValuesOnList(components []*common.Compon
 	for _, component := range components {
 		items = append(items, &ComponentResource{
 			core:       f.core,
-			collection: f,
+			Collection: f,
 			Component:  component,
 		})
 	}
@@ -305,7 +305,7 @@ func (f *FakeInstanceCollection) ReturnValuesOnList(ts []*common.Instance) *Fake
 	for _, t := range ts {
 		items = append(items, &InstanceResource{
 			core:       f.core,
-			collection: f,
+			Collection: f,
 			Instance:   t,
 		})
 	}
@@ -322,15 +322,23 @@ func (f *FakeInstanceCollection) OnDelete(clbk func(*InstanceResource) error) *F
 	return f
 }
 
+func (f *FakeInstanceCollection) OnDeleteVolumes(clbk func(*InstanceResource) error) *FakeInstanceCollection {
+	f.DeleteVolumesFn = func(r *InstanceResource) error {
+		return clbk(r)
+	}
+	return f
+}
+
 type FakeInstanceCollection struct {
-	core     *Core
-	release  *ReleaseResource
-	ListFn   func() *InstanceList
-	NewFn    func(common.ID) *InstanceResource
-	GetFn    func(common.ID) (*InstanceResource, error)
-	StartFn  func(Resource) error
-	StopFn   func(Resource) error
-	DeleteFn func(*InstanceResource) error
+	core            *Core
+	release         *ReleaseResource
+	ListFn          func() *InstanceList
+	NewFn           func(common.ID) *InstanceResource
+	GetFn           func(common.ID) (*InstanceResource, error)
+	StartFn         func(Resource) error
+	StopFn          func(Resource) error
+	DeleteFn        func(*InstanceResource) error
+	DeleteVolumesFn func(*InstanceResource) error
 }
 
 func (f *FakeInstanceCollection) App() *AppResource {
@@ -367,4 +375,8 @@ func (f *FakeInstanceCollection) Stop(ri Resource) error {
 
 func (f *FakeInstanceCollection) Delete(r *InstanceResource) error {
 	return f.DeleteFn(r)
+}
+
+func (f *FakeInstanceCollection) DeleteVolumes(r *InstanceResource) error {
+	return f.DeleteVolumesFn(r)
 }

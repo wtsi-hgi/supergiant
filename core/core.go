@@ -46,6 +46,8 @@ type Core struct {
 
 	// NOTE this goes away when Dockerhub is not the only ImageRegistry
 	dockerhub *ImageRegistryResource
+
+	supervisor *Supervisor
 }
 
 var (
@@ -100,7 +102,8 @@ func (c *Core) Initialize() {
 	c.dockerhub.Name = common.IDString("dockerhub")
 
 	// TODO expose as worker num option in main
-	go NewSupervisor(c, 4).Run()
+	c.supervisor = NewSupervisor(c, 4)
+	go c.supervisor.Run()
 
 	if c.CapacityServiceEnabled {
 		go newCapacityService(c).Run()

@@ -149,19 +149,31 @@ func (c *ReleaseCollection) Patch(name common.ID, r *ReleaseResource) error {
 // Delete removes all assets (volumes, pods, etc.) and deletes the Release in
 // etcd.
 func (c *ReleaseCollection) Delete(r *ReleaseResource) error {
+
+	// NOTE we attempt deletes on all Release instances just in case we have
+	// lingering pods. This wouldn't be an issue if we deleted namespace first,
+	// but there's issues with that.
+	ch := make(chan error)
+	for _, instance := range r.Instances().List().Items {
+		go func(instance *InstanceResource) {
+			ch <- instance.Delete()
+		}(instance)
+	}
+	for i := 0; i < r.InstanceCount; i++ {
+		if err := <-ch; err != nil {
+			return err
+		}
+	}
+
+	// NOTE this part of the delete, as opposed to abovewith Instances, deals
+	// with resources shared between Releases.
 	if r.Committed && !r.Retired {
 		if err := r.serviceSet.delete(); err != nil {
 			return err
 		}
 
-		c := make(chan error)
 		for _, instance := range r.Instances().List().Items {
-			go func(instance *InstanceResource) {
-				c <- instance.Delete()
-			}(instance)
-		}
-		for i := 0; i < r.InstanceCount; i++ {
-			if err := <-c; err != nil {
+			if err := r.Instances().DeleteVolumes(instance); err != nil {
 				return err
 			}
 		}
@@ -221,21 +233,6 @@ func (r *ReleaseResource) child(key string) (l Locatable) {
 		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
-}
-
-// Action implements the Resource interface.
-func (r *ReleaseResource) Action(name string) *Action {
-	// var fn ActionPerformer
-	switch name {
-	default:
-		panic(fmt.Errorf("No action %s for Release", name))
-	}
-	// return &Action{
-	// 	ActionName: name,
-	// 	core:       r.core,
-	// 	resource:   r,
-	// 	performer:  fn,
-	// }
 }
 
 //------------------------------------------------------------------------------

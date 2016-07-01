@@ -1,13 +1,17 @@
 package core
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/supergiant/supergiant/common"
 )
 
 type TasksInterface interface {
+	DeleteByResource(l Locatable) error
+
 	List() (*TaskList, error)
 	New() *TaskResource
 	Start(*Action) (*TaskResource, error)
@@ -52,6 +56,30 @@ func (c *TaskCollection) List() (*TaskList, error) {
 	list := new(TaskList)
 	err := c.core.db.list(c, list)
 	return list, err
+}
+
+func (c *TaskCollection) DeleteByResource(l Locatable) error {
+	list, err := c.List()
+	if err != nil {
+		return err
+	}
+	key := ResourceLocation(l)
+	for _, task := range list.Items {
+
+		// NOTE due to the way resource locations work, we can cancel all tasks
+		// that have a matching starting ID. That way, app delete causes cascading
+		// cancellation of all sub-tasks.
+		if strings.HasPrefix(task.ResourceLocation(), key) {
+
+			Log.Debugf("Requesting cancellation of Task with ID %s", common.StringID(task.ID))
+
+			c.core.supervisor.cancel(task)
+			if err := task.Delete(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // New initializes an Task with a pointer to the Collection.
@@ -117,6 +145,7 @@ func (c *TaskCollection) Patch(name common.ID, r *TaskResource) error {
 
 // Delete deletes the Task in etcd.
 func (c *TaskCollection) Delete(r *TaskResource) error {
+
 	return c.core.db.delete(c, r.ID)
 }
 
@@ -160,29 +189,19 @@ func (r *TaskResource) child(key string) (l Locatable) {
 	}
 }
 
-// Action implements the Resource interface.
-// NOTE Tasks are inextricably linked to Actions, but can have Actions of their
-// own, since they are Resources themselves. The ToAction() method is very, very
-// different from this method, and is used to convert a Task into the Action.
-func (r *TaskResource) Action(name string) *Action {
-	// var fn ActionPerformer
-	switch name {
-	default:
-		panic(fmt.Errorf("No action %s for Task", name))
-	}
-	// return &Action{
-	// 	ActionName: name,
-	// 	core:       r.core,
-	// 	resource:   r,
-	// 	performer:  fn,
-	// }
-}
-
 //------------------------------------------------------------------------------
 
 // decorate implements the Resource interface
 func (r *TaskResource) decorate() (err error) {
 	return
+}
+
+func (r *TaskResource) ResourceLocation() string {
+	data, err := base64.StdEncoding.DecodeString(common.StringID(r.ID))
+	if err != nil {
+		panic(err)
+	}
+	return strings.Split(string(data), ":")[1]
 }
 
 // See NOTE on Action() method
@@ -215,6 +234,10 @@ func (r *TaskResource) IsQueued() bool {
 	return r.Status == statusQueued
 }
 
+func (r *TaskResource) IsRunning() bool {
+	return r.Status == statusRunning
+}
+
 // Claim updates the Task status to "RUNNING" and returns nil. compareAndSwap is
 // used to prevent a race condition and ensure only one worker performs the task.
 func (r *TaskResource) Claim() error {
@@ -225,9 +248,16 @@ func (r *TaskResource) Claim() error {
 	// not de-referenced.
 	t := *r.Task
 	t.Status = statusRunning
-	next := &TaskResource{Task: &t}
+	next := r.collection.New()
+	next.Task = &t
 
-	return r.core.db.compareAndSwap(r.collection.(Collection), r.ID, &prev, next)
+	if err := r.core.db.compareAndSwap(r.collection.(Collection), r.ID, &prev, next); err != nil {
+		return err
+	}
+
+	// This will update to RUNNING status on r
+	*r = *next
+	return nil
 }
 
 func (r *TaskResource) RecordError(err error) error {
@@ -244,6 +274,8 @@ func (r *TaskResource) RecordError(err error) error {
 		return r.Delete()
 	}
 	r.Attempts++
+
+	r.WorkerID = ""
 
 	return r.Update()
 }

@@ -38,7 +38,6 @@ func retryableOp(fn func() (*etcd.Response, error)) (resp *etcd.Response, err er
 		if resp, err = fn(); err == nil || !strings.Contains(err.Error(), "etcd cluster is unavailable or misconfigured") {
 			return true, nil
 		}
-		Log.Error(err.Error())
 		Log.Warn("Waiting for etcd connection")
 		return false, nil
 	})

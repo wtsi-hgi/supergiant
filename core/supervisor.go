@@ -1,25 +1,49 @@
 package core
 
-import "time"
+import (
+	"time"
+
+	"github.com/satori/go.uuid"
+	"github.com/supergiant/supergiant/common"
+)
 
 const (
 	interval = time.Second
 )
 
 type Supervisor struct {
-	core    *Core
-	workers int
+	core       *Core
+	numWorkers int
+	tasks      chan *TaskResource
+	workers    map[string]*worker
 }
 
-func NewSupervisor(c *Core, workers int) *Supervisor {
-	return &Supervisor{c, workers}
+func NewSupervisor(c *Core, numWorkers int) *Supervisor {
+	return &Supervisor{core: c, numWorkers: numWorkers}
 }
 
 func (s *Supervisor) Run() {
 	// This starts all workers listening on the channel
-	tasks := make(chan *TaskResource)
-	for i := 0; i < s.workers; i++ {
-		go s.startWorker(tasks)
+	s.workers = make(map[string]*worker)
+	s.tasks = make(chan *TaskResource)
+	for i := 0; i < s.numWorkers; i++ {
+		worker := newWorker(s)
+		s.workers[worker.id] = worker
+		go worker.start()
+	}
+
+	// Clear any hanging tasks
+	list, err := s.core.Tasks().List()
+	if err != nil {
+		panic(err)
+	}
+	for _, task := range list.Items {
+		if task.IsRunning() {
+			Log.Warnf("Deleting hanging task with ID %s", common.StringID(task.ID))
+			if err := task.Delete(); err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	// loop every <interval> seconds
@@ -52,29 +76,75 @@ func (s *Supervisor) Run() {
 
 		// NOTE since this is not using a buffered channel, this will block if all
 		// workers are busy, which I think should be the expected behavior.
-		tasks <- task
+		Log.Debugf("Submitting Task with ID %s", common.StringID(task.ID))
+		s.tasks <- task
 	}
 }
 
-func (s *Supervisor) startWorker(tasks <-chan *TaskResource) {
-	for task := range tasks {
+func (s *Supervisor) cancel(task *TaskResource) {
+	if !task.IsRunning() {
+		Log.Warnf("Can't cancel non-running Task with ID %s", common.StringID(task.ID))
+		return
+	}
+
+	worker := s.workers[task.WorkerID]
+	if worker == nil {
+		Log.Errorf("Could not find worker for task with ID %s", common.StringID(task.ID))
+	}
+
+	Log.Debugf("Supervisor is attempting cancellation of Task with ID %s", common.StringID(task.ID))
+	worker.cancel <- struct{}{}
+	Log.Debugf("Supervisor submitted cancellation of Task with ID %s", common.StringID(task.ID))
+}
+
+type worker struct {
+	s      *Supervisor
+	id     string
+	cancel chan struct{}
+}
+
+func newWorker(s *Supervisor) *worker {
+	return &worker{s: s, id: uuid.NewV4().String(), cancel: make(chan struct{})}
+}
+
+func (w *worker) start() {
+	for task := range w.s.tasks {
 		// recover from panic, capture error and report
 		defer func() {
-			if err := recover(); err != nil {
-				recordError(task, err.(error))
+			if ret := recover(); ret != nil {
+				if err, isErr := ret.(error); isErr && task != nil {
+					recordError(task, err)
+				} else {
+					panic(ret)
+				}
 			}
 		}()
 
-		action := task.ToAction().initialize(s.core)
-
-		Log.Infof("Starting Task %s : %s", action.ActionName, action.ResourceLocation)
-		if err := action.Perform(); err != nil {
-			recordError(task, err)
-			continue
+		task.WorkerID = w.id
+		if err := task.Update(); err != nil {
+			panic(err)
 		}
 
-		Log.Infof("Completed Task %s : %s", action.ActionName, action.ResourceLocation)
-		task.Delete() // Task is successful, delete from Queue
+		action := task.ToAction().initialize(w.s.core)
+
+		done := make(chan error)
+		go func() {
+			Log.Infof("Starting Task %s : %s", action.ActionName, action.ResourceLocation)
+			done <- action.Perform()
+		}()
+
+		select {
+		case err := <-done:
+			if err != nil {
+				recordError(task, err)
+			} else {
+				Log.Infof("Completed Task %s : %s", action.ActionName, action.ResourceLocation)
+				task.Delete() // Task is successful or cancelled, delete from Queue
+			}
+		case <-w.cancel:
+			Log.Infof("Cancelling Task %s : %s", action.ActionName, action.ResourceLocation)
+			close(done) // this should stop the action.Perform go routine
+		}
 	}
 }
 

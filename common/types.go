@@ -105,6 +105,8 @@ type Task struct {
 
 	MaxAttempts int `json:"max_attempts" validate:"min=1" sg:"default=10"`
 
+	WorkerID string `json:"worker_id" sg:"readonly"`
+
 	Status   string `json:"status" sg:"readonly"`
 	Attempts int    `json:"attempts" sg:"readonly"`
 	Error    string `json:"error" sg:"readonly"`

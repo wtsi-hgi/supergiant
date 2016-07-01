@@ -24,7 +24,6 @@ type Collection interface {
 }
 
 type Resource interface {
-	Action(string) *Action
 	decorate() error
 }
 
