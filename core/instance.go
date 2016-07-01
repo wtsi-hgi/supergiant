@@ -20,6 +20,7 @@ type InstancesInterface interface {
 	Start(Resource) error
 	Stop(Resource) error
 	Delete(*InstanceResource) error
+	DeleteVolumes(*InstanceResource) error
 }
 
 type InstanceCollection struct {
@@ -28,9 +29,10 @@ type InstanceCollection struct {
 }
 
 type InstanceResource struct {
-	core       *Core
-	collection InstancesInterface
+	core *Core
 	*common.Instance
+
+	Collection InstancesInterface `json:"-"`
 
 	serviceSet *ServiceSet
 }
@@ -66,7 +68,7 @@ func (c *InstanceCollection) List() *InstanceList {
 func (c *InstanceCollection) New(id common.ID) *InstanceResource {
 	r := &InstanceResource{
 		core:       c.core,
-		collection: c,
+		Collection: c,
 		Instance: &common.Instance{
 			ID: id,
 		},
@@ -142,10 +144,11 @@ func (c *InstanceCollection) Delete(r *InstanceResource) (err error) {
 	if err := r.serviceSet.delete(); err != nil {
 		return err
 	}
-	if err = r.deleteVolumes(); err != nil {
-		return
-	}
 	return
+}
+
+func (c *InstanceCollection) DeleteVolumes(r *InstanceResource) error {
+	return r.deleteVolumes()
 }
 
 //------------------------------------------------------------------------------
@@ -176,7 +179,7 @@ func (r *InstanceResource) locationKey() string {
 
 // Parent implements the Locatable interface.
 func (r *InstanceResource) parent() Locatable {
-	return r.collection.(Locatable)
+	return r.Collection.(Locatable)
 }
 
 // Child implements the Locatable interface.
@@ -184,25 +187,6 @@ func (r *InstanceResource) child(key string) (l Locatable) {
 	switch key {
 	default:
 		panic(fmt.Errorf("No child with key %s for %T", key, r))
-	}
-}
-
-// Action implements the Resource interface.
-func (r *InstanceResource) Action(name string) *Action {
-	var fn ActionPerformer
-	switch name {
-	case "start":
-		fn = ActionPerformer(r.collection.Start)
-	case "stop":
-		fn = ActionPerformer(r.collection.Stop)
-	default:
-		panic(fmt.Errorf("No action %s for Instance", name))
-	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
 	}
 }
 
@@ -328,11 +312,11 @@ func (r *InstanceResource) internalAddresses() (addrs []*common.PortAddress, err
 }
 
 func (r *InstanceResource) App() *AppResource {
-	return r.collection.App()
+	return r.Collection.App()
 }
 
 func (r *InstanceResource) Component() *ComponentResource {
-	return r.collection.Component()
+	return r.Collection.Component()
 }
 
 func (r *InstanceResource) IsStarted() bool {
@@ -345,17 +329,17 @@ func (r *InstanceResource) IsStopped() bool {
 
 // Delete tears down the instance
 func (r *InstanceResource) Delete() error {
-	return r.collection.Delete(r)
+	return r.Collection.Delete(r)
 }
 
 // The following 2 are only diff from Provision() and Delete() in that they do
 // not delete the create or delete the volumes.
 func (r *InstanceResource) Start() error {
-	return r.collection.Start(r)
+	return r.Collection.Start(r)
 }
 
 func (r *InstanceResource) Stop() error {
-	return r.collection.Stop(r)
+	return r.Collection.Stop(r)
 }
 
 // TODO we need a better way of initializing defaults on sub-resources
@@ -386,7 +370,7 @@ func (r *InstanceResource) Log() (string, error) {
 }
 
 func (r *InstanceResource) Release() *ReleaseResource {
-	return r.collection.Release()
+	return r.Collection.Release()
 }
 
 func (r *InstanceResource) Volumes() (vols []*AwsVolume) {

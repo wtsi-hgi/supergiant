@@ -99,7 +99,7 @@ func (c *ComponentController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := component.Action("delete").Supervise(); err != nil {
+	if err := core.NewAction(c.core, component, "Delete").CancelTasks().Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -134,7 +134,7 @@ func (c *ComponentController) Deploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := component.Action("deploy").Supervise(); err != nil {
+	if err := core.NewAction(c.core, component, "Deploy").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

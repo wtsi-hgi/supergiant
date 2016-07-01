@@ -23,8 +23,9 @@ type AppCollection struct {
 
 type AppResource struct {
 	*common.App
-	collection *AppCollection
-	core       *Core
+	core *Core
+
+	Collection *AppCollection `json:"-"`
 
 	// Relations
 	ComponentsInterface ComponentsInterface `json:"-"`
@@ -40,7 +41,7 @@ type AppList struct {
 func (c *AppCollection) initializeResource(in Resource) {
 	r := in.(*AppResource)
 	r.core = c.core
-	r.collection = c
+	r.Collection = c
 	r.ComponentsInterface = &ComponentCollection{
 		core: c.core,
 		app:  r,
@@ -165,7 +166,7 @@ func (r *AppResource) locationKey() string {
 
 // Parent implements the Locatable interface.
 func (r *AppResource) parent() Locatable {
-	return r.collection
+	return r.Collection
 }
 
 // Child implements the Locatable interface.
@@ -179,23 +180,6 @@ func (r *AppResource) child(key string) (l Locatable) {
 	return
 }
 
-// Action implements the Resource interface.
-func (r *AppResource) Action(name string) *Action {
-	var fn ActionPerformer
-	switch name {
-	case "delete":
-		fn = ActionPerformer(r.collection.Delete)
-	default:
-		panic(fmt.Errorf("No action %s for App", name))
-	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
-}
-
 //------------------------------------------------------------------------------
 
 // decorate implements the Resource interface
@@ -205,17 +189,17 @@ func (r *AppResource) decorate() (err error) {
 
 // Update is a proxy method to AppCollection's Update.
 func (r *AppResource) Update() error {
-	return r.collection.Update(r.Name, r)
+	return r.Collection.Update(r.Name, r)
 }
 
 // Patch is a proxy method to collection Patch.
 func (r *AppResource) Patch() error {
-	return r.collection.Patch(r.Name, r)
+	return r.Collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to AppCollection's Delete.
 func (r *AppResource) Delete() error {
-	return r.collection.Delete(r)
+	return r.Collection.Delete(r)
 }
 
 // Components returns a ComponentsInterface with a pointer to the AppResource.

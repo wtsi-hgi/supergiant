@@ -135,21 +135,6 @@ func (r *ImageRegistryResource) child(key string) (l Locatable) {
 	return
 }
 
-// Action implements the Resource interface.
-func (r *ImageRegistryResource) Action(name string) *Action {
-	// var fn ActionPerformer
-	switch name {
-	default:
-		panic(fmt.Errorf("No action %s for ImageRegistry", name))
-	}
-	// return &Action{
-	// 	ActionName: name,
-	// 	core:       r.core,
-	// 	resource:   r,
-	// 	performer:  fn,
-	// }
-}
-
 //------------------------------------------------------------------------------
 
 // decorate implements the Resource interface

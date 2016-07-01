@@ -89,7 +89,7 @@ func (c *AppController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := app.Action("delete").Supervise(); err != nil {
+	if err := core.NewAction(c.core, app, "Delete").CancelTasks().Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

@@ -60,7 +60,7 @@ func (c *InstanceController) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := instance.Action("start").Supervise(); err != nil {
+	if err := core.NewAction(c.core, instance, "Start").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -78,7 +78,7 @@ func (c *InstanceController) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := instance.Action("stop").Supervise(); err != nil {
+	if err := core.NewAction(c.core, instance, "Stop").Supervise(); err != nil {
 		renderError(w, err, http.StatusInternalServerError)
 		return
 	}

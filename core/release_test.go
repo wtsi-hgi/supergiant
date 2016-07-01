@@ -404,7 +404,7 @@ func TestReleaseDelete(t *testing.T) {
 
 		component.TargetReleaseTimestamp = release.Timestamp
 
-		fakeInstances := new(FakeInstanceCollection)
+		fakeInstances := &FakeInstanceCollection{core: core, release: release}
 
 		fakeInstances.ReturnValuesOnList([]*common.Instance{
 			&common.Instance{
@@ -416,6 +416,10 @@ func TestReleaseDelete(t *testing.T) {
 
 		fakeInstances.OnDelete(func(r *InstanceResource) error {
 			instanceDeleted = common.StringID(r.ID)
+			return nil
+		})
+
+		fakeInstances.OnDeleteVolumes(func(r *InstanceResource) error {
 			return nil
 		})
 

@@ -186,6 +186,10 @@
 			"Rev": "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74"
 		},
 		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Rev": "e673fdd4dea8a7334adbbe7f57b7e4b00bdc5502"
+		},
+		{
 			"ImportPath": "github.com/supergiant/guber",
 			"Comment": "v0.1.0",
 			"Rev": "2e03f817d7cf5a5ba78b850038783686a583332f"

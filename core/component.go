@@ -28,9 +28,10 @@ type ComponentCollection struct {
 }
 
 type ComponentResource struct {
-	core       *Core
-	collection ComponentsInterface
+	core *Core
 	*common.Component
+
+	Collection ComponentsInterface `json:"-"`
 
 	// Relations
 	ReleasesInterface ReleasesInterface `json:"-"`
@@ -43,7 +44,7 @@ type ComponentList struct {
 // initializeResource implements the Collection interface.
 func (c *ComponentCollection) initializeResource(in Resource) {
 	r := in.(*ComponentResource)
-	r.collection = c
+	r.Collection = c
 	r.core = c.core
 	if r.ReleasesInterface == nil { // don't want to reset for testing purposes
 		r.ReleasesInterface = &ReleaseCollection{
@@ -235,7 +236,7 @@ func (r *ComponentResource) locationKey() string {
 
 // Parent implements the Locatable interface.
 func (r *ComponentResource) parent() Locatable {
-	return r.collection.(Locatable)
+	return r.Collection.(Locatable)
 }
 
 // Child implements the Locatable interface.
@@ -247,25 +248,6 @@ func (r *ComponentResource) child(key string) (l Locatable) {
 		panic(fmt.Errorf("No child with key %s for %T", key, r))
 	}
 	return
-}
-
-// Action implements the Resource interface.
-func (r *ComponentResource) Action(name string) *Action {
-	var fn ActionPerformer
-	switch name {
-	case "deploy":
-		fn = ActionPerformer(r.collection.Deploy)
-	case "delete":
-		fn = ActionPerformer(r.collection.Delete)
-	default:
-		panic(fmt.Errorf("No action %s for Component", name))
-	}
-	return &Action{
-		ActionName: name,
-		core:       r.core,
-		resource:   r,
-		performer:  fn,
-	}
 }
 
 //------------------------------------------------------------------------------
@@ -295,21 +277,21 @@ func (r *ComponentResource) decorate() error {
 
 // Update is a proxy method to ComponentCollection's Update.
 func (r *ComponentResource) Update() error {
-	return r.collection.Update(r.Name, r)
+	return r.Collection.Update(r.Name, r)
 }
 
 // Patch is a proxy method to collection Patch.
 func (r *ComponentResource) Patch() error {
-	return r.collection.Patch(r.Name, r)
+	return r.Collection.Patch(r.Name, r)
 }
 
 // Delete is a proxy method to ComponentCollection's Delete.
 func (r *ComponentResource) Delete() error {
-	return r.collection.Delete(r)
+	return r.Collection.Delete(r)
 }
 
 func (r *ComponentResource) App() *AppResource {
-	return r.collection.App()
+	return r.Collection.App()
 }
 
 // Releases returns a ReleasesInterface with a pointer to the AppResource.

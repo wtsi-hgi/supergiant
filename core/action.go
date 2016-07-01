@@ -1,21 +1,25 @@
 package core
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"fmt"
+	"encoding/base64"
+	"reflect"
 
 	"github.com/supergiant/supergiant/common"
 )
-
-type ActionPerformer func(r Resource) error
 
 type Action struct {
 	ResourceLocation string `json:"resource_location"`
 	ActionName       string `json:"action_name"`
 	core             *Core
-	resource         Resource        // corresponds to ResourceLocation
-	performer        ActionPerformer // corresponds to ActionName
+	resource         Resource // corresponds to ResourceLocation
+}
+
+func NewAction(core *Core, r Resource, name string) *Action {
+	return &Action{
+		core:       core,
+		resource:   r,
+		ActionName: name,
+	}
 }
 
 // initialize takes a *Core, and loads resource and performer on the Action.
@@ -24,7 +28,6 @@ type Action struct {
 func (a *Action) initialize(c *Core) *Action {
 	a.core = c
 	a.resource = LocateResource(c, a.ResourceLocation)
-	a.performer = a.resource.Action(a.ActionName).performer
 	return a
 }
 
@@ -32,16 +35,26 @@ func (a *Action) initialize(c *Core) *Action {
 // This creates a simple "mutex" on Resource actions since a create operation on
 // an existing key will fail.
 func (a *Action) ID() common.ID {
-	data := fmt.Sprintf("%s:%s", a.ActionName, a.ResourceLocation)
-	hash := sha1.New()
-	hash.Write([]byte(data))
-	id := hex.EncodeToString(hash.Sum(nil))
+	data := a.ActionName + ":" + a.ResourceLocation
+	id := base64.StdEncoding.EncodeToString([]byte(data))
 	return common.IDString(id)
 }
 
 // Perform performs the Action by calling the performer func.
 func (a *Action) Perform() error {
-	return a.performer(a.resource)
+	rv := reflect.ValueOf(a.resource)
+	colv := rv.Elem().FieldByName("Collection")
+	fnv := colv.MethodByName(a.ActionName)
+
+	retv := fnv.Call([]reflect.Value{
+		reflect.ValueOf(rv.Interface().(Resource)),
+	})
+
+	ret := retv[0].Interface()
+	if ret != nil {
+		return ret.(error)
+	}
+	return nil
 }
 
 // Supervise sets the ResourceLocation of the resource and creates a Task from
@@ -50,4 +63,11 @@ func (a *Action) Supervise() error {
 	a.ResourceLocation = ResourceLocation(a.resource.(Locatable))
 	_, err := a.core.Tasks().Start(a)
 	return err
+}
+
+func (a *Action) CancelTasks() *Action {
+	if err := a.core.Tasks().DeleteByResource(a.resource.(Locatable)); err != nil {
+		Log.Error(err)
+	}
+	return a
 }
