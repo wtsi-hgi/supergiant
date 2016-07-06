@@ -28,7 +28,7 @@ Instead a Component groups (indirectly, by way of Releases > Instances)
 and [Pods](https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/pods.md).
 
 You'll notice in the schema that a Component does not appear to hold enough
-configuration to represent a deployment of containers. Other than it's own name
+configuration to represent a deployment of containers. Other than its own name
 (which is used for external asset naming), a Component can only define a
 [custom_deploy_script](custom-deploy-scripts.md), which says _how_ to deploy
 whatever configuration the Component _is pointing to_.
