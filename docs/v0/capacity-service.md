@@ -5,9 +5,9 @@ application management and deployments. It allows the user to focus only on how
 much CPU, RAM, and disk _containers_ need, not which flavor of server to use for
 each application.
 
-If you imagine _containerization_ to be similar to _virtualization_ (hypervisors
-partitioning big host machines in the cloud into multiple virtual machines),
-then the following analogy could be made:
+If you imagine _containerization_ to be similar to _hardware-level
+virtualization_ (hypervisors partitioning big host machines in the cloud into
+multiple virtual machines), then the following analogy could be made:
 
 Without the Supergiant Capacity Service, running a container orchestration
 platform like Kubernetes forces devops engineers to *manage 2 levels of capacity*
