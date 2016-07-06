@@ -1,9 +1,9 @@
 # Apps
 
-An App is what groups Components. You could also say an App is how to organize
-some collection of (micro)services. In practical terms, it often serves as an
-environment, such as "my-app-production", but organization is flexible, and up
-to the user.
+An App is what groups [Components](components.md). You could also say an App is
+how to organize some collection of (micro)services. In practical terms, it often
+serves more specifically as an environment, such as "my-app-production", but
+organization is flexible, and up to the user.
 
 There may be situations where one App stores a database Component, and a
 Component running application code. However, there may also be situations where
