@@ -21,7 +21,7 @@ developer-friendly application platform. It is based on
 
 See the [docs](docs/v0/apps.md).
 
-### Running
+### Development
 
 ```shell
 # Run etcd in background (or in another tab/pane)
