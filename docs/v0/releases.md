@@ -13,10 +13,11 @@ a Component reflect the most recently _released configuration_ (i.e. Release).
 #### Deploying
 
 When deploying, a Component is the [union](https://en.wikipedia.org/wiki/Union_(set_theory))
-of its _current_ and _target_ Releases. More specifically, [Instances](instances.md),
-which belong to Releases, are swapped during the deploy (e.g. current-release-instance-0
-is replaced by target-release-instance-0). This is how configuration is
-"released" across the Instances of a Component.
+of (active) Instances between its _current_ and _target_ Releases. More
+specifically, [Instances](instances.md), which belong to Releases, are swapped
+during the deploy (e.g. current-release-instance-0 is replaced by
+target-release-instance-0). This is how configuration is _released_ across the
+Instances of a Component.
 
 _The following illustrates a Component mid-deploy, specifically focusing on the
 Instance "hand-off" procedure. Kubernetes Services are updated before and after
