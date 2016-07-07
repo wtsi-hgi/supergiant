@@ -62,7 +62,7 @@ Component
 ```
 
 It is intuitive to think of a Release like a version-controlled code repository
-(like a Git repo), where the "physical" code, must be considered at _a point in
+(like a Git repo), where the "active" code must be considered at _a point in
 time_. However, to note some low-level nuance, a Release is not merely a diff,
 but in reality a full configuration at each step.
 
