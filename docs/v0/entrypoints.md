@@ -59,7 +59,7 @@ Apps                 \
 }
 ```
 
-[Entrypoint API docs](http://supergiant-batman-364753107.us-east-1.elb.amazonaws.com:31590/docs/#/Entrypoints)
+[Entrypoint API docs](http://swagger.supergiant.io/docs/#/Entrypoints)
 <br>
 _The definition of the model and all the attributes can be found by clicking on
 an operation, and then click on "Model", which is to the left of "Example Value"._
