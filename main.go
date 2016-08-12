@@ -1,128 +1,114 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/codegangsta/cli"
-	"github.com/supergiant/supergiant/api"
-	"github.com/supergiant/supergiant/core"
+	"github.com/supergiant/supergiant/pkg/api"
+	"github.com/supergiant/supergiant/pkg/core"
+	"github.com/supergiant/supergiant/pkg/ui"
 )
 
 func main() {
-
 	app := cli.NewApp()
-	app.Name = "supergiant-api"
-	app.Usage = "The Supergiant api server."
+	app.Name = "supergiant"
+	app.Usage = "Supergiant"
 
 	c := new(core.Core)
 
 	app.Action = func(ctx *cli.Context) {
 
-		core.SetLogLevel(ctx.String("log-level"))
-
-		// Check the args. The ones we don't have default values for...
-		if c.K8sUser == "" {
-			core.Log.Error("Kubernetes HTTP basic username required")
-			cli.ShowCommandHelp(ctx, "")
-			os.Exit(5)
-		}
-		if c.K8sPass == "" {
-			core.Log.Error("Kubernetes HTTP basic password required")
-			cli.ShowCommandHelp(ctx, "")
-			os.Exit(5)
+		requiredFlags := map[string]string{
+			"psql-host":       c.PsqlHost,
+			"psql-db":         c.PsqlDb,
+			"psql-user":       c.PsqlUser,
+			"psql-pass":       c.PsqlPass,
+			"http-port":       c.HTTPPort,
+			"http-basic-user": c.HTTPBasicUser,
+			"http-basic-pass": c.HTTPBasicPass,
 		}
 
-		c.EtcdEndpoints = ctx.StringSlice("etcd-hosts")
-		if len(c.EtcdEndpoints) < 0 {
-			c.EtcdEndpoints = []string{"http://etcd:2379"}
+		for flag, val := range requiredFlags {
+			if val == "" {
+				cli.ShowCommandHelp(ctx, fmt.Sprintf("%s required\n", flag))
+				os.Exit(5)
+			}
 		}
-
-		// Log args that have default values.
-		core.Log.Info("ETCD hosts,", c.EtcdEndpoints)
-		core.Log.Info("Kubernetes Host,", c.K8sHost)
 
 		c.Initialize()
 
-		router := api.NewRouter(c)
+		// We do this here, and not in core, so that we can ensure the file closes on exit.
+		if c.LogPath != "" {
+			file, err := os.OpenFile(c.LogPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+			if err != nil {
+				panic(err)
+			}
+			defer file.Close()
+			path, err := filepath.Abs(c.LogPath)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Writing log to " + path)
+			c.Log.Out = file
+		}
 
-		core.Log.Info("Serving API on port :8080")
-		core.Log.Info(http.ListenAndServe(":8080", router))
+		apiRouter := api.NewRouter(c)
+		router := ui.NewRouter(c.NewAPIClient(), apiRouter)
+
+		c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPPort))
+		c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPPort))
+		c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), router))
 	}
 
 	app.Flags = []cli.Flag{
-		cli.StringSliceFlag{
-			Name:   "etcd-hosts",
-			Usage:  "Array of etcd hosts.",
-			EnvVar: "ETCD_ENDPOINT",
+		cli.StringFlag{
+			Name:        "psql-host",
+			Usage:       "PostgreSQL host",
+			Destination: &c.PsqlHost,
 		},
 		cli.StringFlag{
-			Name:        "k8s-host, kh",
-			Value:       "kubernetes", // TODO is this working?
-			Usage:       "IP of a Kuberntes api.",
-			EnvVar:      "K8S_HOST",
-			Destination: &c.K8sHost,
+			Name:        "psql-db",
+			Usage:       "PostgreSQL database name",
+			Destination: &c.PsqlDb,
 		},
 		cli.StringFlag{
-			Name:        "k8s-user, ku",
-			Usage:       "Username used to connect to your Kubernetes api.",
-			EnvVar:      "K8S_USER",
-			Destination: &c.K8sUser,
+			Name:        "psql-user",
+			Usage:       "PostgreSQL database user",
+			Destination: &c.PsqlUser,
 		},
 		cli.StringFlag{
-			Name:        "k8s-pass, kp",
-			Usage:       "Password used to connect to your Kubernetes api.",
-			EnvVar:      "K8S_PASS",
-			Destination: &c.K8sPass,
+			Name:        "psql-pass",
+			Usage:       "PostgreSQL database password",
+			Destination: &c.PsqlPass,
 		},
 		cli.StringFlag{
-			Name:        "aws-region, ar",
-			Usage:       "AWS Region in which your kubernetes cluster resides.",
-			EnvVar:      "AWS_REGION",
-			Destination: &c.AwsRegion,
+			Name:        "http-port",
+			Usage:       "HTTP port for the web interfaces",
+			Destination: &c.HTTPPort,
 		},
 		cli.StringFlag{
-			Name:        "aws-az, az",
-			Usage:       "AWS Availability Zone in which your kubernetes cluster resides.",
-			EnvVar:      "AWS_AZ",
-			Destination: &c.AwsAZ,
+			Name:        "http-basic-user",
+			Usage:       "HTTP Basic Auth username used to secure the web interfaces",
+			Destination: &c.HTTPBasicUser,
 		},
 		cli.StringFlag{
-			Name:        "aws-sg-id, sg",
-			Usage:       "AWS Security Group in which your kubernetes cluster resides.",
-			EnvVar:      "AWS_SG_ID",
-			Destination: &c.AwsSgID,
+			Name:        "http-basic-pass",
+			Usage:       "HTTP Basic Auth password used to secure the web interfaces",
+			Destination: &c.HTTPBasicPass,
 		},
 		cli.StringFlag{
-			Name:        "aws-subnet-id, sid",
-			Usage:       "AWS Subnet ID in which your kubernetes cluster resides.",
-			EnvVar:      "AWS_SUBNET_ID",
-			Destination: &c.AwsSubnetID,
+			Name:        "log-file",
+			Usage:       "Log output filepath",
+			Destination: &c.LogPath,
 		},
 		cli.StringFlag{
-			Name:        "aws-access-key",
-			Usage:       "AWS Access key.",
-			Destination: &c.AwsAccessKey,
-		},
-		cli.StringFlag{
-			Name:        "aws-secret-key",
-			Usage:       "AWS Secret key.",
-			Destination: &c.AwsSecretKey,
-		},
-		cli.BoolFlag{
-			Name:        "k8s-insecure-https",
-			Usage:       "Skip verification if HTTPS mode when connecting to Kubernetes.",
-			Destination: &c.K8sInsecureHTTPS,
-		},
-		cli.BoolFlag{
-			Name:        "enable-capacity-service",
-			Usage:       "Enable the automatic creation/deletion of servers to meet requested capacity.",
-			Destination: &c.CapacityServiceEnabled,
-		},
-		cli.StringFlag{
-			Name:  "log-level",
-			Value: "info",
-			Usage: "Set the API log level",
+			Name:        "log-level",
+			Usage:       "Log level",
+			Destination: &c.LogLevel,
+			// Value:  <--- NOTE just cuz you always forget you can set defaults
 		},
 	}
 

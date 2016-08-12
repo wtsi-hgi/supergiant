@@ -12,4 +12,4 @@ and adds Elasticsearch deployment logic in particular spots.
 
 Custom Deploy Scripts _must_ be defined as a runnable container. You can see how
 we reference our supergiant/deploy-elasticsearch in
-[hack/deploy_elasticsearch.sh](https://github.com/supergiant/supergiant/tree/master/hack/deploy_elasticsearch.sh).
+[examples/deploy_elasticsearch.sh](https://github.com/supergiant/supergiant/tree/master/examples/deploy_elasticsearch.sh).
