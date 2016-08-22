@@ -1,4 +1,6 @@
-[![GoReportCard Widget]][GoReportCard] [![GoDoc Widget]][GoDoc] [![Travis Widget]][Travis] [![Coverage Status Widget]][Coverage Status]
+[![GoReportCard Widget]][GoReportCard] [![GoDoc Widget]][GoDoc] [![Travis Widget]][Travis]
+
+<!-- [![Coverage Status Widget]][Coverage Status] -->
 
 [GoReportCard Widget]: https://goreportcard.com/badge/github.com/supergiant/supergiant
 [GoReportCard]: https://goreportcard.com/report/github.com/supergiant/supergiant
@@ -6,8 +8,8 @@
 [GoDoc Widget]: https://godoc.org/github.com/supergiant/supergiant?status.svg
 [Travis]: https://travis-ci.org/supergiant/supergiant
 [Travis Widget]: https://travis-ci.org/supergiant/supergiant.svg?branch=master
-[Coverage Status]: https://coveralls.io/github/supergiant/supergiant?branch=master
-[Coverage Status Widget]: https://coveralls.io/repos/github/supergiant/supergiant/badge.svg?branch=master
+<!-- [Coverage Status]: https://coveralls.io/github/supergiant/supergiant?branch=master
+[Coverage Status Widget]: https://coveralls.io/repos/github/supergiant/supergiant/badge.svg?branch=master -->
 
 # Supergiant
 
@@ -15,7 +17,7 @@ Supergiant is API-based stateful container orchestration disguised as a
 developer-friendly application platform. It is based on
 [Kubernetes](https://github.com/kubernetes/kubernetes).
 
-[supergiant.io](supergiant.io)
+[supergiant.io](https://supergiant.io)
 
 ### Concepts
 
@@ -23,33 +25,37 @@ See the [docs](docs/v0/apps.md).
 
 ### Development
 
+Run PostgreSQL
 ```shell
-# Run etcd in background (or in another tab/pane)
-etcd &
-
-go run main.go \
---etcd-hosts http://localhost:2379 \
---aws-region us-east-1 \
---aws-az us-east-1c \
---aws-sg-id <security_group_id> \
---aws-subnet-id <subnet_id> \
---k8s-host <kubernetes_master_host> \
---k8s-user <kubernetes_api_user> \
---k8s-pass <kubernetes_api_pass> \
---aws-access-key <AWS access key> \
---aws-secret-key <AWS secret key> \
---k8s-insecure-https \
---enable-capacity-service \
---log-level=debug
+pg_ctl -D /usr/local/var/postgres -l /usr/local/var/postgres/server.log start
 ```
 
-### Tests
+Create database
+```sql
+CREATE DATABASE supergiant_development;
+CREATE USER supergiant WITH PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE supergiant_development to supergiant;
+```
 
-*Better coverage is on the way, we promise.*
+Run
+```shell
+godep go run main.go \
+--psql-host localhost \
+--psql-db supergiant_development \
+--psql-user supergiant \
+--psql-pass password \
+--http-basic-user admin \
+--http-basic-pass password \
+--http-port 8080 \
+--log-file tmp/development.log \
+--log-level debug
+```
+
+<!-- ### Tests
 
 ```shell
 godep go test ./...
-```
+``` -->
 
 ### License
 
