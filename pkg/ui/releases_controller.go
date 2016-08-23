@@ -21,7 +21,7 @@ func CreateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/components", 302)
+	http.Redirect(w, r, "/ui/components", http.StatusTemporaryRedirect)
 	return nil
 }
 
@@ -43,6 +43,6 @@ func UpdateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/components", 302)
+	http.Redirect(w, r, "/ui/components", http.StatusTemporaryRedirect)
 	return nil
 }

@@ -139,7 +139,7 @@ func (c *Core) Initialize() {
 	capacityService := &RecurringService{
 		core:     c,
 		service:  &CapacityService{c},
-		interval: 1 * time.Minute,
+		interval: 30 * time.Second,
 	}
 	nodeSynchronizer := &RecurringService{
 		core:     c,

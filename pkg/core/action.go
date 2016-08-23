@@ -115,10 +115,6 @@ func (a *Action) Async() error {
 	go func() {
 		retries := 0
 		for {
-			if retries >= a.Status.MaxRetries {
-				return // Don't remove from Actions
-			}
-
 			if a.Status.Cancelled {
 				break // Remove from Actions
 			}
@@ -133,6 +129,10 @@ func (a *Action) Async() error {
 			a.Status.Error = err.Error()
 
 			a.core.Log.Error(err)
+
+			if retries >= a.Status.MaxRetries {
+				return // Don't remove from Actions
+			}
 		}
 
 		a.stopUnlessCancelled()

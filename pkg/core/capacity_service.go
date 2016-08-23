@@ -15,7 +15,7 @@ type CapacityService struct {
 
 func (s *CapacityService) Perform() error {
 	var kubes []*models.Kube
-	if err := s.core.DB.Where("ready = ?", true).Preload("CloudAccount").Preload("Nodes.Kube").Find(&kubes); err != nil {
+	if err := s.core.DB.Where("ready = ?", true).Preload("CloudAccount").Find(&kubes); err != nil {
 		return err
 	}
 
@@ -221,7 +221,17 @@ func (s *KubeScaler) Scale() error {
 		}
 	}
 
+	// Load existing Nodes
+	s.kube.Nodes = make([]*models.Node, 0)
+	if err := s.core.DB.Preload("Kube.CloudAccount").Find(&s.kube.Nodes, "kube_id = ?", s.kube.ID); err != nil {
+		return err
+	}
+
 	for _, node := range s.kube.Nodes {
+
+		if !node.Ready {
+			continue
+		}
 
 		// TODO ---- need to label them to prevent disk overflow
 
@@ -264,12 +274,13 @@ func (s *KubeScaler) Scale() error {
 
 		// If there's an existing node which is spinning up with this type, then
 		// don't create.
-		// This is a big TODO -- the logic should be much tighter, allowing on
-		// going projection of pods onto nodes that are still spinning up.
+		// This is a big TODO -- the logic should be much tighter, allowing ongoing
+		// projection of pods onto nodes that are still spinning up.
 
 		alreadySpinningUp := false
 		for _, existingNode := range s.kube.Nodes {
-			if existingNode.Class == node.Class && (existingNode.Ready || time.Since(existingNode.ProviderCreationTimestamp) < minAgeToExist) {
+
+			if existingNode.Class == node.Class && !existingNode.Ready {
 				// This may be a node that is already being created, or NOTE it could
 				// be a broken node that we erroneously identify as spinning up.
 				alreadySpinningUp = true

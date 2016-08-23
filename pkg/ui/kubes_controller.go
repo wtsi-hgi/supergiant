@@ -50,7 +50,7 @@ func CreateKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/kubes", 302)
+	http.Redirect(w, r, "/ui/kubes", http.StatusTemporaryRedirect)
 	return nil
 }
 
@@ -109,6 +109,6 @@ func DeleteKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error
 	if err := sg.Kubes.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/kubes", 302)
+	// http.Redirect(w, r, "/ui/kubes", http.StatusTemporaryRedirect)
 	return nil
 }

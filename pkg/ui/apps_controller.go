@@ -31,7 +31,7 @@ func CreateApp(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/apps", 302)
+	http.Redirect(w, r, "/ui/apps", http.StatusTemporaryRedirect)
 	return nil
 }
 
@@ -85,6 +85,6 @@ func DeleteApp(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 	if err := sg.Apps.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/apps", 302)
+	// http.Redirect(w, r, "/ui/apps", http.StatusTemporaryRedirect)
 	return nil
 }

@@ -31,7 +31,7 @@ func CreateNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/nodes", 302)
+	http.Redirect(w, r, "/ui/nodes", http.StatusTemporaryRedirect)
 	return nil
 }
 
@@ -102,6 +102,6 @@ func DeleteNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error
 	if err := sg.Nodes.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/nodes", 302)
+	// http.Redirect(w, r, "/ui/nodes", http.StatusTemporaryRedirect)
 	return nil
 }

@@ -35,8 +35,11 @@ func init() {
 }
 
 func NewRouter(sg *client.Client, baseRouter *mux.Router) *mux.Router {
+	base := baseRouter.StrictSlash(true)
 
-	r := baseRouter.PathPrefix("/ui").Subrouter().StrictSlash(true)
+	base.HandleFunc("/", uiRedirect).Methods("GET")
+
+	r := base.PathPrefix("/ui").Subrouter()
 
 	r.HandleFunc("/", handlerFunc(sg, Root)).Methods("GET")
 
@@ -159,13 +162,19 @@ func unmarshalFormInto(r *http.Request, out interface{}) error {
 
 //------------------------------------------------------------------------------
 
+func uiRedirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/ui", http.StatusTemporaryRedirect)
+}
+
+//------------------------------------------------------------------------------
+
 func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 	var cloudAccounts []*models.CloudAccount
 	if err := sg.CloudAccounts.List(&cloudAccounts); err != nil {
 		return err
 	}
 	if len(cloudAccounts) == 0 {
-		http.Redirect(w, r, "/ui/cloud_accounts/new", 302)
+		http.Redirect(w, r, "/ui/cloud_accounts/new", http.StatusTemporaryRedirect)
 		return nil
 	}
 
@@ -174,10 +183,10 @@ func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if len(kubes) == 0 {
-		http.Redirect(w, r, "/ui/kubes/new", 302)
+		http.Redirect(w, r, "/ui/kubes/new", http.StatusTemporaryRedirect)
 		return nil
 	}
 
-	http.Redirect(w, r, "/ui/apps", 302)
+	http.Redirect(w, r, "/ui/apps", http.StatusTemporaryRedirect)
 	return nil
 }

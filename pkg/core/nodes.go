@@ -44,9 +44,10 @@ func (c *Nodes) Create(m *models.Node) error {
 			// error, the user will know about it quickly, instead of after 20 retries.
 			MaxRetries: 0,
 		},
-		core:       c.core,
-		resourceID: m.UUID,
-		model:      m,
+		core:  c.core,
+		scope: c.core.DB.Preload("Kube.CloudAccount"),
+		model: m,
+		id:    m.ID,
 		fn: func(_ *Action) error {
 			server, err := c.createServer(m)
 			if err != nil {
@@ -116,6 +117,9 @@ func (c *Nodes) createServer(m *models.Node) (*ec2.Instance, error) {
 		MaxSize:              aws.Int64(desiredCapacity),
 	}
 	_, err = c.core.CloudAccounts.autoscaling(m.Kube.CloudAccount, m.Kube.Config.Region).UpdateAutoScalingGroup(input)
+	if err != nil {
+		return nil, err
+	}
 
 	var serverID string
 

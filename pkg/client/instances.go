@@ -34,8 +34,8 @@ func (c *Instances) WaitForStarted(m *models.Instance) error {
 		// NOTE this is essential for cancelling deploys on Component delete, the
 		// reason being that this is generally the longest part of deploys, because
 		// instance Start() is what resizes volumes, which can take forever.
-		if m.Status.Cancelled {
-			return false, errors.New("Instance is being deleted")
+		if m.Status != nil && m.Status.Cancelled {
+			return false, errors.New("Instance start was cancelled")
 		}
 
 		return m.Started, nil

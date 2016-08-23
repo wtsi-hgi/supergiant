@@ -21,6 +21,9 @@ func Deploy(sg *client.Client, componentID *int64) error {
 	// If first deploy, concurrently start Instances and return
 	if component.CurrentRelease == nil {
 		for _, instance := range component.Instances {
+			if instance.Started {
+				continue
+			}
 			if err := sg.Instances.Start(instance); err != nil {
 				return err
 			}
@@ -59,7 +62,6 @@ func Deploy(sg *client.Client, componentID *int64) error {
 		if instance.Started {
 			continue
 		}
-
 		if err := sg.Instances.Start(instance); err != nil {
 			return err
 		}

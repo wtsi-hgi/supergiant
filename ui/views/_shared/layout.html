@@ -408,7 +408,7 @@
                 modalActionName = $("strong#modal_action_name"),
                 modalList = $("ul#modal_list"),
                 modalConfirmBtn = $('#confirm_action_btn'),
-                selectedItemIDs = {};
+                selectedItemIDs = [];
 
 
 
@@ -422,14 +422,19 @@
                 input.prop('checked', !input.prop('checked')) // toggle
               }
 
-              if (input.prop('checked')) {
-                selectedItemIDs[itemID] = true;
-              } else {
-                delete selectedItemIDs[itemID];
-              }
+              selectedItemIDs = [];
+              $("td.item_selector > input:checked").each(function(chx, checkbox) {
+                selectedItemIDs.push(checkbox.id);
+              });
+
+              // if (input.prop('checked')) {
+              //   selectedItemIDs[itemID] = true;
+              // } else {
+              //   delete selectedItemIDs[itemID];
+              // }
 
               // Single actions
-              if (Object.keys(selectedItemIDs).length == 1) {
+              if (selectedItemIDs.length == 1) {
                 actionLinks.each(function(lx, actionLink) {
                   var link = $(actionLink),
                       path = uiBasePath + "/" + itemID + link.data("action-path");
@@ -444,7 +449,7 @@
               }
 
               // Batch actions
-              if (Object.keys(selectedItemIDs).length > 0) {
+              if (selectedItemIDs.length > 0) {
                 batchActionLinks.removeAttr('disabled');
                 batchActionLinks.removeClass('disabled');
               } else {
@@ -477,9 +482,9 @@
 
 
               modalList.empty();
-              for (var id in selectedItemIDs) {
+              $.each(selectedItemIDs, function(selx, id) {
                 modalList.append($("<li>" + id + "</li>"));
-              }
+              });
 
               modalConfirmBtn.text(actionName);
               modalConfirmBtn.data("batch-action-path", link.data("batch-action-path"));
@@ -495,17 +500,13 @@
               // TODO
               var alerted = false;
 
-              for (var id in selectedItemIDs) {
+              $.each(selectedItemIDs, function(selx, id) {
 
                 console.log(uiBasePath + "/" + id + modalConfirmBtn.data("batch-action-path"))
 
                 $.ajax({
                   type: "PUT",
                   url: uiBasePath + "/" + id + modalConfirmBtn.data("batch-action-path"),
-
-                  complete: function() {
-                    delete selectedItemIDs[this.id];
-                  },
                   error: function(data) {
                     if (!alerted) {
                       alert(data.responseText);
@@ -513,7 +514,7 @@
                     alerted = true;
                   }
                 });
-              }
+              });
 
 
 
