@@ -16,26 +16,12 @@ go:
   - 1.6
 
 install:
-  - go get github.com/tools/godep
-  - go get github.com/mattn/goveralls
-  - go get github.com/modocache/gover
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/smartystreets/goconvey/convey
+  - wget https://releases.hashicorp.com/packer/0.10.1/packer_0.10.1_linux_amd64.zip
+  - unzip packer_0.10.1_linux_amd64.zip
+  - chmod 755 ./packer
 
 script:
-  - godep restore
-  - godep go test -v ./...
-  - CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -o ./supergiant-api
-
-after_success:
-  - go list -f '{{if len .TestGoFiles}}"go test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
-  - gover
-  - "$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci"
-  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-  - export REPO=supergiant/supergiant-api
-  - export TAG=`if [ -z "$TRAVIS_TAG" ] && [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; elif [ -z "$TRAVIS_TAG" ] && [ "$TRAVIS_BRANCH" != "master" ]; then echo "unstable-${TRAVIS_BRANCH}"; else echo $TRAVIS_TAG ; fi`
-  - docker build -t $REPO:$TAG .
-  - docker push $REPO
+  - travis_wait 30 ./packer build build.json
 
 notifications:
   slack:

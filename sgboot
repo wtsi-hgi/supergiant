@@ -1,0 +1,12 @@
+#!/bin/bash
+SGUSER=admin
+SGPASS=$(openssl rand -base64 8)
+echo "SGUSER=${SGUSER}" >> /etc/environment
+echo "SGPASS=${SGPASS}" >> /etc/environment
+echo "*******************************" >> /dev/ttyS0
+echo "**** Supergiant Login Info ****" >> /dev/ttyS0
+echo "     UserName: ${SGUSER}       " >> /dev/ttyS0
+echo "     Password: ${SGPASS}       " >> /dev/ttyS0
+echo "*******************************" >> /dev/ttyS0
+#remove
+echo -n "" > $0
