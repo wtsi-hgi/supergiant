@@ -1,4 +1,4 @@
-supergiant-api
-/tmp
-default.etcd
+*.DS_Store
 TODO.md
+tmp/*
+!tmp/.gitkeep
