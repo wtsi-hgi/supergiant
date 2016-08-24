@@ -57,7 +57,8 @@ func logHandler(core *core.Core) func(http.ResponseWriter, *http.Request) {
 		}
 
 		if core.LogPath == "" {
-			w.Write([]byte("No log file configured\n"))
+			msg := "No log file configured!\nCreate file and provide path to --log-file at startup.\n"
+			w.Write([]byte(msg))
 			return
 		}
 
@@ -67,14 +68,10 @@ func logHandler(core *core.Core) func(http.ResponseWriter, *http.Request) {
 		}
 		defer file.Close()
 
-		// if _, err = file.Seek(0, 1); err != nil {
-		// 	panic(err)
-		// }
-
 		stat, err := os.Stat(core.LogPath)
-		// start := stat.Size() - 62
-
-		// fmt.Println("start", start)
+		if err != nil {
+			panic(err)
+		}
 
 		buf := make([]byte, 1024)
 		if _, err := file.ReadAt(buf, stat.Size()-int64(len(buf))); err != nil {
