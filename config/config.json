@@ -1,0 +1,11 @@
+{
+  "psql_host": "localhost",
+  "psql_db": "supergiant_development",
+  "psql_user": "supergiant",
+  "psql_pass": "password",
+  "http_port": "8080",
+  "http_basic_user": "admin",
+  "http_basic_pass": "password",
+  "log_file": "tmp/development.log",
+  "log_level": "info"
+}

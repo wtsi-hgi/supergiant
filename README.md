@@ -39,16 +39,7 @@ GRANT ALL PRIVILEGES ON DATABASE supergiant_development to supergiant;
 
 Run
 ```shell
-godep go run main.go \
---psql-host localhost \
---psql-db supergiant_development \
---psql-user supergiant \
---psql-pass password \
---http-basic-user admin \
---http-basic-pass password \
---http-port 8080 \
---log-file tmp/development.log \
---log-level debug
+godep go run main.go --config-file config/config.json
 ```
 
 <!-- ### Tests

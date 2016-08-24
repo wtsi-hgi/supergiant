@@ -12,16 +12,20 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
+type Settings struct {
+	PsqlHost      string `json:"psql_host"`
+	PsqlDb        string `json:"psql_db"`
+	PsqlUser      string `json:"psql_user"`
+	PsqlPass      string `json:"psql_pass"`
+	HTTPPort      string `json:"http_port"`
+	HTTPBasicUser string `json:"http_basic_user"`
+	HTTPBasicPass string `json:"http_basic_pass"`
+	LogPath       string `json:"log_file"`
+	LogLevel      string `json:"log_level"`
+}
+
 type Core struct {
-	PsqlHost      string
-	PsqlDb        string
-	PsqlUser      string
-	PsqlPass      string
-	HTTPPort      string
-	HTTPBasicUser string
-	HTTPBasicPass string
-	LogPath       string
-	LogLevel      string
+	Settings
 
 	Log *logrus.Logger
 
