@@ -34,7 +34,7 @@ func CreateCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Reques
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/cloud_accounts", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/ui/cloud_accounts", http.StatusFound)
 	return nil
 }
 
@@ -88,6 +88,6 @@ func DeleteCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Reques
 	if err := sg.CloudAccounts.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/cloud_accounts", http.StatusTemporaryRedirect)
+	// http.Redirect(w, r, "/ui/cloud_accounts", http.StatusFound)
 	return nil
 }

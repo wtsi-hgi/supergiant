@@ -33,7 +33,7 @@ func CreatePrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Req
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/private_image_keys", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/ui/private_image_keys", http.StatusFound)
 	return nil
 }
 
@@ -87,6 +87,6 @@ func DeletePrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Req
 	if err := sg.PrivateImageKeys.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/private_image_keys", http.StatusTemporaryRedirect)
+	// http.Redirect(w, r, "/ui/private_image_keys", http.StatusFound)
 	return nil
 }

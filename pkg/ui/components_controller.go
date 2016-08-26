@@ -33,7 +33,7 @@ func CreateComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, fmt.Sprintf("/ui/components/%d/configure", *m.ID), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/ui/components/%d/configure", *m.ID), http.StatusFound)
 	return nil
 }
 
@@ -91,7 +91,7 @@ func DeployComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 	if err := sg.Components.Deploy(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/components", http.StatusTemporaryRedirect)
+	// http.Redirect(w, r, "/ui/components", http.StatusFound)
 	return nil
 }
 
@@ -105,7 +105,7 @@ func DeleteComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 	if err := sg.Components.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/components", http.StatusTemporaryRedirect)
+	// http.Redirect(w, r, "/ui/components", http.StatusFound)
 	return nil
 }
 

@@ -163,7 +163,7 @@ func unmarshalFormInto(r *http.Request, out interface{}) error {
 //------------------------------------------------------------------------------
 
 func uiRedirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ui", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/ui", http.StatusFound)
 }
 
 //------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if len(cloudAccounts) == 0 {
-		http.Redirect(w, r, "/ui/cloud_accounts/new", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/ui/cloud_accounts/new", http.StatusFound)
 		return nil
 	}
 
@@ -183,10 +183,10 @@ func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if len(kubes) == 0 {
-		http.Redirect(w, r, "/ui/kubes/new", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/ui/kubes/new", http.StatusFound)
 		return nil
 	}
 
-	http.Redirect(w, r, "/ui/apps", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/ui/apps", http.StatusFound)
 	return nil
 }
