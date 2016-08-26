@@ -31,7 +31,7 @@ func CreateEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request)
 			"error":      err.Error(),
 		})
 	}
-	http.Redirect(w, r, "/ui/entrypoints", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/ui/entrypoints", http.StatusFound)
 	return nil
 }
 
@@ -90,6 +90,6 @@ func DeleteEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request)
 	if err := sg.Entrypoints.Delete(item); err != nil {
 		return err
 	}
-	// http.Redirect(w, r, "/ui/entrypoints", http.StatusTemporaryRedirect)
+	// http.Redirect(w, r, "/ui/entrypoints", http.StatusFound)
 	return nil
 }
