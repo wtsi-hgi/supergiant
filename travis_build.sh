@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# Travis deployment script. After test success actions go here.
+
+TAG=${TRAVIS_BRANCH:-unstable}
+
+if [[ "$TAG" =~ ^v[0-100].[0-100].[0-100] ]]; then
+  echo "global deploy"
+  ./packer build build_release.json
+else
+  echo "private unstable"
+  ./packer build build_branch.json
+fi
