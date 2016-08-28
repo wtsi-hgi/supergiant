@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -58,8 +57,4 @@ func (c *CloudAccounts) iam(m *models.CloudAccount, region string) *iam.IAM {
 
 func (c *CloudAccounts) elb(m *models.CloudAccount, region string) *elb.ELB {
 	return elb.New(globalAWSSession, c.awsConfig(m, region))
-}
-
-func (c *CloudAccounts) autoscaling(m *models.CloudAccount, region string) *autoscaling.AutoScaling {
-	return autoscaling.New(globalAWSSession, c.awsConfig(m, region))
 }

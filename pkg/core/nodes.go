@@ -1,17 +1,17 @@
 package core
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/base64"
+	"io/ioutil"
 	"regexp"
 	"strconv"
-	"time"
+	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/pkg/models"
-	"github.com/supergiant/supergiant/pkg/util"
 )
 
 type Nodes struct {
@@ -45,7 +45,7 @@ func (c *Nodes) Create(m *models.Node) error {
 			MaxRetries: 0,
 		},
 		core:  c.core,
-		scope: c.core.DB.Preload("Kube.CloudAccount"),
+		scope: c.core.DB.Preload("Kube.CloudAccount").Preload("Kube.Entrypoints.Kube.CloudAccount"),
 		model: m,
 		id:    m.ID,
 		fn: func(_ *Action) error {
@@ -54,7 +54,15 @@ func (c *Nodes) Create(m *models.Node) error {
 				return err
 			}
 			c.setAttrsFromServer(m, server)
-			return c.core.DB.Save(m)
+			if err := c.core.DB.Save(m); err != nil {
+				return err
+			}
+			for _, entrypoint := range m.Kube.Entrypoints {
+				if err := c.core.Entrypoints.registerNodes(entrypoint, m); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 	return provision.Async()
@@ -95,61 +103,78 @@ func (c *Nodes) setAttrsFromServer(m *models.Node, server *ec2.Instance) {
 }
 
 func (c *Nodes) createServer(m *models.Node) (*ec2.Instance, error) {
-	group, err := c.core.Kubes.autoScalingGroup(m.Kube, m.Class)
+
+	// TODO move to init outside of func
+	userdataTemplate, err := ioutil.ReadFile("config/minion_userdata.txt")
+	if err != nil {
+		return nil, err
+	}
+	template, err := template.New("minion_template").Parse(string(userdataTemplate))
+	if err != nil {
+		return nil, err
+	}
+	var userdata bytes.Buffer
+	if err = template.Execute(&userdata, m.Kube); err != nil {
+		return nil, err
+	}
+	encodedUserdata := base64.StdEncoding.EncodeToString(userdata.Bytes())
+
+	input := &ec2.RunInstancesInput{
+		MinCount:     aws.Int64(1),
+		MaxCount:     aws.Int64(1),
+		InstanceType: aws.String(m.Class),
+		ImageId:      aws.String(AWSMasterAMIs[m.Kube.Config.Region]),
+		EbsOptimized: aws.Bool(true),
+		KeyName:      aws.String(m.Kube.Name + "-key"),
+		SecurityGroupIds: []*string{
+			aws.String(m.Kube.Config.NodeSecurityGroupID),
+		},
+		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
+			Name: aws.String("kubernetes-minion"),
+		},
+		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+			// root device ? TODO (do we need the one after this?)
+			{
+				DeviceName: aws.String("/dev/sda1"),
+				Ebs: &ec2.EbsBlockDevice{
+					VolumeType:          aws.String("gp2"),
+					VolumeSize:          aws.Int64(80),
+					DeleteOnTermination: aws.Bool(true),
+				},
+			},
+			&ec2.BlockDeviceMapping{
+				DeviceName: aws.String("/dev/xvdb"),
+				Ebs: &ec2.EbsBlockDevice{
+					VolumeType:          aws.String("gp2"),
+					VolumeSize:          aws.Int64(80),
+					DeleteOnTermination: aws.Bool(true),
+				},
+			},
+		},
+		UserData: aws.String(encodedUserdata),
+		SubnetId: aws.String(m.Kube.Config.PublicSubnetID),
+	}
+
+	ec2S := c.core.CloudAccounts.ec2(m.Kube.CloudAccount, m.Kube.Config.Region)
+
+	resp, err := ec2S.RunInstances(input)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO race conditions can occur between fetching / updating the size fields.
-	// We need a mutex of some sort.
+	server := resp.Instances[0]
 
-	origInstanceIDs := make(map[string]struct{})
-	for _, instance := range group.Instances {
-		origInstanceIDs[*instance.InstanceId] = struct{}{}
-	}
-
-	startingCapacity := *group.DesiredCapacity
-	desiredCapacity := startingCapacity + 1
-
-	input := &autoscaling.UpdateAutoScalingGroupInput{
-		AutoScalingGroupName: group.AutoScalingGroupName,
-		DesiredCapacity:      aws.Int64(desiredCapacity),
-		MaxSize:              aws.Int64(desiredCapacity),
-	}
-	_, err = c.core.CloudAccounts.autoscaling(m.Kube.CloudAccount, m.Kube.Config.Region).UpdateAutoScalingGroup(input)
-	if err != nil {
-		return nil, err
-	}
-
-	var serverID string
-
-	desc := fmt.Sprintf(
-		"autoscaling group %s scale up from %d to %d instances",
-		*group.AutoScalingGroupName,
-		startingCapacity,
-		desiredCapacity,
-	)
-	err = util.WaitFor(desc, 60*time.Second, 2*time.Second, func() (bool, error) {
-		group, err := c.core.Kubes.autoScalingGroup(m.Kube, m.Class)
-		if err != nil {
-			return false, err
-		}
-
-		c.core.Log.Debugf("Waiting for %s", desc)
-
-		for _, instance := range group.Instances {
-			if _, ok := origInstanceIDs[*instance.InstanceId]; !ok { // if this is a new instance ID
-				serverID = *instance.InstanceId
-				return true, nil
-			}
-		}
-		return false, nil
+	err = tagAWSResource(ec2S, *server.InstanceId, map[string]string{
+		"KubernetesCluster": m.Kube.Name,
+		"Name":              m.Kube.Name + "-minion",
+		"Role":              m.Kube.Name + "-minion",
 	})
 	if err != nil {
-		return nil, err
+		// TODO
+		c.core.Log.Error("Failed to tag EC2 Instance " + *server.InstanceId)
 	}
 
-	return c.core.Kubes.server(m.Kube, serverID)
+	return server, nil
 }
 
 func (c *Nodes) deleteServer(m *models.Node) error {
@@ -160,11 +185,10 @@ func (c *Nodes) deleteServer(m *models.Node) error {
 		return nil
 	}
 
-	input := &autoscaling.TerminateInstanceInAutoScalingGroupInput{
-		InstanceId:                     aws.String(m.ProviderID),
-		ShouldDecrementDesiredCapacity: aws.Bool(true),
+	input := &ec2.TerminateInstancesInput{
+		InstanceIds: []*string{aws.String(m.ProviderID)},
 	}
-	_, err := c.core.CloudAccounts.autoscaling(m.Kube.CloudAccount, m.Kube.Config.Region).TerminateInstanceInAutoScalingGroup(input)
+	_, err := c.core.CloudAccounts.ec2(m.Kube.CloudAccount, m.Kube.Config.Region).TerminateInstances(input)
 	if isErrAndNotAWSNotFound(err) {
 		return err
 	}

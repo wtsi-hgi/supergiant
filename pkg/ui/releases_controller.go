@@ -15,7 +15,7 @@ func CreateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 	}
 	if err := sg.Releases.Create(m); err != nil {
 		return renderTemplate(w, "releases/new.html", map[string]interface{}{
-			"title":      "Releases",
+			"title":      "Components",
 			"formAction": "/ui/releases",
 			"model":      m,
 			"error":      err.Error(),
@@ -37,7 +37,7 @@ func UpdateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 	m.ID = id
 	if err := sg.Releases.Update(m); err != nil {
 		return renderTemplate(w, "releases/new.html", map[string]interface{}{
-			"title":      "Releases",
+			"title":      "Components",
 			"formAction": fmt.Sprintf("/ui/releases/%d", *m.ID),
 			"model":      m,
 			"error":      err.Error(),

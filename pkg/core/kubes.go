@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/supergiant/guber"
@@ -98,7 +97,7 @@ func (c *Kubes) Delete(id *int64, m *models.Kube) *Action {
 			MaxRetries:  5,
 		},
 		core:           c.core,
-		scope:          c.core.DB.Preload("CloudAccount").Preload("Entrypoints").Preload("Volumes.Kube.CloudAccount").Preload("Apps").Preload("Nodes.Kube.CloudAccount"),
+		scope:          c.core.DB.Preload("CloudAccount").Preload("Entrypoints").Preload("Volumes.Kube.CloudAccount").Preload("Apps.Components.Instances").Preload("Apps.Components.Releases").Preload("Nodes.Kube.CloudAccount"),
 		model:          m,
 		id:             id,
 		cancelExisting: true,
@@ -114,8 +113,34 @@ func (c *Kubes) Delete(id *int64, m *models.Kube) *Action {
 					return err
 				}
 			}
+
+			// Delete App records -- no need to delete assets
+			// TODO... might be better to have Kubernetes-related operations first
+			// check to see if Kube is flagged for delete?
 			for _, app := range m.Apps {
-				if err := c.core.Apps.Delete(app.ID, app).Now(); err != nil {
+				if err := c.core.DB.Delete(app); err != nil {
+					return err
+				}
+				for _, component := range app.Components {
+					if err := c.core.DB.Delete(component); err != nil {
+						return err
+					}
+					for _, release := range component.Releases {
+						if err := c.core.DB.Delete(release); err != nil {
+							return err
+						}
+					}
+					for _, instance := range component.Instances {
+						if err := c.core.DB.Delete(instance); err != nil {
+							return err
+						}
+					}
+				}
+			}
+
+			// Delete Volumes
+			for _, volume := range m.Volumes {
+				if err := c.core.Volumes.Delete(volume.ID, volume).Now(); err != nil {
 					return err
 				}
 			}
@@ -133,7 +158,9 @@ func (c *Kubes) Delete(id *int64, m *models.Kube) *Action {
 
 func (c *Kubes) servers(m *models.Kube) (instances []*ec2.Instance, err error) {
 	return c.filteredServers(m, map[string][]string{
-		"tag:aws:autoscaling:groupName": m.AutoScalingGroupNames(),
+		"tag:Name": []string{
+			m.Name + "-minion",
+		},
 	})
 }
 
@@ -175,17 +202,6 @@ func (c *Kubes) filteredServers(m *models.Kube, filters map[string][]string) (in
 		}
 	}
 	return instances, nil
-}
-
-func (c *Kubes) autoScalingGroup(m *models.Kube, instanceType string) (*autoscaling.Group, error) {
-	input := &autoscaling.DescribeAutoScalingGroupsInput{
-		AutoScalingGroupNames: []*string{aws.String(m.AutoScalingGroupName(instanceType))},
-	}
-	resp, err := c.core.CloudAccounts.autoscaling(m.CloudAccount, m.Config.Region).DescribeAutoScalingGroups(input)
-	if err != nil {
-		return nil, err
-	}
-	return resp.AutoScalingGroups[0], nil
 }
 
 type provisioner struct {
@@ -312,7 +328,6 @@ func tagAWSResource(ec2S *ec2.EC2, idstr string, tags map[string]string) error {
 func (c *Kubes) provision(m *models.Kube, action *Action) error {
 	iamS := c.core.CloudAccounts.iam(m.CloudAccount, m.Config.Region)
 	ec2S := c.core.CloudAccounts.ec2(m.CloudAccount, m.Config.Region)
-	autoscalingS := c.core.CloudAccounts.autoscaling(m.CloudAccount, m.Config.Region)
 	p := &provisioner{core: c.core, kube: m}
 
 	p.addStep("preparing IAM Role kubernetes-master", func() error {
@@ -521,6 +536,15 @@ func (c *Kubes) provision(m *models.Kube, action *Action) error {
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-psub",
 		})
+	})
+
+	p.addStep("enabling public IP assignment setting of Subnet", func() error {
+		input := &ec2.ModifySubnetAttributeInput{
+			SubnetId:            aws.String(m.Config.PublicSubnetID),
+			MapPublicIpOnLaunch: &ec2.AttributeBooleanValue{Value: aws.Bool(true)},
+		}
+		_, err := ec2S.ModifySubnetAttribute(input)
+		return err
 	})
 
 	// Route Table
@@ -877,101 +901,14 @@ func (c *Kubes) provision(m *models.Kube, action *Action) error {
 		return err
 	})
 
-	// Create autoscaling groups
+	// Create first minion
 
-	p.addStep("creating Kubernetes minion AutoScaling Groups", func() error {
-		for i, instanceType := range m.Config.InstanceTypes {
-			launchConfigName := m.AutoScalingGroupName(instanceType)
-
-			userdataTemplate, err := ioutil.ReadFile("config/minion_userdata.txt")
-			if err != nil {
-				return err
-			}
-			template, err := template.New("minion_template").Parse(string(userdataTemplate))
-			if err != nil {
-				return err
-			}
-			var userdata bytes.Buffer
-			if err = template.Execute(&userdata, m); err != nil {
-				return err
-			}
-			encodedUserdata := base64.StdEncoding.EncodeToString(userdata.Bytes())
-
-			lcInput := &autoscaling.CreateLaunchConfigurationInput{
-				LaunchConfigurationName:  aws.String(launchConfigName),
-				InstanceType:             aws.String(instanceType),
-				ImageId:                  aws.String(AWSMasterAMIs[m.Config.Region]),
-				AssociatePublicIpAddress: aws.Bool(true),
-				EbsOptimized:             aws.Bool(true),
-				KeyName:                  aws.String(m.Name + "-key"),
-				SecurityGroups: []*string{
-					aws.String(m.Config.NodeSecurityGroupID),
-				},
-				IamInstanceProfile: aws.String("kubernetes-minion"),
-				BlockDeviceMappings: []*autoscaling.BlockDeviceMapping{
-
-					// root device ? TODO (do we need the one after this?)
-					{
-						DeviceName: aws.String("/dev/sda1"),
-						Ebs: &autoscaling.Ebs{
-							VolumeType:          aws.String("gp2"),
-							VolumeSize:          aws.Int64(80),
-							DeleteOnTermination: aws.Bool(true),
-						},
-					},
-
-					&autoscaling.BlockDeviceMapping{
-						DeviceName: aws.String("/dev/xvdb"),
-						Ebs: &autoscaling.Ebs{
-							VolumeType:          aws.String("gp2"),
-							VolumeSize:          aws.Int64(80),
-							DeleteOnTermination: aws.Bool(true),
-						},
-					},
-				},
-				UserData: aws.String(encodedUserdata),
-			}
-			if _, err = autoscalingS.CreateLaunchConfiguration(lcInput); err != nil && !strings.Contains(err.Error(), "already exists") {
-				return err
-			}
-
-			desiredCapacity := 0
-			if i == 0 { // NOTE !! should (should) be the smallest
-				desiredCapacity = 1
-			}
-
-			input := &autoscaling.CreateAutoScalingGroupInput{
-				AutoScalingGroupName:    aws.String(launchConfigName),
-				LaunchConfigurationName: aws.String(launchConfigName),
-				VPCZoneIdentifier:       aws.String(m.Config.PublicSubnetID),
-				HealthCheckGracePeriod:  aws.Int64(100),
-				HealthCheckType:         aws.String("EC2"),
-				MinSize:                 aws.Int64(0),
-				MaxSize:                 aws.Int64(int64(desiredCapacity)),
-				DesiredCapacity:         aws.Int64(int64(desiredCapacity)),
-				Tags: []*autoscaling.Tag{
-					{
-						Key:               aws.String("KubernetesCluster"),
-						Value:             aws.String(m.Name),
-						PropagateAtLaunch: aws.Bool(true),
-					},
-					{
-						Key:               aws.String("Name"),
-						Value:             aws.String(m.Name + "-minion"),
-						PropagateAtLaunch: aws.Bool(true),
-					},
-					{
-						Key:               aws.String("Role"),
-						Value:             aws.String(m.Name + "-minion"),
-						PropagateAtLaunch: aws.Bool(true),
-					},
-				},
-			}
-			if _, err = autoscalingS.CreateAutoScalingGroup(input); err != nil && !strings.Contains(err.Error(), "already exists") {
-				return err
-			}
+	p.addStep("creating Kubernetes minion", func() error {
+		node := &models.Node{
+			KubeID: m.ID,
+			Class:  m.Config.InstanceTypes[0], // TODO this may not be the smallest...
 		}
-		return nil
+		return c.core.Nodes.Create(node)
 	})
 
 	p.addStep("waiting for Kubernetes", func() error {
@@ -1003,32 +940,7 @@ func (c *Kubes) provision(m *models.Kube, action *Action) error {
 
 func (c *Kubes) teardown(m *models.Kube) error {
 	ec2S := c.core.CloudAccounts.ec2(m.CloudAccount, m.Config.Region)
-	autoscalingS := c.core.CloudAccounts.autoscaling(m.CloudAccount, m.Config.Region)
 	p := &provisioner{core: c.core, kube: m}
-
-	p.addStep("deleting minion Instances", func() error {
-		for _, instanceType := range m.Config.InstanceTypes {
-			launchConfigName := m.AutoScalingGroupName(instanceType)
-
-			asInput := &autoscaling.DeleteAutoScalingGroupInput{
-				AutoScalingGroupName: aws.String(launchConfigName),
-				ForceDelete:          aws.Bool(true), // this should delete the instances
-			}
-			_, err := autoscalingS.DeleteAutoScalingGroup(asInput)
-			if isErrAndNotAWSNotFound(err) {
-				return err
-			}
-
-			lcInput := &autoscaling.DeleteLaunchConfigurationInput{
-				LaunchConfigurationName: aws.String(launchConfigName),
-			}
-			_, err = autoscalingS.DeleteLaunchConfiguration(lcInput)
-			if isErrAndNotAWSNotFound(err) {
-				return err
-			}
-		}
-		return nil
-	})
 
 	p.addStep("deleting master", func() error {
 		if m.Config.MasterID == "" {

@@ -107,7 +107,7 @@ var instanceTypes = [...]*instanceType{
 
 var (
 	waitBeforeScale         = 2 * time.Minute
-	minAgeToExist           = 10 * time.Minute // this is used to prevent adding more nodes while still-pending pods are scheduling to a new node
+	minAgeToExist           = 20 * time.Minute // this is used to prevent adding more nodes while still-pending pods are scheduling to a new node
 	maxClusteredPodsPerNode = 2                // prevent putting all nodes of a cluster on one host node
 	maxDisksPerNode         = 11
 	trackedEventMessages    = [...]string{
@@ -216,7 +216,6 @@ func (s *KubeScaler) Scale() error {
 					pnode1.Committed = true
 					break
 				}
-
 			}
 		}
 	}
@@ -228,10 +227,6 @@ func (s *KubeScaler) Scale() error {
 	}
 
 	for _, node := range s.kube.Nodes {
-
-		if !node.Ready {
-			continue
-		}
 
 		// TODO ---- need to label them to prevent disk overflow
 
