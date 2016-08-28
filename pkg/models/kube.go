@@ -50,14 +50,3 @@ type AWSKubeConfig struct {
 	MasterID                      string `json:"master_id" sg:"readonly"`
 	MasterPublicIP                string `json:"master_public_ip" sg:"readonly"`
 }
-
-func (m *Kube) AutoScalingGroupName(instanceType string) string {
-	return m.Name + "-" + instanceType
-}
-
-func (m *Kube) AutoScalingGroupNames() (names []string) {
-	for _, instanceType := range m.Config.InstanceTypes {
-		names = append(names, m.AutoScalingGroupName(instanceType))
-	}
-	return
-}

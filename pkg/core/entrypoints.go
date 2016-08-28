@@ -2,10 +2,8 @@ package core
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/supergiant/supergiant/pkg/models"
 )
@@ -20,7 +18,7 @@ func (c *Entrypoints) Create(m *models.Entrypoint) error {
 	}
 
 	// Load Kube and CloudAccount
-	if err := c.core.DB.Preload("CloudAccount").First(m.Kube, m.KubeID); err != nil {
+	if err := c.core.DB.Preload("Nodes").Preload("CloudAccount").First(m.Kube, m.KubeID); err != nil {
 		return err
 	}
 
@@ -148,17 +146,8 @@ func (c *Entrypoints) createELB(m *models.Entrypoint) error {
 		return err
 	}
 
-	// Attach to AutoScaling groups
-	for _, groupName := range m.Kube.AutoScalingGroupNames() {
-		params := &autoscaling.AttachLoadBalancersInput{
-			AutoScalingGroupName: aws.String(groupName),
-			LoadBalancerNames: []*string{
-				aws.String(m.ProviderID),
-			},
-		}
-		if _, err := c.core.CloudAccounts.autoscaling(m.Kube.CloudAccount, m.Kube.Config.Region).AttachLoadBalancers(params); err != nil {
-			return err
-		}
+	if err := c.registerNodes(m, m.Kube.Nodes...); err != nil {
+		return err
 	}
 
 	// Configure health check
@@ -176,21 +165,22 @@ func (c *Entrypoints) createELB(m *models.Entrypoint) error {
 	return err
 }
 
-func (c *Entrypoints) deleteELB(m *models.Entrypoint) error {
-	// Detach from AutoScaling groups
-	for _, groupName := range m.Kube.AutoScalingGroupNames() {
-		params := &autoscaling.DetachLoadBalancersInput{
-			AutoScalingGroupName: aws.String(groupName),
-			LoadBalancerNames: []*string{
-				aws.String(m.ProviderID),
-			},
-		}
-		_, err := c.core.CloudAccounts.autoscaling(m.Kube.CloudAccount, m.Kube.Config.Region).DetachLoadBalancers(params)
-		if err != nil && !strings.Contains(err.Error(), "Trying to remove Load Balancers that are not part of the group") && isErrAndNotAWSNotFound(err) {
-			return err
-		}
+func (c *Entrypoints) registerNodes(m *models.Entrypoint, nodes ...*models.Node) error {
+	var elbInstances []*elb.Instance
+	for _, node := range nodes {
+		elbInstances = append(elbInstances, &elb.Instance{
+			InstanceId: aws.String(node.ProviderID),
+		})
 	}
+	input := &elb.RegisterInstancesWithLoadBalancerInput{
+		LoadBalancerName: aws.String(m.ProviderID),
+		Instances:        elbInstances,
+	}
+	_, err := c.core.CloudAccounts.elb(m.Kube.CloudAccount, m.Kube.Config.Region).RegisterInstancesWithLoadBalancer(input)
+	return err
+}
 
+func (c *Entrypoints) deleteELB(m *models.Entrypoint) error {
 	// Delete ELB
 	params := &elb.DeleteLoadBalancerInput{
 		LoadBalancerName: aws.String(m.ProviderID),

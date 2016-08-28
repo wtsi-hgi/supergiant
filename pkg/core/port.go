@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 
 	"github.com/supergiant/guber"
@@ -13,7 +12,7 @@ func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
 	for _, pA := range setA {
 		unique := true
 		for _, pB := range setB {
-			if reflect.DeepEqual(*pA.Port, *pB.Port) {
+			if pA.Port.Number == pB.Port.Number && pA.Port.ExternalNumber == pB.Port.ExternalNumber && pA.Port.Protocol == pB.Port.Protocol {
 				unique = false
 				break
 			}
