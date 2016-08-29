@@ -4,7 +4,8 @@
 
 TAG=${TRAVIS_BRANCH:-unstable}
 
-if [[ "$TAG" =~ ^v[0-100].[0-100].[0-100] ]]; then
+echo "Tag Name: ${TAG}"
+if [[ "$TAG" =~ ^v[0-100]. ]]; then
   echo "global deploy"
   ./packer build build_release.json
 else
