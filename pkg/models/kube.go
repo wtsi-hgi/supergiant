@@ -21,23 +21,31 @@ type Kube struct {
 
 	Name string `json:"name" validate:"nonzero,max=12,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$" gorm:"not null;unique_index"`
 
+	MasterNodeSize string `json:"master_node_size" validate:"nonzero"`
+
+	NodeSizes     []string `json:"node_sizes" gorm:"-" validate:"min=1" sg:"store_as_json_in=NodeSizesJSON"`
+	NodeSizesJSON []byte   `json:"-" gorm:"not null"`
+
 	Username string `json:"username" validate:"nonzero"`
 	Password string `json:"password" validate:"nonzero"`
 
-	Config     *AWSKubeConfig `json:"config" gorm:"-" validate:"nonzero" sg:"store_as_json_in=ConfigJSON"`
-	ConfigJSON []byte         `json:"-" gorm:"not null"`
+	// NOTE due to how we marshal this as JSON, it's difficult to have this stored
+	// as an interface, because unmarshalling causes us to lose the underlying
+	// type. So, this is kindof like a whacky form of single-table inheritance.
+	AWSConfig     *AWSKubeConfig `json:"aws_config,omitempty" gorm:"-" sg:"store_as_json_in=AWSConfigJSON"`
+	AWSConfigJSON []byte         `json:"-"`
+
+	MasterPublicIP string `json:"master_public_ip" sg:"readonly"`
 
 	Ready bool `json:"ready" sg:"readonly" gorm:"index"`
 }
 
 type AWSKubeConfig struct {
-	Region              string   `json:"region" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9]$"`
-	AvailabilityZone    string   `json:"availability_zone" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9][a-z]$"`
-	InstanceTypes       []string `json:"instance_types" validate:"min=1"`
-	MasterInstanceType  string   `json:"master_instance_type" validate:"nonzero" sg:"default=m4.large"`
-	VPCIPRange          string   `json:"vpc_ip_range" validate:"nonzero" sg:"default=172.20.0.0/16"`
-	PublicSubnetIPRange string   `json:"public_subnet_ip_range" validate:"nonzero" sg:"default=172.20.0.0/24"`
-	MasterPrivateIP     string   `json:"master_private_ip" validate:"nonzero" sg:"default=172.20.0.9"`
+	Region              string `json:"region" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9]$"`
+	AvailabilityZone    string `json:"availability_zone" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9][a-z]$"`
+	VPCIPRange          string `json:"vpc_ip_range" validate:"nonzero" sg:"default=172.20.0.0/16"`
+	PublicSubnetIPRange string `json:"public_subnet_ip_range" validate:"nonzero" sg:"default=172.20.0.0/24"`
+	MasterPrivateIP     string `json:"master_private_ip" validate:"nonzero" sg:"default=172.20.0.9"`
 
 	PrivateKey                    string `json:"private_key,omitempty" sg:"readonly,private"`
 	VPCID                         string `json:"vpc_id" sg:"readonly"`
@@ -48,5 +56,4 @@ type AWSKubeConfig struct {
 	ELBSecurityGroupID            string `json:"elb_security_group_id" sg:"readonly"`
 	NodeSecurityGroupID           string `json:"node_security_group_id" sg:"readonly"`
 	MasterID                      string `json:"master_id" sg:"readonly"`
-	MasterPublicIP                string `json:"master_public_ip" sg:"readonly"`
 }

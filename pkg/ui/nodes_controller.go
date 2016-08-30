@@ -13,7 +13,7 @@ func NewNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		"formAction": "/ui/nodes",
 		"model": map[string]interface{}{
 			"kube_id": nil,
-			"class":   "",
+			"size":    "",
 		},
 	})
 }
@@ -44,9 +44,9 @@ func ListNodes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 			"field": "kube_id",
 		},
 		{
-			"title": "Class",
+			"title": "Size",
 			"type":  "field_value",
-			"field": "class",
+			"field": "size",
 		},
 		{
 			"title": "Provider ID",

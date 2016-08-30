@@ -1,5 +1,5 @@
 #! /bin/bash
-SALT_MASTER='{{ .Config.MasterPrivateIP }}'
+SALT_MASTER='{{ .AWSConfig.MasterPrivateIP }}'
 DOCKER_OPTS=''
 readonly DOCKER_STORAGE='aufs'
 

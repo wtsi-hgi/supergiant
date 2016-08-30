@@ -156,6 +156,11 @@ func unmarshalSerializedFields(m models.Model) {
 			if objField.Kind() == reflect.Map {
 				objField.Set(reflect.MakeMap(objField.Type()))
 				unmarshalTo = objField.Addr()
+
+			} else if objField.Kind() == reflect.Slice {
+				objField.Set(reflect.MakeSlice(objField.Type(), 0, 0))
+				unmarshalTo = objField.Addr()
+
 			} else { // *struct
 				objField.Set(reflect.New(objField.Type().Elem()))
 				unmarshalTo = objField

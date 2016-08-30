@@ -1,14 +1,14 @@
 #! /bin/bash
 mkdir -p /var/cache/kubernetes-install
 cd /var/cache/kubernetes-install
-readonly SALT_MASTER='{{ .Config.MasterPrivateIP }}'
+readonly SALT_MASTER='{{ .AWSConfig.MasterPrivateIP }}'
 readonly INSTANCE_PREFIX='{{ .Name }}'
 readonly NODE_INSTANCE_PREFIX='{{ .Name }}-minion'
 readonly CLUSTER_IP_RANGE='10.244.0.0/16'
 readonly ALLOCATE_NODE_CIDRS='true'
 readonly SERVER_BINARY_TAR_URL='https://s3.amazonaws.com/kubernetes-1-1-7-artifacts/devel/kubernetes-server-linux-amd64.tar.gz'
 readonly SALT_TAR_URL='https://s3.amazonaws.com/kubernetes-1-1-7-artifacts/devel/kubernetes-salt.tar.gz'
-readonly ZONE='{{ .Config.AvailabilityZone }}'
+readonly ZONE='{{ .AWSConfig.AvailabilityZone }}'
 readonly KUBE_USER='{{ .Username }}'
 readonly KUBE_PASSWORD='{{ .Password }}'
 readonly SERVICE_CLUSTER_IP_RANGE='10.0.0.0/16'

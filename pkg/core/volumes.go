@@ -1,12 +1,6 @@
 package core
 
-import (
-	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/supergiant/supergiant/pkg/models"
-)
+import "github.com/supergiant/supergiant/pkg/models"
 
 type Volumes struct {
 	Collection
@@ -43,8 +37,8 @@ func (c *Volumes) Provision(id *int64, m *models.Volume) *Action {
 		scope: c.core.DB.Preload("Instance").Preload("Kube.CloudAccount"),
 		model: m,
 		id:    id,
-		fn: func(_ *Action) error {
-			return c.createVolume(m, nil)
+		fn: func(a *Action) error {
+			return c.core.CloudAccounts.provider(m.Kube.CloudAccount).CreateVolume(m, a)
 		},
 	}
 }
@@ -60,7 +54,7 @@ func (c *Volumes) Delete(id *int64, m *models.Volume) *Action {
 		model: m,
 		id:    id,
 		fn: func(_ *Action) error {
-			if err := c.deleteVolume(m); err != nil {
+			if err := c.core.CloudAccounts.provider(m.Kube.CloudAccount).DeleteVolume(m); err != nil {
 				return err
 			}
 			return c.Collection.Delete(id, m)
@@ -78,134 +72,24 @@ func (c *Volumes) Resize(id *int64, m *models.Volume) *Action {
 		scope: c.core.DB.Preload("Instance").Preload("Kube.CloudAccount"),
 		model: m,
 		id:    id,
-		fn: func(_ *Action) error {
-			snapshot, err := c.createSnapshot(m)
-			if err != nil {
-				return err
-			}
-			if err := c.deleteVolume(m); err != nil {
-				return err
-			}
-			if err := c.createVolume(m, snapshot.SnapshotId); err != nil {
-				return err
-			}
-			if err := c.deleteSnapshot(m, snapshot); err != nil {
-				c.core.Log.Errorf("Error deleting snapshot %s: %s", *snapshot.SnapshotId, err.Error())
-			}
-			return nil
+		fn: func(a *Action) error {
+			return c.core.CloudAccounts.provider(m.Kube.CloudAccount).ResizeVolume(m, a)
 		},
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Private methods                                                            //
-////////////////////////////////////////////////////////////////////////////////
-
-func (c *Volumes) createVolume(volume *models.Volume, snapshotID *string) error {
-	volInput := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String(volume.Kube.Config.AvailabilityZone),
-		VolumeType:       aws.String(volume.Type),
-		Size:             aws.Int64(int64(volume.Size)),
-		SnapshotId:       snapshotID,
-	}
-	awsVol, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).CreateVolume(volInput)
-	if err != nil {
-		return err
-	}
-
-	volume.ProviderID = *awsVol.VolumeId
-	volume.Size = int(*awsVol.Size)
-	if err := c.core.DB.Save(volume); err != nil {
-		return err
-	}
-
-	tagsInput := &ec2.CreateTagsInput{
-		Resources: []*string{
-			awsVol.VolumeId,
+func (c *Volumes) WaitForAvailable(id *int64, m *models.Volume) error {
+	action := &Action{
+		Status: &models.ActionStatus{
+			Description: "waiting for available",
 		},
-		Tags: []*ec2.Tag{
-			{
-				Key:   aws.String("Name"),
-				Value: aws.String(volume.Name),
-			},
+		core:  c.core,
+		scope: c.core.DB.Preload("Instance").Preload("Kube.CloudAccount"),
+		model: m,
+		id:    id,
+		fn: func(a *Action) error {
+			return c.core.CloudAccounts.provider(m.Kube.CloudAccount).WaitForVolumeAvailable(m, a)
 		},
 	}
-	_, err = c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).CreateTags(tagsInput)
-	return err
-}
-
-func (c *Volumes) deleteVolume(volume *models.Volume) error {
-	if err := c.waitForAvailable(volume); err != nil {
-		return err
-	}
-	input := &ec2.DeleteVolumeInput{
-		VolumeId: aws.String(volume.ProviderID),
-	}
-	if _, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).DeleteVolume(input); isErrAndNotAWSNotFound(err) {
-		return err
-	}
-	return nil
-}
-
-func (c *Volumes) waitForAvailable(volume *models.Volume) error {
-	input := &ec2.DescribeVolumesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name: aws.String("volume-id"),
-				Values: []*string{
-					aws.String(volume.ProviderID),
-				},
-			},
-		},
-	}
-
-	resp, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).DescribeVolumes(input)
-	if err != nil {
-		return err
-	}
-	if len(resp.Volumes) == 0 {
-		return nil
-	}
-
-	c.core.Log.Debugf("Waiting for EBS volume %s to be available", volume.Name)
-	return c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).WaitUntilVolumeAvailable(input)
-}
-
-func (c *Volumes) forceDetachVolume(volume *models.Volume) error {
-	input := &ec2.DetachVolumeInput{
-		VolumeId: aws.String(volume.ProviderID),
-		Force:    aws.Bool(true),
-	}
-	if _, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).DetachVolume(input); isErrAndNotAWSNotFound(err) {
-		return err
-	}
-	return nil
-}
-
-func (c *Volumes) createSnapshot(volume *models.Volume) (*ec2.Snapshot, error) {
-	input := &ec2.CreateSnapshotInput{
-		Description: aws.String(fmt.Sprintf("%s-%d", volume.Name, volume.Instance.ReleaseID)),
-		VolumeId:    aws.String(volume.ProviderID),
-	}
-	snapshot, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).CreateSnapshot(input)
-	if err != nil {
-		return nil, err
-	}
-	waitInput := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{snapshot.SnapshotId},
-	}
-	if err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).WaitUntilSnapshotCompleted(waitInput); err != nil {
-		return nil, err // TODO destroy snapshot that failed to complete?
-	}
-	return snapshot, nil
-}
-
-func (c *Volumes) deleteSnapshot(volume *models.Volume, snapshot *ec2.Snapshot) error {
-	input := &ec2.DeleteSnapshotInput{
-		SnapshotId: snapshot.SnapshotId,
-	}
-	if _, err := c.core.CloudAccounts.ec2(volume.Kube.CloudAccount, volume.Kube.Config.Region).DeleteSnapshot(input); isErrAndNotAWSNotFound(err) {
-		return err
-	}
-	return nil
+	return action.Now()
 }

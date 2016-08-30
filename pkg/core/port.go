@@ -71,20 +71,20 @@ func (p *Port) externalAddress() *models.PortAddress {
 
 // The following methods apply to external ports only
 
-func (p *Port) nodePort() int {
+func (p *Port) nodePort() int64 {
 	for _, port := range p.service.Spec.Ports {
 		if port.Port == p.Number {
-			return port.NodePort
+			return int64(port.NodePort)
 		}
 	}
 	panic(fmt.Sprintf("Could not find NodePort for %#v", *p.Port))
 }
 
-func (p *Port) elbPort() int {
+func (p *Port) elbPort() int64 {
 	if !p.PerInstance && p.ExternalNumber != 0 {
-		return p.ExternalNumber
+		return int64(p.ExternalNumber)
 	}
-	return p.nodePort()
+	return int64(p.nodePort())
 }
 
 // TODO like the comment above, this only applies when there is an EntrypointDomain

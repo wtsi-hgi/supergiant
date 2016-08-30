@@ -17,7 +17,7 @@ func (s *NodeObserver) Perform() error {
 			k8sNode, err := s.core.K8S(kube).Nodes().Get(node.Name)
 			if err != nil {
 				if isKubeNotFoundErr(err) {
-					// node.Ready = false    TODO we should probably be setting ready in this observer class
+					// node.Ready = false    TODO we should probably be setting ready in this observer size
 					s.core.Log.Warn(err.Error())
 					continue
 				} else {

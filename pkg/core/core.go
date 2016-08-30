@@ -12,6 +12,12 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
+type NodeSize struct {
+	Name     string  `json:"name"`
+	RAMGIB   float64 `json:"ram_gib"`
+	CPUCores float64 `json:"cpu_cores"`
+}
+
 type Settings struct {
 	PsqlHost      string `json:"psql_host"`
 	PsqlDb        string `json:"psql_db"`
@@ -22,6 +28,12 @@ type Settings struct {
 	HTTPBasicPass string `json:"http_basic_pass"`
 	LogPath       string `json:"log_file"`
 	LogLevel      string `json:"log_level"`
+
+	// NOTE these MUST be provided in ascending order by cost in order to
+	// correctly provision the smallest size on Kube creation
+	//
+	// NodeSizes is a map of provider name (ex. "aws") and node sizes
+	NodeSizes map[string][]*NodeSize `json:"node_sizes"`
 }
 
 type Core struct {
@@ -145,11 +157,6 @@ func (c *Core) Initialize() {
 		service:  &CapacityService{c},
 		interval: 30 * time.Second,
 	}
-	nodeSynchronizer := &RecurringService{
-		core:     c,
-		service:  &NodeSynchronizer{c},
-		interval: 1 * time.Minute,
-	}
 	nodeObserver := &RecurringService{
 		core:     c,
 		service:  &NodeObserver{c},
@@ -162,7 +169,6 @@ func (c *Core) Initialize() {
 	}
 
 	go capacityService.Run()
-	go nodeSynchronizer.Run()
 	go nodeObserver.Run()
 	go instanceObserver.Run()
 }
