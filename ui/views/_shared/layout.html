@@ -65,18 +65,16 @@
           padding-bottom: 200px;
         }
 
-        pre#log {
+        div#log {
           /* height must match margin-bottom of #main_row */
+          background: #222;
+          color: #999;
+          white-space: pre-wrap;
           height: 200px;
           margin: 0 -15px 0 -15px;
-          border-radius: 0;
-          background: #222;
-          color: #aaa;
-          border: none;
-          -webkit-box-shadow: 0px -6px 113px -27px rgba(51,51,51,1);
-          -moz-box-shadow: 0px -6px 113px -27px rgba(51,51,51,1);
-          box-shadow: 0px -6px 113px -27px rgba(51,51,51,1);
-          white-space: pre-line;
+          padding: 0 0 0 15px;
+          overflow-y: scroll;
+          font-family: Consolas, Menlo, Courier, monospace;
         }
 
         #sidenav {
@@ -556,6 +554,10 @@
               $.get({
                 url: "/api/v0/log",
                 success: function(data) {
+
+                  data = data.replace(/[\x00-\x7F]\[\d+mINFO[\x00-\x7F]\[0m/g, "<span class='text-info'>INFO</span> ")
+                  data = data.replace(/[\x00-\x7F]\[\d+mWARN[\x00-\x7F]\[0m/g, "<span class='text-warning'>WARN</span> ")
+                  data = data.replace(/[\x00-\x7F]\[\d+mERRO[\x00-\x7F]\[0m/g, "<span class='text-danger'>ERRO</span> ")
 
                   logDiv.html(data);
 

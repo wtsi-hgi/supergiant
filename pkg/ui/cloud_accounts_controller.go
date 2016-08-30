@@ -12,7 +12,8 @@ func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 		"title":      "Cloud Accounts",
 		"formAction": "/ui/cloud_accounts",
 		"model": map[string]interface{}{
-			"name": "",
+			"name":     "",
+			"provider": "",
 			"credentials": map[string]interface{}{
 				"access_key": "",
 				"secret_key": "",
@@ -46,9 +47,9 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 			"field": "name",
 		},
 		{
-			"title": "Access Key",
+			"title": "Provider",
 			"type":  "field_value",
-			"field": "credentials.access_key",
+			"field": "provider",
 		},
 	}
 	return renderTemplate(w, "cloud_accounts/index.html", map[string]interface{}{

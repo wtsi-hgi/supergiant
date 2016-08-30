@@ -1,26 +1,26 @@
 set -e
 
 echo "creating entrypoint"
-entrypoint_id=$(curl -s -XPOST localhost:8080/api/v0/entrypoints -d "{
+entrypoint_id=$(curl -s -XPOST http://admin:password@localhost:8080/api/v0/entrypoints -d "{
   \"kube_id\": $KUBE_ID,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 sleep 5 # wait for entrypoint address
 
 echo "creating app"
-app_id=$(curl -s -XPOST localhost:8080/api/v0/apps -d "{
+app_id=$(curl -s -XPOST http://admin:password@localhost:8080/api/v0/apps -d "{
   \"kube_id\": $KUBE_ID,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 
 echo "creating component"
-component_id=$(curl -s -XPOST localhost:8080/api/v0/components -d "{
+component_id=$(curl -s -XPOST http://admin:password@localhost:8080/api/v0/components -d "{
   \"app_id\": $app_id,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 
 echo "creating release"
-curl -s -XPOST localhost:8080/api/v0/releases -d "{
+curl -s -XPOST http://admin:password@localhost:8080/api/v0/releases -d "{
   \"component_id\": $component_id,
 
   \"instance_count\": 3,
@@ -90,11 +90,11 @@ curl -s -XPOST localhost:8080/api/v0/releases -d "{
 }"
 
 echo "deploying"
-curl -XPOST localhost:8080/api/v0/components/$component_id/deploy
+curl -XPOST http://admin:password@localhost:8080/api/v0/components/$component_id/deploy
 
-# curl -s -XPOST localhost:8080/api/v0/releases -d "{
+# curl -s -XPOST http://admin:password@localhost:8080/api/v0/releases -d "{
 #   \"component_id\": $component_id,
 #   \"instance_count\": 2
 # }"
 #
-# curl -XPOST localhost:8080/api/v0/components/$component_id/deploy
+# curl -XPOST http://admin:password@localhost:8080/api/v0/components/$component_id/deploy

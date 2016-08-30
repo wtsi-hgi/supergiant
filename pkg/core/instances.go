@@ -332,7 +332,7 @@ func (c *Instances) deleteReplicationControllerAndPod(m *models.Instance) error 
 	}
 	// Wait for volume detach
 	for _, volume := range m.Volumes {
-		if err := c.core.Volumes.waitForAvailable(volume); err != nil {
+		if err := c.core.Volumes.WaitForAvailable(volume.ID, volume); err != nil {
 			return err
 		}
 	}

@@ -50,7 +50,7 @@ func errorHttpStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
-const logViewBytesize int64 = 1024
+const logViewBytesize int64 = 2048
 
 func logHandler(core *core.Core) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {

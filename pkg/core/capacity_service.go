@@ -39,72 +39,6 @@ func (s *CapacityService) Perform() error {
 
 //------------------------------------------------------------------------------
 
-type instanceType struct {
-	ID    string
-	Name  string
-	RAM   float64
-	Cores float64
-	Cost  float64 // Linux On Demand Hourly
-}
-
-// These are sorted by cost ascending
-var instanceTypes = [...]*instanceType{
-	{"t2.nano", "T2 Nano", 0.5, 1.0, 0.006},
-	{"t2.micro", "T2 Micro", 1.0, 1.0, 0.013},
-	{"t1.micro", "T1 Micro", 0.613, 1.0, 0.020},
-	{"t2.small", "T2 Small", 2.0, 1.0, 0.026},
-	{"m1.small", "M1 General Purpose Small", 1.7, 1.0, 0.044},
-	{"t2.medium", "T2 Medium", 4.0, 2.0, 0.052},
-	{"m3.medium", "M3 General Purpose Medium", 3.75, 1.0, 0.067},
-	{"m1.medium", "M1 General Purpose Medium", 3.75, 1.0, 0.087},
-	{"t2.large", "T2 Large", 8.0, 2.0, 0.104},
-	{"c3.large", "C3 High-CPU Large", 3.75, 2.0, 0.105},
-	{"c4.large", "C4 High-CPU Large", 3.75, 2.0, 0.105},
-	{"m4.large", "M4 Large", 8.0, 2.0, 0.120},
-	{"c1.medium", "C1 High-CPU Medium", 1.7, 2.0, 0.130},
-	{"m3.large", "M3 General Purpose Large", 7.5, 2.0, 0.133},
-	{"r3.large", "R3 High-Memory Large", 15.25, 2.0, 0.166},
-	{"m1.large", "M1 General Purpose Large", 7.5, 2.0, 0.175},
-	{"c4.xlarge", "C4 High-CPU Extra Large", 7.5, 4.0, 0.209},
-	{"c3.xlarge", "C3 High-CPU Extra Large", 7.5, 4.0, 0.210},
-	{"m4.xlarge", "M4 Extra Large", 16.0, 4.0, 0.239},
-	{"m2.xlarge", "M2 High Memory Extra Large", 17.1, 2.0, 0.245},
-	{"m3.xlarge", "M3 General Purpose Extra Large", 15.0, 4.0, 0.266},
-	{"r3.xlarge", "R3 High-Memory Extra Large", 30.5, 4.0, 0.333},
-	{"m1.xlarge", "M1 General Purpose Extra Large", 15.0, 4.0, 0.350},
-	{"c4.2xlarge", "C4 High-CPU Double Extra Large", 15.0, 8.0, 0.419},
-	{"c3.2xlarge", "C3 High-CPU Double Extra Large", 15.0, 8.0, 0.420},
-	{"m4.2xlarge", "M4 Double Extra Large", 32.0, 8.0, 0.479},
-	{"m2.2xlarge", "M2 High Memory Double Extra Large", 34.2, 4.0, 0.490},
-	{"c1.xlarge", "C1 High-CPU Extra Large", 7.0, 8.0, 0.520},
-	{"m3.2xlarge", "M3 General Purpose Double Extra Large", 30.0, 8.0, 0.532},
-	{"g2.2xlarge", "G2 Double Extra Large", 15.0, 8.0, 0.650},
-	{"r3.2xlarge", "R3 High-Memory Double Extra Large", 61.0, 8.0, 0.665},
-	{"d2.xlarge", "D2 Extra Large", 30.5, 4.0, 0.690},
-	{"c4.4xlarge", "C4 High-CPU Quadruple Extra Large", 30.0, 16.0, 0.838},
-	{"c3.4xlarge", "C3 High-CPU Quadruple Extra Large", 30.0, 16.0, 0.840},
-	{"i2.xlarge", "I2 Extra Large", 30.5, 4.0, 0.853},
-	{"m4.4xlarge", "M4 Quadruple Extra Large", 64.0, 16.0, 0.958},
-	{"m2.4xlarge", "M2 High Memory Quadruple Extra Large", 68.4, 8.0, 0.980},
-	{"r3.4xlarge", "R3 High-Memory Quadruple Extra Large", 122.0, 16.0, 1.330},
-	{"d2.2xlarge", "D2 Double Extra Large", 61.0, 8.0, 1.380},
-	{"c4.8xlarge", "C4 High-CPU Eight Extra Large", 60.0, 36.0, 1.675},
-	{"c3.8xlarge", "C3 High-CPU Eight Extra Large", 60.0, 32.0, 1.680},
-	{"i2.2xlarge", "I2 Double Extra Large", 61.0, 8.0, 1.705},
-	{"cc2.8xlarge", "Cluster Compute Eight Extra Large", 60.5, 32.0, 2.000},
-	{"cg1.4xlarge", "Cluster GPU Quadruple Extra Large", 22.5, 16.0, 2.100},
-	{"m4.10xlarge", "M4 Deca Extra Large", 160.0, 40.0, 2.394},
-	{"g2.8xlarge", "G2 Eight Extra Large", 60.0, 32.0, 2.600},
-	{"r3.8xlarge", "R3 High-Memory Eight Extra Large", 244.0, 32.0, 2.660},
-	{"d2.4xlarge", "D2 Quadruple Extra Large", 122.0, 16.0, 2.760},
-	{"hi1.4xlarge", "HI1. High I/O Quadruple Extra Large", 60.5, 16.0, 3.100},
-	{"i2.4xlarge", "I2 Quadruple Extra Large", 122.0, 16.0, 3.410},
-	{"cr1.8xlarge", "High Memory Cluster Eight Extra Large", 244.0, 32.0, 3.500},
-	{"hs1.8xlarge", "High Storage Eight Extra Large", 117.0, 16.0, 4.600},
-	{"d2.8xlarge", "D2 Eight Extra Large", 244.0, 36.0, 5.520},
-	{"i2.8xlarge", "I2 Eight Extra Large", 244.0, 32.0, 6.820},
-}
-
 var (
 	waitBeforeScale         = 2 * time.Minute
 	minAgeToExist           = 20 * time.Minute // this is used to prevent adding more nodes while still-pending pods are scheduling to a new node
@@ -122,24 +56,24 @@ var (
 //------------------------------------------------------------------------------
 
 type KubeScaler struct {
-	core                *Core
-	kube                *models.Kube
-	instanceTypes       []*instanceType
-	largestInstanceType *instanceType
+	core            *Core
+	kube            *models.Kube
+	nodeSizes       []*NodeSize
+	largestNodeSize *NodeSize
 }
 
 func newKubeScaler(c *Core, kube *models.Kube) *KubeScaler {
 	s := &KubeScaler{core: c, kube: kube}
-	// We iterate on all instanceTypes here first to preserve the cost order
-	for _, it := range instanceTypes {
-		for _, instanceTypeID := range kube.Config.InstanceTypes {
-			if it.ID == instanceTypeID {
-				s.instanceTypes = append(s.instanceTypes, it)
+	// We iterate on all nodeSizes here first to preserve the cost order
+	for _, it := range c.NodeSizes[kube.CloudAccount.Provider] {
+		for _, nodeSizeID := range kube.NodeSizes {
+			if it.Name == nodeSizeID {
+				s.nodeSizes = append(s.nodeSizes, it)
 				break
 			}
 		}
 	}
-	s.largestInstanceType = s.instanceTypes[len(s.instanceTypes)-1]
+	s.largestNodeSize = s.nodeSizes[len(s.nodeSizes)-1]
 	return s
 }
 
@@ -155,7 +89,7 @@ func (s *KubeScaler) Scale() error {
 	for _, pod := range incomingPods {
 		projectedNodes = append(projectedNodes, &projectedNode{
 			false,
-			s.largestInstanceType,
+			s.largestNodeSize,
 			[]*guber.Pod{pod},
 		})
 	}
@@ -209,10 +143,10 @@ func (s *KubeScaler) Scale() error {
 			pnode1.Pods = append(pnode1.Pods, pnode2.Pods...)
 		} else {
 			// If we can't merge with anyone, can we scale down to the lowest cost.
-			// instanceTypes are asc. by cost, so the first we find is the cheapest.
-			for _, instanceType := range s.instanceTypes {
-				if instanceType.Cores >= pnode1.usedCPU() && instanceType.RAM >= pnode1.usedRAM() {
-					pnode1.Size = instanceType
+			// nodeSizes are asc. by cost, so the first we find is the cheapest.
+			for _, nodeSize := range s.nodeSizes {
+				if nodeSize.CPUCores >= pnode1.usedCPU() && nodeSize.RAMGIB >= pnode1.usedRAM() {
+					pnode1.Size = nodeSize
 					pnode1.Committed = true
 					break
 				}
@@ -264,7 +198,7 @@ func (s *KubeScaler) Scale() error {
 	for _, pnode := range projectedNodes {
 		node := &models.Node{
 			KubeID: s.kube.ID,
-			Class:  pnode.Size.ID,
+			Size:   pnode.Size.Name,
 		}
 
 		// If there's an existing node which is spinning up with this type, then
@@ -275,7 +209,7 @@ func (s *KubeScaler) Scale() error {
 		alreadySpinningUp := false
 		for _, existingNode := range s.kube.Nodes {
 
-			if existingNode.Class == node.Class && !existingNode.Ready {
+			if existingNode.Size == node.Size && !existingNode.Ready {
 				// This may be a node that is already being created, or NOTE it could
 				// be a broken node that we erroneously identify as spinning up.
 				alreadySpinningUp = true
@@ -283,11 +217,11 @@ func (s *KubeScaler) Scale() error {
 			}
 		}
 		if alreadySpinningUp {
-			s.core.Log.Infof("Capacity service is already waiting on new node with class %s", node.Class)
+			s.core.Log.Infof("Capacity service is already waiting on new node with size %s", node.Size)
 			continue
 		}
 
-		s.core.Log.Infof("Capacity service is creating node with class %s", node.Class)
+		s.core.Log.Infof("Capacity service is creating node with size %s", node.Size)
 
 		if err := s.core.Nodes.Create(node); err != nil {
 			return fmt.Errorf("Capacity service error when creating Node: %s", err)
@@ -373,7 +307,7 @@ func (s *KubeScaler) incomingPods() (incomingPods []*guber.Pod, err error) {
 
 type projectedNode struct {
 	Committed bool
-	Size      *instanceType
+	Size      *NodeSize
 	Pods      []*guber.Pod
 }
 
@@ -448,5 +382,5 @@ func (pnode1 *projectedNode) canMergeWith(pnode2 *projectedNode) bool {
 	usedCPU := pnode1.usedCPU() + pnode2.usedCPU()
 	usedRAM := pnode1.usedRAM() + pnode2.usedRAM()
 	usedVolumes := pnode1.usedVolumes() + pnode2.usedVolumes()
-	return pnode1.Size.Cores >= usedCPU && pnode1.Size.RAM >= usedRAM && usedVolumes <= maxDisksPerNode
+	return pnode1.Size.CPUCores >= usedCPU && pnode1.Size.RAMGIB >= usedRAM && usedVolumes <= maxDisksPerNode
 }

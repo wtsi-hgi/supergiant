@@ -1,15 +1,9 @@
 package core
 
 import (
-	"bytes"
-	"encoding/base64"
-	"io/ioutil"
 	"regexp"
 	"strconv"
-	"text/template"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/pkg/models"
 )
@@ -48,21 +42,8 @@ func (c *Nodes) Create(m *models.Node) error {
 		scope: c.core.DB.Preload("Kube.CloudAccount").Preload("Kube.Entrypoints.Kube.CloudAccount"),
 		model: m,
 		id:    m.ID,
-		fn: func(_ *Action) error {
-			server, err := c.createServer(m)
-			if err != nil {
-				return err
-			}
-			c.setAttrsFromServer(m, server)
-			if err := c.core.DB.Save(m); err != nil {
-				return err
-			}
-			for _, entrypoint := range m.Kube.Entrypoints {
-				if err := c.core.Entrypoints.registerNodes(entrypoint, m); err != nil {
-					return err
-				}
-			}
-			return nil
+		fn: func(a *Action) error {
+			return c.core.CloudAccounts.provider(m.Kube.CloudAccount).CreateNode(m, a)
 		},
 	}
 	return provision.Async()
@@ -82,7 +63,7 @@ func (c *Nodes) Delete(id *int64, m *models.Node) *Action {
 			if m.ProviderID == "" {
 				c.core.Log.Warnf("Deleting Node %d which has no provider_id", *m.ID)
 			} else {
-				if err := c.deleteServer(m); err != nil {
+				if err := c.core.CloudAccounts.provider(m.Kube.CloudAccount).DeleteNode(m); err != nil {
 					return err
 				}
 			}
@@ -94,106 +75,6 @@ func (c *Nodes) Delete(id *int64, m *models.Node) *Action {
 ////////////////////////////////////////////////////////////////////////////////
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
-
-func (c *Nodes) setAttrsFromServer(m *models.Node, server *ec2.Instance) {
-	m.ProviderID = *server.InstanceId
-	m.Name = *server.PrivateDnsName
-	m.Class = *server.InstanceType
-	m.ProviderCreationTimestamp = *server.LaunchTime
-}
-
-func (c *Nodes) createServer(m *models.Node) (*ec2.Instance, error) {
-
-	// TODO move to init outside of func
-	userdataTemplate, err := ioutil.ReadFile("config/minion_userdata.txt")
-	if err != nil {
-		return nil, err
-	}
-	template, err := template.New("minion_template").Parse(string(userdataTemplate))
-	if err != nil {
-		return nil, err
-	}
-	var userdata bytes.Buffer
-	if err = template.Execute(&userdata, m.Kube); err != nil {
-		return nil, err
-	}
-	encodedUserdata := base64.StdEncoding.EncodeToString(userdata.Bytes())
-
-	input := &ec2.RunInstancesInput{
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		InstanceType: aws.String(m.Class),
-		ImageId:      aws.String(AWSMasterAMIs[m.Kube.Config.Region]),
-		EbsOptimized: aws.Bool(true),
-		KeyName:      aws.String(m.Kube.Name + "-key"),
-		SecurityGroupIds: []*string{
-			aws.String(m.Kube.Config.NodeSecurityGroupID),
-		},
-		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-			Name: aws.String("kubernetes-minion"),
-		},
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
-			// root device ? TODO (do we need the one after this?)
-			{
-				DeviceName: aws.String("/dev/sda1"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeType:          aws.String("gp2"),
-					VolumeSize:          aws.Int64(80),
-					DeleteOnTermination: aws.Bool(true),
-				},
-			},
-			&ec2.BlockDeviceMapping{
-				DeviceName: aws.String("/dev/xvdb"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeType:          aws.String("gp2"),
-					VolumeSize:          aws.Int64(80),
-					DeleteOnTermination: aws.Bool(true),
-				},
-			},
-		},
-		UserData: aws.String(encodedUserdata),
-		SubnetId: aws.String(m.Kube.Config.PublicSubnetID),
-	}
-
-	ec2S := c.core.CloudAccounts.ec2(m.Kube.CloudAccount, m.Kube.Config.Region)
-
-	resp, err := ec2S.RunInstances(input)
-	if err != nil {
-		return nil, err
-	}
-
-	server := resp.Instances[0]
-
-	err = tagAWSResource(ec2S, *server.InstanceId, map[string]string{
-		"KubernetesCluster": m.Kube.Name,
-		"Name":              m.Kube.Name + "-minion",
-		"Role":              m.Kube.Name + "-minion",
-	})
-	if err != nil {
-		// TODO
-		c.core.Log.Error("Failed to tag EC2 Instance " + *server.InstanceId)
-	}
-
-	return server, nil
-}
-
-func (c *Nodes) deleteServer(m *models.Node) error {
-
-	// TODO
-	if m.Kube == nil {
-		c.core.Log.Warnf("Deleting Node %d without deleting server because Kube is nil", *m.ID)
-		return nil
-	}
-
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{aws.String(m.ProviderID)},
-	}
-	_, err := c.core.CloudAccounts.ec2(m.Kube.CloudAccount, m.Kube.Config.Region).TerminateInstances(input)
-	if isErrAndNotAWSNotFound(err) {
-		return err
-	}
-	return nil
-}
 
 func (c *Nodes) hasPodsWithReservedResources(m *models.Node) (bool, error) {
 	q := &guber.QueryParams{

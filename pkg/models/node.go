@@ -10,7 +10,7 @@ type Node struct {
 	KubeID *int64 `json:"kube_id" gorm:"not null;index"`
 
 	// This is the only input for Node
-	Class string `json:"class" validate:"nonzero"`
+	Size string `json:"size" validate:"nonzero"`
 
 	ProviderID                string    `json:"provider_id" sg:"readonly" gorm:"index"`
 	Name                      string    `json:"name" sg:"readonly" gorm:"index"`
