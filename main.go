@@ -14,6 +14,18 @@ import (
 	"github.com/supergiant/supergiant/pkg/ui"
 )
 
+// TODO move
+type SecureInfoHandler struct {
+	core *core.Core
+}
+
+func (s *SecureInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	msg := "<p>Supergiant is running securely at <a href='" + s.core.BaseURL() + "'>" + s.core.BaseURL() + "</a>.</p>"
+	msg += "<p>Unless you have provided your own SSL certificate, this will be a self-signed certificate.</p>"
+	msg += "<p>If using self-signed, your browser will most likely warn of an insecure connection. <strong>You must manually trust the certificate to utilize SSL.</strong></p>"
+	w.Write([]byte(msg))
+}
+
 func main() {
 	var configFilePath string
 	var configFileSettings core.Settings
@@ -46,6 +58,7 @@ func main() {
 			"psql-db":         c.PsqlDb,
 			"psql-user":       c.PsqlUser,
 			"psql-pass":       c.PsqlPass,
+			"publish-host":    c.PublishHost,
 			"http-port":       c.HTTPPort,
 			"http-basic-user": c.HTTPBasicUser,
 			"http-basic-pass": c.HTTPBasicPass,
@@ -77,9 +90,23 @@ func main() {
 		apiRouter := api.NewRouter(c)
 		router := ui.NewRouter(c.NewAPIClient(), apiRouter)
 
-		c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPPort))
-		c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPPort))
-		c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), router))
+		if c.SSLEnabled() {
+			c.Log.Info("SSL enabled")
+
+			// Secure info page (concurrently)
+			go func() {
+				c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), &SecureInfoHandler{c}))
+			}()
+
+			c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPSPort))
+			c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPSPort))
+			c.Log.Info(http.ListenAndServeTLS(fmt.Sprintf(":%s", c.HTTPSPort), c.SSLCertFile, c.SSLKeyFile, router))
+		} else {
+			c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPPort))
+			c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPPort))
+			c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), router))
+		}
+
 	}
 
 	app.Flags = []cli.Flag{
@@ -104,11 +131,6 @@ func main() {
 			Destination: &c.PsqlPass,
 		},
 		cli.StringFlag{
-			Name:        "http-port",
-			Usage:       "HTTP port for the web interfaces",
-			Destination: &c.HTTPPort,
-		},
-		cli.StringFlag{
 			Name:        "http-basic-user",
 			Usage:       "HTTP Basic Auth username used to secure the web interfaces",
 			Destination: &c.HTTPBasicUser,
@@ -117,6 +139,31 @@ func main() {
 			Name:        "http-basic-pass",
 			Usage:       "HTTP Basic Auth password used to secure the web interfaces",
 			Destination: &c.HTTPBasicPass,
+		},
+		cli.StringFlag{
+			Name:        "publish-host",
+			Usage:       "Host that can be used to connect to this Supergiant server remotely",
+			Destination: &c.PublishHost,
+		},
+		cli.StringFlag{
+			Name:        "http-port",
+			Usage:       "HTTP port for the web interfaces",
+			Destination: &c.HTTPPort,
+		},
+		cli.StringFlag{
+			Name:        "https-port",
+			Usage:       "HTTPS (SSL) port for the web interfaces",
+			Destination: &c.HTTPSPort,
+		},
+		cli.StringFlag{
+			Name:        "ssl-cert-file",
+			Usage:       "SSL certificate file",
+			Destination: &c.SSLCertFile,
+		},
+		cli.StringFlag{
+			Name:        "ssl-key-file",
+			Usage:       "SSL key file",
+			Destination: &c.SSLKeyFile,
 		},
 		cli.StringFlag{
 			Name:        "log-file",

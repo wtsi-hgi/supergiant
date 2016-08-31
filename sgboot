@@ -8,5 +8,87 @@ echo "**** Supergiant Login Info ****" >> /dev/ttyS0
 echo "     UserName: ${SGUSER}       " >> /dev/ttyS0
 echo "     Password: ${SGPASS}       " >> /dev/ttyS0
 echo "*******************************" >> /dev/ttyS0
+
+SSL_KEY_FILE=/etc/ssl/private/supergiant.key
+SSL_CRT_FILE=/etc/ssl/certs/supergiant.pem
+PUBLISH_HOST=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+openssl genrsa -out $SSL_KEY_FILE 2048
+openssl req -new -x509 -sha256 -key $SSL_KEY_FILE -out $SSL_CRT_FILE -days 3650 -subj /C=US/ST=Arkansas/L=Fayetteville/O=Supergiant/CN=$PUBLISH_HOST
+
+cat > /etc/supergiant.json <<- EOM
+{
+  "psql_host": "localhost",
+  "psql_db": "supergiant",
+  "psql_user": "postgres",
+  "psql_pass": "postgres",
+  "http_basic_user": "$SGUSER",
+  "http_basic_pass": "$SGPASS",
+  "publish_host": "$PUBLISH_HOST",
+  "http_port": "80",
+  "https_port": "443",
+  "ssl_cert_file": "$SSL_CRT_FILE",
+  "ssl_key_file": "$SSL_KEY_FILE",
+  "log_file": "/var/log/supergiant.log",
+  "node_sizes": {
+    "aws": [
+      {"name": "t2.nano", "ram_gib": 0.5, "cpu_cores": 1},
+      {"name": "t2.micro", "ram_gib": 1, "cpu_cores": 1},
+      {"name": "t1.micro", "ram_gib": 0.613, "cpu_cores": 1},
+      {"name": "t2.small", "ram_gib": 2, "cpu_cores": 1},
+      {"name": "m1.small", "ram_gib": 1.7, "cpu_cores": 1},
+      {"name": "t2.medium", "ram_gib": 4, "cpu_cores": 2},
+      {"name": "m3.medium", "ram_gib": 3.75, "cpu_cores": 1},
+      {"name": "m1.medium", "ram_gib": 3.75, "cpu_cores": 1},
+      {"name": "t2.large", "ram_gib": 8, "cpu_cores": 2},
+      {"name": "c3.large", "ram_gib": 3.75, "cpu_cores": 2},
+      {"name": "c4.large", "ram_gib": 3.75, "cpu_cores": 2},
+      {"name": "m4.large", "ram_gib": 8, "cpu_cores": 2},
+      {"name": "c1.medium", "ram_gib": 1.7, "cpu_cores": 2},
+      {"name": "m3.large", "ram_gib": 7.5, "cpu_cores": 2},
+      {"name": "r3.large", "ram_gib": 15.25, "cpu_cores": 2},
+      {"name": "m1.large", "ram_gib": 7.5, "cpu_cores": 2},
+      {"name": "c4.xlarge", "ram_gib": 7.5, "cpu_cores": 4},
+      {"name": "c3.xlarge", "ram_gib": 7.5, "cpu_cores": 4},
+      {"name": "m4.xlarge", "ram_gib": 16, "cpu_cores": 4},
+      {"name": "m2.xlarge", "ram_gib": 17.1, "cpu_cores": 2},
+      {"name": "m3.xlarge", "ram_gib": 15, "cpu_cores": 4},
+      {"name": "r3.xlarge", "ram_gib": 30.5, "cpu_cores": 4},
+      {"name": "m1.xlarge", "ram_gib": 15, "cpu_cores": 4},
+      {"name": "c4.2xlarge", "ram_gib": 15, "cpu_cores": 8},
+      {"name": "c3.2xlarge", "ram_gib": 15, "cpu_cores": 8},
+      {"name": "m4.2xlarge", "ram_gib": 32, "cpu_cores": 8},
+      {"name": "m2.2xlarge", "ram_gib": 34.2, "cpu_cores": 4},
+      {"name": "c1.xlarge", "ram_gib": 7, "cpu_cores": 8},
+      {"name": "m3.2xlarge", "ram_gib": 30, "cpu_cores": 8},
+      {"name": "g2.2xlarge", "ram_gib": 15, "cpu_cores": 8},
+      {"name": "r3.2xlarge", "ram_gib": 61, "cpu_cores": 8},
+      {"name": "d2.xlarge", "ram_gib": 30.5, "cpu_cores": 4},
+      {"name": "c4.4xlarge", "ram_gib": 30, "cpu_cores": 16},
+      {"name": "c3.4xlarge", "ram_gib": 30, "cpu_cores": 16},
+      {"name": "i2.xlarge", "ram_gib": 30.5, "cpu_cores": 4},
+      {"name": "m4.4xlarge", "ram_gib": 64, "cpu_cores": 16},
+      {"name": "m2.4xlarge", "ram_gib": 68.4, "cpu_cores": 8},
+      {"name": "r3.4xlarge", "ram_gib": 122, "cpu_cores": 16},
+      {"name": "d2.2xlarge", "ram_gib": 61, "cpu_cores": 8},
+      {"name": "c4.8xlarge", "ram_gib": 60, "cpu_cores": 36},
+      {"name": "c3.8xlarge", "ram_gib": 60, "cpu_cores": 32},
+      {"name": "i2.2xlarge", "ram_gib": 61, "cpu_cores": 8},
+      {"name": "cc2.8xlarge", "ram_gib": 60.5, "cpu_cores": 32},
+      {"name": "cg1.4xlarge", "ram_gib": 22.5, "cpu_cores": 16},
+      {"name": "m4.10xlarge", "ram_gib": 160, "cpu_cores": 40},
+      {"name": "g2.8xlarge", "ram_gib": 60, "cpu_cores": 32},
+      {"name": "r3.8xlarge", "ram_gib": 244, "cpu_cores": 32},
+      {"name": "d2.4xlarge", "ram_gib": 122, "cpu_cores": 16},
+      {"name": "hi1.4xlarge", "ram_gib": 60.5, "cpu_cores": 16},
+      {"name": "i2.4xlarge", "ram_gib": 122, "cpu_cores": 16},
+      {"name": "cr1.8xlarge", "ram_gib": 244, "cpu_cores": 32},
+      {"name": "hs1.8xlarge", "ram_gib": 117, "cpu_cores": 16},
+      {"name": "d2.8xlarge", "ram_gib": 244, "cpu_cores": 36},
+      {"name": "i2.8xlarge", "ram_gib": 244, "cpu_cores": 32}
+    ]
+  }
+}
+EOM
+
 #remove
 echo -n "" > $0

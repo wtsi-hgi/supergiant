@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -13,6 +15,8 @@ type Client struct {
 	BaseURL  string
 	Username string
 	Password string
+
+	httpClient *http.Client
 
 	CloudAccounts    *CloudAccounts
 	Kubes            *Kubes
@@ -26,11 +30,31 @@ type Client struct {
 	Nodes            *Nodes
 }
 
-func New(url string, user string, pass string) *Client {
+func New(url string, user string, pass string, certFile string) *Client {
 	client := &Client{
 		BaseURL:  url,
 		Username: user,
 		Password: pass,
+	}
+
+	transport := new(http.Transport)
+
+	if certFile != "" {
+		pem, err := ioutil.ReadFile(certFile)
+		if err != nil {
+			panic(err)
+		}
+		roots := x509.NewCertPool()
+		if ok := roots.AppendCertsFromPEM(pem); !ok {
+			panic("failed to parse root certificate")
+		}
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs: roots,
+		}
+	}
+
+	client.httpClient = &http.Client{
+		Transport: transport,
 	}
 
 	client.CloudAccounts = &CloudAccounts{Collection{client, "cloud_accounts"}}
@@ -73,7 +97,7 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 
 	req.SetBasicAuth(c.Username, c.Password)
 
-	resp, err := new(http.Client).Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
