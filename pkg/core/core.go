@@ -23,9 +23,13 @@ type Settings struct {
 	PsqlDb        string `json:"psql_db"`
 	PsqlUser      string `json:"psql_user"`
 	PsqlPass      string `json:"psql_pass"`
-	HTTPPort      string `json:"http_port"`
 	HTTPBasicUser string `json:"http_basic_user"`
 	HTTPBasicPass string `json:"http_basic_pass"`
+	PublishHost   string `json:"publish_host"`
+	HTTPPort      string `json:"http_port"`
+	HTTPSPort     string `json:"https_port"`
+	SSLCertFile   string `json:"ssl_cert_file"`
+	SSLKeyFile    string `json:"ssl_key_file"`
 	LogPath       string `json:"log_file"`
 	LogLevel      string `json:"log_level"`
 
@@ -175,10 +179,23 @@ func (c *Core) Initialize() {
 
 //------------------------------------------------------------------------------
 
-func (c *Core) apiURL() string {
-	return fmt.Sprintf("http://localhost:%s/api/v0", c.HTTPPort)
+func (c *Core) SSLEnabled() bool {
+	return c.HTTPSPort != "" && c.SSLCertFile != "" && c.SSLKeyFile != ""
+}
+
+func (c *Core) BaseURL() string {
+	var protocol string
+	var port string
+	if c.SSLEnabled() {
+		protocol = "https"
+		port = c.HTTPSPort
+	} else {
+		protocol = "http"
+		port = c.HTTPPort
+	}
+	return fmt.Sprintf("%s://%s:%s", protocol, c.PublishHost, port)
 }
 
 func (c *Core) NewAPIClient() *client.Client {
-	return client.New(c.apiURL(), c.HTTPBasicUser, c.HTTPBasicPass)
+	return client.New(fmt.Sprintf("%s/api/v0", c.BaseURL()), c.HTTPBasicUser, c.HTTPBasicPass, c.SSLCertFile)
 }
