@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "cloud_accounts/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Cloud Accounts",
 		"formAction": "/ui/cloud_accounts",
+		"formMethod": "POST",
 		"model": map[string]interface{}{
 			"name":     "",
 			"provider": "",
@@ -23,14 +24,15 @@ func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 }
 
 func CreateCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.CloudAccount)
+	m := new(model.CloudAccount)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.CloudAccounts.Create(m); err != nil {
-		return renderTemplate(w, "cloud_accounts/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Cloud Accounts",
 			"formAction": "/ui/cloud_accounts",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -52,7 +54,7 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 			"field": "provider",
 		},
 	}
-	return renderTemplate(w, "cloud_accounts/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Cloud Accounts",
 		"uiBasePath":  "/ui/cloud_accounts",
 		"apiListPath": "/api/v0/cloud_accounts",
@@ -69,11 +71,11 @@ func GetCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-	item := new(models.CloudAccount)
+	item := new(model.CloudAccount)
 	if err := sg.CloudAccounts.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "cloud_accounts/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Cloud Accounts",
 		"model": item,
 	})
@@ -84,9 +86,8 @@ func DeleteCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return err
 	}
-	item := new(models.CloudAccount)
-	item.ID = id
-	if err := sg.CloudAccounts.Delete(item); err != nil {
+	item := new(model.CloudAccount)
+	if err := sg.CloudAccounts.Delete(id, item); err != nil {
 		return err
 	}
 	// http.Redirect(w, r, "/ui/cloud_accounts", http.StatusFound)

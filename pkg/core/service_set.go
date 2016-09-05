@@ -2,28 +2,28 @@ package core
 
 import (
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type ServiceSet struct {
 	core          *Core
-	component     *models.Component
-	release       *models.Release
+	component     *model.Component
+	release       *model.Release
 	labelSelector map[string]string
-	portFilter    func(*models.Port) bool
+	portFilter    func(*model.Port) bool
 
 	internalServiceName string
 	externalServiceName string
 	namespace           string
 
 	previous    *ServiceSet
-	entrypoints map[int64]*models.Entrypoint
+	entrypoints map[int64]*model.Entrypoint
 
 	internal *guber.Service
 	external *guber.Service
 }
 
-func NewServiceSet(core *Core, component *models.Component, release *models.Release, baseName string, labelSelector map[string]string, portFilter func(*models.Port) bool) (*ServiceSet, error) {
+func NewServiceSet(core *Core, component *model.Component, release *model.Release, baseName string, labelSelector map[string]string, portFilter func(*model.Port) bool) (*ServiceSet, error) {
 	if release == nil {
 		release = component.CurrentRelease
 	}
@@ -49,12 +49,12 @@ func NewServiceSet(core *Core, component *models.Component, release *models.Rele
 	}
 
 	// Load Entrypoints
-	serviceSet.entrypoints = make(map[int64]*models.Entrypoint)
+	serviceSet.entrypoints = make(map[int64]*model.Entrypoint)
 	for _, port := range serviceSet.externalPortDefs() {
 		if port.EntrypointID == nil {
 			continue
 		}
-		entrypoint := new(models.Entrypoint)
+		entrypoint := new(model.Entrypoint)
 		if err := core.Entrypoints.GetWithIncludes(port.EntrypointID, entrypoint, []string{"Kube.CloudAccount"}); err != nil {
 			// NOTE if return error here delete will fail if Entrypoint has been deleted
 			core.Log.Warn(err)
@@ -88,7 +88,7 @@ func (s *ServiceSet) externalService() (*guber.Service, error) {
 	return s.external, nil
 }
 
-func (s *ServiceSet) selectPortDefs(portFilterArg func(*models.Port) bool) (ports []*models.Port) {
+func (s *ServiceSet) selectPortDefs(portFilterArg func(*model.Port) bool) (ports []*model.Port) {
 	for _, container := range s.release.Config.Containers {
 		for _, port := range container.Ports {
 			if (s.portFilter == nil || s.portFilter(port)) && portFilterArg(port) {
@@ -99,14 +99,14 @@ func (s *ServiceSet) selectPortDefs(portFilterArg func(*models.Port) bool) (port
 	return
 }
 
-func (s *ServiceSet) internalPortDefs() []*models.Port {
-	return s.selectPortDefs(func(port *models.Port) bool {
+func (s *ServiceSet) internalPortDefs() []*model.Port {
+	return s.selectPortDefs(func(port *model.Port) bool {
 		return !port.Public
 	})
 }
 
-func (s *ServiceSet) externalPortDefs() []*models.Port {
-	return s.selectPortDefs(func(port *models.Port) bool {
+func (s *ServiceSet) externalPortDefs() []*model.Port {
+	return s.selectPortDefs(func(port *model.Port) bool {
 		return port.Public
 	})
 }
@@ -132,7 +132,7 @@ func (s *ServiceSet) externalPorts() (ports []*Port, err error) {
 		return // Service does not exist (which... can be an error depending on the context called)
 	}
 	for _, port := range s.externalPortDefs() {
-		var entrypoint *models.Entrypoint
+		var entrypoint *model.Entrypoint
 		if port.EntrypointID != nil {
 			ep, ok := s.entrypoints[*port.EntrypointID]
 			if !ok {
@@ -347,7 +347,7 @@ func (s *ServiceSet) deleteService(name string) error {
 	return nil
 }
 
-func (s *ServiceSet) externalAddresses() (addrs []*models.PortAddress, err error) {
+func (s *ServiceSet) externalAddresses() (addrs []*model.PortAddress, err error) {
 	ports, err := s.externalPorts()
 	if err != nil {
 		return nil, err
@@ -358,7 +358,7 @@ func (s *ServiceSet) externalAddresses() (addrs []*models.PortAddress, err error
 	return addrs, nil
 }
 
-func (s *ServiceSet) internalAddresses() (addrs []*models.PortAddress, err error) {
+func (s *ServiceSet) internalAddresses() (addrs []*model.PortAddress, err error) {
 	iPorts, err := s.internalPorts()
 	if err != nil {
 		return nil, err
@@ -377,7 +377,7 @@ func (s *ServiceSet) internalAddresses() (addrs []*models.PortAddress, err error
 
 //------------------------------------------ move below to kube helpers
 
-func asKubeServicePorts(inPorts []*models.Port) (outPorts []*guber.ServicePort) {
+func asKubeServicePorts(inPorts []*model.Port) (outPorts []*guber.ServicePort) {
 	for _, port := range inPorts {
 		outPorts = append(outPorts, asKubeServicePort(port))
 	}

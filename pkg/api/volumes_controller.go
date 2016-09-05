@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListVolumes(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.Volume))
+func ListVolumes(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.Volume))
 }
 
-func GetVolume(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Volume)
+func GetVolume(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Volume)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

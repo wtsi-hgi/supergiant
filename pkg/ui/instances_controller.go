@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func ListInstances(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
@@ -32,7 +32,7 @@ func ListInstances(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 			"denominator_field": "ram_limit",
 		},
 	}
-	return renderTemplate(w, "instances/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Instances",
 		"uiBasePath":  "/ui/instances",
 		"apiListPath": "/api/v0/instances",
@@ -50,11 +50,11 @@ func GetInstance(sg *client.Client, w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return err
 	}
-	item := new(models.Instance)
+	item := new(model.Instance)
 	if err := sg.Instances.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "instances/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Instances",
 		"model": item,
 	})

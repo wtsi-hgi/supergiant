@@ -1,0 +1,48 @@
+{{ define "body" }}
+  <div class="row" id="main_row">
+    <div class="col-xs-12">
+      <div class="row">
+        <div class="col-xs-12">
+
+          {{ if .error }}
+            <div class="alert alert-danger" role="alert">{{ .error }}</div>
+          {{ end }}
+
+          <form method="{{ .formMethod }}" action="{{ .formAction }}">
+
+            <div class="form-group">
+              <textarea rows=20 class="form-control" name="json_input"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              Create
+            </button>
+
+          </form>
+
+        </div>
+      </div>
+
+      <script type="text/javascript">
+
+        function prettyPrint(ugly) {
+          return JSON.stringify(JSON.parse(ugly), undefined, 4);
+        }
+
+        var modelJSON = '{{ .modelJSON }}',
+            model = JSON.parse(modelJSON),
+            textarea = $('textarea[name="json_input"]');
+
+        $(function() {
+
+          textarea.val(prettyPrint(modelJSON));
+          textarea.on("keyup", function() {
+            textarea.val(prettyPrint(textarea.val()));
+          });
+
+        });
+
+      </script>
+    </div>
+  </div>
+{{ end }}

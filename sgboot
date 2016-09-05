@@ -1,14 +1,4 @@
 #!/bin/bash
-SGUSER=admin
-SGPASS=$(openssl rand -base64 8)
-echo "SGUSER=${SGUSER}" >> /etc/environment
-echo "SGPASS=${SGPASS}" >> /etc/environment
-echo "*******************************" >> /dev/ttyS0
-echo "**** Supergiant Login Info ****" >> /dev/ttyS0
-echo "     UserName: ${SGUSER}       " >> /dev/ttyS0
-echo "     Password: ${SGPASS}       " >> /dev/ttyS0
-echo "*******************************" >> /dev/ttyS0
-
 SSL_KEY_FILE=/etc/ssl/private/supergiant.key
 SSL_CRT_FILE=/etc/ssl/certs/supergiant.pem
 PUBLISH_HOST=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
@@ -21,8 +11,6 @@ cat > /etc/supergiant.json <<- EOM
   "psql_db": "supergiant",
   "psql_user": "postgres",
   "psql_pass": "postgres",
-  "http_basic_user": "$SGUSER",
-  "http_basic_pass": "$SGPASS",
   "publish_host": "$PUBLISH_HOST",
   "http_port": "80",
   "https_port": "443",

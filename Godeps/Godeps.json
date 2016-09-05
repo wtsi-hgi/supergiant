@@ -114,11 +114,6 @@
 			"Rev": "8041be5461786460d86b4358305fbdf32d37cfb2"
 		},
 		{
-			"ImportPath": "github.com/aws/aws-sdk-go/service/autoscaling",
-			"Comment": "v1.1.2",
-			"Rev": "8041be5461786460d86b4358305fbdf32d37cfb2"
-		},
-		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
 			"Comment": "v1.1.2",
 			"Rev": "8041be5461786460d86b4358305fbdf32d37cfb2"
@@ -171,6 +166,11 @@
 			"Rev": "a646b13548ec0aa812fe805b2780f460dd2771b6"
 		},
 		{
+			"ImportPath": "github.com/jinzhu/gorm/dialects/sqlite",
+			"Comment": "v1.0-50-ga646b13",
+			"Rev": "a646b13548ec0aa812fe805b2780f460dd2771b6"
+		},
+		{
 			"ImportPath": "github.com/jinzhu/inflection",
 			"Rev": "8f4d3a0d04ce0b7c0cf3126fb98524246d00d102"
 		},
@@ -195,6 +195,11 @@
 			"Rev": "4dd446efc17690bc53e154025146f73203b18309"
 		},
 		{
+			"ImportPath": "github.com/mattn/go-sqlite3",
+			"Comment": "v1.1.0-78-gb5c99a7",
+			"Rev": "b5c99a720374818b629fd1fbf6d2cbb4fb9a5644"
+		},
+		{
 			"ImportPath": "github.com/satori/go.uuid",
 			"Rev": "e673fdd4dea8a7334adbbe7f57b7e4b00bdc5502"
 		},
@@ -202,6 +207,14 @@
 			"ImportPath": "github.com/supergiant/guber",
 			"Comment": "v0.1.0-5-ga386e6d",
 			"Rev": "a386e6dad1c8f8c28d8b48876d6e884216718eae"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/bcrypt",
+			"Rev": "055d4bfb5c396e3c3dcd9aad97c9086d48b23189"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/blowfish",
+			"Rev": "055d4bfb5c396e3c3dcd9aad97c9086d48b23189"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",

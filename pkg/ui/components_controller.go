@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func NewComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "components/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Components",
 		"formAction": "/ui/components",
+		"formMethod": "POST",
 		"model": map[string]interface{}{
 			"app_id":             nil,
 			"name":               "",
@@ -21,14 +22,15 @@ func NewComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) err
 }
 
 func CreateComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.Component)
+	m := new(model.Component)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.Components.Create(m); err != nil {
-		return renderTemplate(w, "components/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Components",
 			"formAction": "/ui/components",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -50,7 +52,7 @@ func ListComponents(sg *client.Client, w http.ResponseWriter, r *http.Request) e
 			"field": "name",
 		},
 	}
-	return renderTemplate(w, "components/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Components",
 		"uiBasePath":  "/ui/components",
 		"apiListPath": "/api/v0/components",
@@ -71,11 +73,11 @@ func GetComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	item := new(models.Component)
+	item := new(model.Component)
 	if err := sg.Components.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "components/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Components",
 		"model": item,
 	})
@@ -86,7 +88,7 @@ func DeployComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-	item := new(models.Component)
+	item := new(model.Component)
 	item.ID = id
 	if err := sg.Components.Deploy(item); err != nil {
 		return err
@@ -100,9 +102,8 @@ func DeleteComponent(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-	item := new(models.Component)
-	item.ID = id
-	if err := sg.Components.Delete(item); err != nil {
+	item := new(model.Component)
+	if err := sg.Components.Delete(id, item); err != nil {
 		return err
 	}
 	// http.Redirect(w, r, "/ui/components", http.StatusFound)
@@ -117,27 +118,27 @@ func ConfigureComponent(sg *client.Client, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return err
 	}
-	item := new(models.Component)
+	item := new(model.Component)
 	includes := []string{"TargetRelease", "CurrentRelease"}
 	if err := sg.Components.GetWithIncludes(id, item, includes); err != nil {
 		return err
 	}
 
-	var model interface{}
+	var m interface{}
 	var formAction string
 
 	if item.TargetRelease != nil {
-		model = item.TargetRelease
+		m = item.TargetRelease
 		formAction = fmt.Sprintf("/ui/releases/%d", *item.TargetReleaseID)
 
 	} else if item.CurrentRelease != nil {
 		release := item.CurrentRelease
-		models.ZeroReadonlyFields(release)
-		model = release
+		model.ZeroReadonlyFields(release)
+		m = release
 		formAction = "/ui/releases"
 
 	} else {
-		model = map[string]interface{}{
+		m = map[string]interface{}{
 			"component_id":   id,
 			"instance_count": 1,
 			"config": map[string]interface{}{
@@ -155,9 +156,10 @@ func ConfigureComponent(sg *client.Client, w http.ResponseWriter, r *http.Reques
 		formAction = "/ui/releases"
 	}
 
-	return renderTemplate(w, "releases/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Components",
 		"formAction": formAction,
-		"model":      model,
+		"formMethod": "POST",
+		"model":      m,
 	})
 }

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
-func RunCustomDeployment(core *Core, component *models.Component) error {
+func RunCustomDeployment(core *Core, component *model.Component) error {
 	cd := component.CustomDeployScript
 	name := fmt.Sprintf("supergiant-custom-deploy-%s-%s-%d", component.App.Name, component.Name, component.TargetReleaseID)
 	podDef := &guber.Pod{

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-validator/validator"
 	"github.com/jinzhu/gorm"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type DB struct {
@@ -15,7 +15,7 @@ type DB struct {
 	*gorm.DB
 }
 
-func (db *DB) Create(m models.Model) error {
+func (db *DB) Create(m model.Model) error {
 	m.SetUUID()
 	setDefaultFields(m)
 	marshalSerializedFields(m)
@@ -28,7 +28,7 @@ func (db *DB) Create(m models.Model) error {
 	return db.Set("gorm:save_associations", true).Create(m).Error
 }
 
-func (db *DB) Save(m models.Model) error {
+func (db *DB) Save(m model.Model) error {
 	marshalSerializedFields(m)
 	if err := validateFields(m); err != nil {
 		return err
@@ -42,7 +42,7 @@ func (db *DB) Find(out interface{}, where ...interface{}) error {
 	}
 	items := reflect.ValueOf(out).Elem()
 	for i := 0; i < items.Len(); i++ {
-		m := items.Index(i).Interface().(models.Model)
+		m := items.Index(i).Interface().(model.Model)
 		unmarshalSerializedFields(m)
 	}
 	return nil
@@ -52,12 +52,12 @@ func (db *DB) First(out interface{}, where ...interface{}) error {
 	if err := db.DB.First(out, where...).Error; err != nil {
 		return err
 	}
-	m := out.(models.Model)
+	m := out.(model.Model)
 	unmarshalSerializedFields(m)
 	return nil
 }
 
-func (db *DB) Delete(m models.Model) error {
+func (db *DB) Delete(m model.Model) error {
 	if m.GetID() == nil {
 		return errors.New("ID required for Delete")
 	}
@@ -84,8 +84,8 @@ func (db *DB) Where(query interface{}, args ...interface{}) *DB {
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (db *DB) validateBelongsTos(m models.Model) error {
-	for _, tf := range models.TaggedModelFieldsOf(m) {
+func (db *DB) validateBelongsTos(m model.Model) error {
+	for _, tf := range model.TaggedModelFieldsOf(m) {
 		if belongsTo := tf.ForeignKeyOf; belongsTo != nil && !tf.Field.IsNil() {
 
 			newParent := reflect.New(belongsTo.Field.Type.Elem())
@@ -105,8 +105,8 @@ func (db *DB) validateBelongsTos(m models.Model) error {
 
 // setDefaultFields takes a Model with a pointer and sets the default value
 // on all fields with the tag sg:"default=something".
-func setDefaultFields(m models.Model) {
-	for _, tf := range models.TaggedModelFieldsOf(m) {
+func setDefaultFields(m model.Model) {
+	for _, tf := range model.TaggedModelFieldsOf(m) {
 		if tf.Default == nil {
 			continue
 		}
@@ -119,12 +119,12 @@ func setDefaultFields(m models.Model) {
 
 // validateFields takes a Model with a pointer and runs a validation on every
 // field with the validate:"..." tag.
-func validateFields(m models.Model) error {
+func validateFields(m model.Model) error {
 	return validator.Validate(m)
 }
 
-func marshalSerializedFields(m models.Model) {
-	for _, tf := range models.TaggedModelFieldsOf(m) {
+func marshalSerializedFields(m model.Model) {
+	for _, tf := range model.TaggedModelFieldsOf(m) {
 		if jsonField := tf.StoreAsJsonIn; jsonField != nil {
 			objField := tf.Field
 
@@ -142,8 +142,8 @@ func marshalSerializedFields(m models.Model) {
 	}
 }
 
-func unmarshalSerializedFields(m models.Model) {
-	for _, tf := range models.TaggedModelFieldsOf(m) {
+func unmarshalSerializedFields(m model.Model) {
+	for _, tf := range model.TaggedModelFieldsOf(m) {
 		if jsonField := tf.StoreAsJsonIn; jsonField != nil {
 			objField := tf.Field
 

@@ -4,16 +4,16 @@ import (
 	"errors"
 
 	"github.com/imdario/mergo"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Releases struct {
 	Collection
 }
 
-func (c *Releases) Create(m *models.Release) error {
+func (c *Releases) Create(m *model.Release) error {
 	// load Component (you can't have it preloaded here)
-	m.Component = new(models.Component)
+	m.Component = new(model.Component)
 	if err := c.core.DB.Preload("CurrentRelease").First(m.Component, *m.ComponentID); err != nil {
 		return err
 	}

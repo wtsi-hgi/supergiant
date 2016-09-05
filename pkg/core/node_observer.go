@@ -1,13 +1,13 @@
 package core
 
-import "github.com/supergiant/supergiant/pkg/models"
+import "github.com/supergiant/supergiant/pkg/model"
 
 type NodeObserver struct {
 	core *Core
 }
 
 func (s *NodeObserver) Perform() error {
-	var kubes []*models.Kube
+	var kubes []*model.Kube
 	if err := s.core.DB.Where("ready = ?", true).Preload("CloudAccount").Preload("Nodes", "provider_id <> ?", "").Find(&kubes); err != nil {
 		return err
 	}

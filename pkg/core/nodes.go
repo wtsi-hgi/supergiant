@@ -5,20 +5,20 @@ import (
 	"strconv"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Nodes struct {
 	Collection
 }
 
-func (c *Nodes) Create(m *models.Node) error {
+func (c *Nodes) Create(m *model.Node) error {
 	if err := c.Collection.Create(m); err != nil {
 		return err
 	}
 
 	provision := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "provisioning",
 
 			// TODO
@@ -49,9 +49,9 @@ func (c *Nodes) Create(m *models.Node) error {
 	return provision.Async()
 }
 
-func (c *Nodes) Delete(id *int64, m *models.Node) *Action {
+func (c *Nodes) Delete(id *int64, m *model.Node) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  5,
 		},
@@ -76,7 +76,7 @@ func (c *Nodes) Delete(id *int64, m *models.Node) *Action {
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *Nodes) hasPodsWithReservedResources(m *models.Node) (bool, error) {
+func (c *Nodes) hasPodsWithReservedResources(m *model.Node) (bool, error) {
 	q := &guber.QueryParams{
 		FieldSelector: "spec.nodeName=" + m.Name + ",status.phase=Running",
 	}

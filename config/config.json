@@ -1,10 +1,6 @@
 {
-  "psql_host": "localhost",
-  "psql_db": "supergiant_development",
-  "psql_user": "supergiant",
-  "psql_pass": "password",
-  "http_basic_user": "admin",
-  "http_basic_pass": "password",
+  "sqlite_file": "tmp/development.db",
+  "ui_enabled": true,
   "publish_host": "localhost",
   "http_port": "8080",
   "https_port": "8081",

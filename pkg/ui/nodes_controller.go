@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func NewNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "nodes/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Nodes",
 		"formAction": "/ui/nodes",
+		"formMethod": "POST",
 		"model": map[string]interface{}{
 			"kube_id": nil,
 			"size":    "",
@@ -19,14 +20,15 @@ func NewNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 }
 
 func CreateNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.Node)
+	m := new(model.Node)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.Nodes.Create(m); err != nil {
-		return renderTemplate(w, "nodes/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Nodes",
 			"formAction": "/ui/nodes",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -66,7 +68,7 @@ func ListNodes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 			"denominator_field": "ram_limit",
 		},
 	}
-	return renderTemplate(w, "nodes/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Nodes",
 		"uiBasePath":  "/ui/nodes",
 		"apiListPath": "/api/v0/nodes",
@@ -83,11 +85,11 @@ func GetNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	item := new(models.Node)
+	item := new(model.Node)
 	if err := sg.Nodes.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "nodes/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Nodes",
 		"model": item,
 	})
@@ -98,9 +100,9 @@ func DeleteNode(sg *client.Client, w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	item := new(models.Node)
+	item := new(model.Node)
 	item.ID = id
-	if err := sg.Nodes.Delete(item); err != nil {
+	if err := sg.Nodes.Delete(id, item); err != nil {
 		return err
 	}
 	// http.Redirect(w, r, "/ui/nodes", http.StatusFound)

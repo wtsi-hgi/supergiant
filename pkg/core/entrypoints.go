@@ -3,14 +3,14 @@ package core
 import (
 	"fmt"
 
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Entrypoints struct {
 	Collection
 }
 
-func (c *Entrypoints) Create(m *models.Entrypoint) error {
+func (c *Entrypoints) Create(m *model.Entrypoint) error {
 	if err := c.Collection.Create(m); err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (c *Entrypoints) Create(m *models.Entrypoint) error {
 	}
 
 	provision := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "provisioning",
 			MaxRetries:  5,
 		},
@@ -35,9 +35,9 @@ func (c *Entrypoints) Create(m *models.Entrypoint) error {
 	return provision.Async()
 }
 
-func (c *Entrypoints) Delete(id *int64, m *models.Entrypoint) *Action {
+func (c *Entrypoints) Delete(id *int64, m *model.Entrypoint) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  5,
 		},
@@ -54,9 +54,9 @@ func (c *Entrypoints) Delete(id *int64, m *models.Entrypoint) *Action {
 	}
 }
 
-func (c *Entrypoints) SetPort(id *int64, m *models.Entrypoint, elbPort int64, instancePort int64) error {
+func (c *Entrypoints) SetPort(id *int64, m *model.Entrypoint, elbPort int64, instancePort int64) error {
 	action := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: fmt.Sprintf("setting port %d:%d", elbPort, instancePort),
 			MaxRetries:  5,
 		},
@@ -72,9 +72,9 @@ func (c *Entrypoints) SetPort(id *int64, m *models.Entrypoint, elbPort int64, in
 	return action.Now()
 }
 
-func (c *Entrypoints) RemovePort(id *int64, m *models.Entrypoint, elbPort int64) error {
+func (c *Entrypoints) RemovePort(id *int64, m *model.Entrypoint, elbPort int64) error {
 	action := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: fmt.Sprintf("removing port %d", elbPort),
 			MaxRetries:  5,
 		},

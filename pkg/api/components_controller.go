@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListComponents(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.Component))
+func ListComponents(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.Component))
 }
 
-func CreateComponent(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Component)
+func CreateComponent(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Component)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreateComponent(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdateComponent(core *core.Core, r *http.Request) (*Response, error) {
+func UpdateComponent(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.Component)
+	item := new(model.Component)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.Components.Update(id, new(models.Component), item); err != nil {
+	if err := core.Components.Update(id, new(model.Component), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetComponent(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Component)
+func GetComponent(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Component)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,20 +49,20 @@ func GetComponent(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeployComponent(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Component)
+func DeployComponent(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Component)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	if err := core.Components.Deploy(id, item).Async(); err != nil {
+	if err := core.Components.Deploy(user, id, item).Async(); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func DeleteComponent(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Component)
+func DeleteComponent(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Component)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

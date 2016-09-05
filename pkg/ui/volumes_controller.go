@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func ListVolumes(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
@@ -40,7 +40,7 @@ func ListVolumes(sg *client.Client, w http.ResponseWriter, r *http.Request) erro
 			"field": "provider_id",
 		},
 	}
-	return renderTemplate(w, "volumes/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Volumes",
 		"uiBasePath":  "/ui/volumes",
 		"apiListPath": "/api/v0/volumes",
@@ -54,11 +54,11 @@ func GetVolume(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	item := new(models.Volume)
+	item := new(model.Volume)
 	if err := sg.Volumes.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "volumes/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Volumes",
 		"model": item,
 	})

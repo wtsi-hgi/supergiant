@@ -2,20 +2,20 @@ package core
 
 import (
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Apps struct {
 	Collection
 }
 
-func (c *Apps) Create(m *models.App) error {
+func (c *Apps) Create(m *model.App) error {
 	if err := c.Collection.Create(m); err != nil {
 		return err
 	}
 
 	provision := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "provisioning",
 			MaxRetries:  5,
 		},
@@ -29,9 +29,9 @@ func (c *Apps) Create(m *models.App) error {
 	return provision.Async()
 }
 
-func (c *Apps) Delete(id *int64, m *models.App) *Action {
+func (c *Apps) Delete(id *int64, m *model.App) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  20,
 		},
@@ -62,7 +62,7 @@ func (c *Apps) Delete(id *int64, m *models.App) *Action {
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *Apps) createNamespace(m *models.App) error {
+func (c *Apps) createNamespace(m *model.App) error {
 	namespace := &guber.Namespace{
 		Metadata: &guber.Metadata{
 			Name: m.Name,
@@ -75,7 +75,7 @@ func (c *Apps) createNamespace(m *models.App) error {
 	return nil
 }
 
-func (c *Apps) deleteNamespace(m *models.App) error {
+func (c *Apps) deleteNamespace(m *model.App) error {
 	err := c.core.K8S(m.Kube).Namespaces().Delete(m.Name)
 	if err != nil && !isKubeNotFoundErr(err) {
 		return err

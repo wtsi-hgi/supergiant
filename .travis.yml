@@ -31,7 +31,7 @@ script:
   - godep go test -v ./...
 
 after_success:
-  - go list -f '{{if len .TestGoFiles}}"go test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
+  - go list -f "{{ if len .TestGoFiles }}\"go test -coverpkg $(go list ./pkg/... | tr '\n' ',') -coverprofile={{ .Dir }}/.coverprofile {{ .ImportPath }}\"{{ end }}" ./... | xargs -L 1 sh -c
   - gover
   - "$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci"
 

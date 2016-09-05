@@ -1,23 +1,23 @@
 package core
 
-import "github.com/supergiant/supergiant/pkg/models"
+import "github.com/supergiant/supergiant/pkg/model"
 
 type Provider interface {
-	ValidateAccount(*models.CloudAccount) error
+	ValidateAccount(*model.CloudAccount) error
 
-	CreateKube(*models.Kube, *Action) error
-	DeleteKube(*models.Kube) error
+	CreateKube(*model.Kube, *Action) error
+	DeleteKube(*model.Kube) error
 
-	CreateNode(*models.Node, *Action) error
-	DeleteNode(*models.Node) error
+	CreateNode(*model.Node, *Action) error
+	DeleteNode(*model.Node) error
 
-	CreateVolume(*models.Volume, *Action) error
-	WaitForVolumeAvailable(*models.Volume, *Action) error
-	ResizeVolume(*models.Volume, *Action) error
-	DeleteVolume(*models.Volume) error
+	CreateVolume(*model.Volume, *Action) error
+	WaitForVolumeAvailable(*model.Volume, *Action) error
+	ResizeVolume(*model.Volume, *Action) error
+	DeleteVolume(*model.Volume) error
 
-	CreateEntrypoint(*models.Entrypoint, *Action) error
-	AddPortToEntrypoint(*models.Entrypoint, int64, int64) error
-	RemovePortFromEntrypoint(*models.Entrypoint, int64) error
-	DeleteEntrypoint(*models.Entrypoint) error
+	CreateEntrypoint(*model.Entrypoint, *Action) error
+	AddPortToEntrypoint(*model.Entrypoint, int64, int64) error
+	RemovePortFromEntrypoint(*model.Entrypoint, int64) error
+	DeleteEntrypoint(*model.Entrypoint) error
 }

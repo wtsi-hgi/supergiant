@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
@@ -13,9 +13,9 @@ type Instances struct {
 	Collection
 }
 
-func (c *Instances) CreateVolumes(id *int64, m *models.Instance) error {
+func (c *Instances) CreateVolumes(id *int64, m *model.Instance) error {
 	action := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "creating volumes",
 			MaxRetries:  1, // see NOTE in Volume
 		},
@@ -25,8 +25,8 @@ func (c *Instances) CreateVolumes(id *int64, m *models.Instance) error {
 		id:    id,
 		fn: func(_ *Action) error {
 			return c.inParallel(m.Release.Config.Volumes, func(vc interface{}) error {
-				volConf := vc.(*models.VolumeBlueprint)
-				var volume *models.Volume
+				volConf := vc.(*model.VolumeBlueprint)
+				var volume *model.Volume
 
 				for _, existingVol := range m.Volumes {
 					if existingVol.Name == volConf.Name {
@@ -36,7 +36,7 @@ func (c *Instances) CreateVolumes(id *int64, m *models.Instance) error {
 				}
 
 				if volume == nil {
-					volume = &models.Volume{
+					volume = &model.Volume{
 						Instance:   m,
 						InstanceID: m.ID,
 						Kube:       m.Component.App.Kube,
@@ -64,9 +64,9 @@ func (c *Instances) CreateVolumes(id *int64, m *models.Instance) error {
 	return action.Now()
 }
 
-func (c *Instances) Start(id *int64, m *models.Instance) *Action {
+func (c *Instances) Start(id *int64, m *model.Instance) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "starting",
 			MaxRetries:  5,
 		},
@@ -113,7 +113,7 @@ func (c *Instances) Start(id *int64, m *models.Instance) *Action {
 			if err != nil {
 				return err
 			}
-			m.Addresses = &models.Addresses{
+			m.Addresses = &model.Addresses{
 				External: externalAddrs,
 				Internal: internalAddrs,
 			}
@@ -121,7 +121,7 @@ func (c *Instances) Start(id *int64, m *models.Instance) *Action {
 			// TODO sloppy... we need a way (can't do this at initialize due to how we set
 			// Release above) to get the volume conf from the Release for a volume
 			err = c.inParallel(m.Volumes, func(vi interface{}) error {
-				volume := vi.(*models.Volume)
+				volume := vi.(*model.Volume)
 				for _, volConf := range m.Release.Config.Volumes {
 					if volume.Name == volConf.Name && volume.Size != volConf.Size {
 						volume.Size = volConf.Size
@@ -159,9 +159,9 @@ func (c *Instances) Start(id *int64, m *models.Instance) *Action {
 	}
 }
 
-func (c *Instances) Stop(id *int64, m *models.Instance) *Action {
+func (c *Instances) Stop(id *int64, m *model.Instance) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "stopping",
 			MaxRetries:  5,
 		},
@@ -179,9 +179,9 @@ func (c *Instances) Stop(id *int64, m *models.Instance) *Action {
 	}
 }
 
-func (c *Instances) Delete(id *int64, m *models.Instance) *Action {
+func (c *Instances) Delete(id *int64, m *model.Instance) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  5,
 		},
@@ -211,7 +211,7 @@ func (c *Instances) Delete(id *int64, m *models.Instance) *Action {
 	}
 }
 
-func (c *Instances) Log(m *models.Instance) (string, error) {
+func (c *Instances) Log(m *model.Instance) (string, error) {
 	pod, err := c.pod(m)
 	if err != nil {
 		return "", err
@@ -231,7 +231,7 @@ func (err *PodNotFoundError) Error() string {
 	return fmt.Sprintf("Pod not found for Instance %d", err.InstanceID)
 }
 
-func (c *Instances) pod(m *models.Instance) (*guber.Pod, error) {
+func (c *Instances) pod(m *model.Instance) (*guber.Pod, error) {
 	q := &guber.QueryParams{
 		LabelSelector: "instance=" + m.Name,
 	}
@@ -245,13 +245,13 @@ func (c *Instances) pod(m *models.Instance) (*guber.Pod, error) {
 	return nil, &PodNotFoundError{m.ID}
 }
 
-func (c *Instances) serviceSet(m *models.Instance) (*ServiceSet, error) {
+func (c *Instances) serviceSet(m *model.Instance) (*ServiceSet, error) {
 	labelSelector := map[string]string{"instance_service": m.Name}
-	portFilter := func(port *models.Port) bool { return port.PerInstance }
+	portFilter := func(port *model.Port) bool { return port.PerInstance }
 	return NewServiceSet(c.core, m.Component, m.Release, m.Name, labelSelector, portFilter)
 }
 
-func (c *Instances) provisionReplicationController(m *models.Instance) error {
+func (c *Instances) provisionReplicationController(m *model.Instance) error {
 	if _, err := c.core.K8S(m.Component.App.Kube).ReplicationControllers(m.Component.App.Name).Get(m.Name); err == nil {
 		return nil // already provisioned
 	} else if !isKubeNotFoundErr(err) {
@@ -314,7 +314,7 @@ func (c *Instances) provisionReplicationController(m *models.Instance) error {
 	return err
 }
 
-func (c *Instances) deleteReplicationControllerAndPod(m *models.Instance) error {
+func (c *Instances) deleteReplicationControllerAndPod(m *model.Instance) error {
 	pod, err := c.pod(m)
 	if err != nil {
 		if _, podNotFound := err.(*PodNotFoundError); podNotFound {

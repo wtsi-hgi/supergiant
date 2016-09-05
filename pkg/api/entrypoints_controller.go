@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListEntrypoints(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.Entrypoint))
+func ListEntrypoints(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.Entrypoint))
 }
 
-func CreateEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Entrypoint)
+func CreateEntrypoint(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Entrypoint)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreateEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdateEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
+func UpdateEntrypoint(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.Entrypoint)
+	item := new(model.Entrypoint)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.Entrypoints.Update(id, new(models.Entrypoint), item); err != nil {
+	if err := core.Entrypoints.Update(id, new(model.Entrypoint), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Entrypoint)
+func GetEntrypoint(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Entrypoint)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func GetEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeleteEntrypoint(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Entrypoint)
+func DeleteEntrypoint(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Entrypoint)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListPrivateImageKeys(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.PrivateImageKey))
+func ListPrivateImageKeys(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.PrivateImageKey))
 }
 
-func CreatePrivateImageKey(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.PrivateImageKey)
+func CreatePrivateImageKey(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.PrivateImageKey)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreatePrivateImageKey(core *core.Core, r *http.Request) (*Response, error) 
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdatePrivateImageKey(core *core.Core, r *http.Request) (*Response, error) {
+func UpdatePrivateImageKey(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.PrivateImageKey)
+	item := new(model.PrivateImageKey)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.PrivateImageKeys.Update(id, new(models.PrivateImageKey), item); err != nil {
+	if err := core.PrivateImageKeys.Update(id, new(model.PrivateImageKey), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetPrivateImageKey(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.PrivateImageKey)
+func GetPrivateImageKey(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.PrivateImageKey)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func GetPrivateImageKey(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeletePrivateImageKey(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.PrivateImageKey)
+func DeletePrivateImageKey(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.PrivateImageKey)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

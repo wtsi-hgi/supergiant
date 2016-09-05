@@ -1,14 +1,14 @@
 package core
 
-import "github.com/supergiant/supergiant/pkg/models"
+import "github.com/supergiant/supergiant/pkg/model"
 
 type Volumes struct {
 	Collection
 }
 
-func (c *Volumes) Provision(id *int64, m *models.Volume) *Action {
+func (c *Volumes) Provision(id *int64, m *model.Volume) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "provisioning",
 
 			// TODO
@@ -43,9 +43,9 @@ func (c *Volumes) Provision(id *int64, m *models.Volume) *Action {
 	}
 }
 
-func (c *Volumes) Delete(id *int64, m *models.Volume) *Action {
+func (c *Volumes) Delete(id *int64, m *model.Volume) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  5,
 		},
@@ -63,9 +63,9 @@ func (c *Volumes) Delete(id *int64, m *models.Volume) *Action {
 }
 
 // Resize the Volume
-func (c *Volumes) Resize(id *int64, m *models.Volume) *Action {
+func (c *Volumes) Resize(id *int64, m *model.Volume) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "resizing",
 		},
 		core:  c.core,
@@ -78,9 +78,9 @@ func (c *Volumes) Resize(id *int64, m *models.Volume) *Action {
 	}
 }
 
-func (c *Volumes) WaitForAvailable(id *int64, m *models.Volume) error {
+func (c *Volumes) WaitForAvailable(id *int64, m *model.Volume) error {
 	action := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "waiting for available",
 		},
 		core:  c.core,

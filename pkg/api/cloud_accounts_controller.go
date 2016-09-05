@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListCloudAccounts(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.CloudAccount))
+func ListCloudAccounts(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.CloudAccount))
 }
 
-func CreateCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.CloudAccount)
+func CreateCloudAccount(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.CloudAccount)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreateCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdateCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
+func UpdateCloudAccount(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.CloudAccount)
+	item := new(model.CloudAccount)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.CloudAccounts.Update(id, new(models.CloudAccount), item); err != nil {
+	if err := core.CloudAccounts.Update(id, new(model.CloudAccount), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.CloudAccount)
+func GetCloudAccount(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.CloudAccount)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func GetCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeleteCloudAccount(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.CloudAccount)
+func DeleteCloudAccount(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.CloudAccount)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

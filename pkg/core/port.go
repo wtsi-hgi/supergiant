@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
@@ -26,43 +26,43 @@ func findPortsUniqueToSetA(setA []*Port, setB []*Port) (ports []*Port) {
 
 type Port struct {
 	core *Core
-	*models.Port
+	*model.Port
 	service *guber.Service
 	// entrypoint is nil if it's an internal port
-	entrypoint *models.Entrypoint
+	entrypoint *model.Entrypoint
 }
 
 func (p *Port) name() string {
 	return strconv.Itoa(p.Number)
 }
 
-func (p *Port) internalAddress() *models.PortAddress {
+func (p *Port) internalAddress() *model.PortAddress {
 	svcMeta := p.service.Metadata
 	host := fmt.Sprintf("%s.%s.svc.cluster.local", svcMeta.Name, svcMeta.Namespace)
-	return &models.PortAddress{
+	return &model.PortAddress{
 		Port: p.name(),
 		// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.Number),
 		Address: fmt.Sprintf("%s:%d", host, p.Number),
 	}
 }
 
-func (p *Port) externalAddress() *models.PortAddress {
+func (p *Port) externalAddress() *model.PortAddress {
 	if p.entrypoint == nil {
 		host := ""
-		node := new(models.Node)
+		node := new(model.Node)
 		if err := p.core.DB.First(node); err != nil {
 			p.core.Log.Errorf("Error when fetching nodes for external address IP: %s", err)
 		} else {
 			host = node.ExternalIP
 		}
-		return &models.PortAddress{
+		return &model.PortAddress{
 			Port: p.name(),
 			// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), host, p.nodePort()),
 			Address: fmt.Sprintf("%s:%d", host, p.nodePort()),
 		}
 	}
 
-	return &models.PortAddress{
+	return &model.PortAddress{
 		Port: p.name(),
 		// Address: fmt.Sprintf("%s://%s:%d", protoWithDefault(p.Protocol), p.entrypoint.Address, p.elbPort()),
 		Address: fmt.Sprintf("%s:%d", p.entrypoint.Address, p.elbPort()),

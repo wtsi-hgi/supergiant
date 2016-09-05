@@ -5,18 +5,19 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func CreateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.Release)
+	m := new(model.Release)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.Releases.Create(m); err != nil {
-		return renderTemplate(w, "releases/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Components",
 			"formAction": "/ui/releases",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -30,15 +31,15 @@ func UpdateRelease(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	m := new(models.Release)
+	m := new(model.Release)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
-	m.ID = id
-	if err := sg.Releases.Update(m); err != nil {
-		return renderTemplate(w, "releases/new.html", map[string]interface{}{
+	if err := sg.Releases.Update(id, m); err != nil {
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Components",
-			"formAction": fmt.Sprintf("/ui/releases/%d", *m.ID),
+			"formAction": fmt.Sprintf("/ui/releases/%d", *id),
+			"formMethod": "PUT",
 			"model":      m,
 			"error":      err.Error(),
 		})

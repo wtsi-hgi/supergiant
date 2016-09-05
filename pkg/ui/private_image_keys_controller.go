@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func NewPrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "private_image_keys/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Private Image Keys",
 		"formAction": "/ui/private_image_keys",
+		"formMethod": "POST",
 		"model": map[string]interface{}{
 			"host":     "index.docker.io",
 			"username": "",
@@ -21,14 +22,15 @@ func NewPrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Reques
 }
 
 func CreatePrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.PrivateImageKey)
+	m := new(model.PrivateImageKey)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.PrivateImageKeys.Create(m); err != nil {
-		return renderTemplate(w, "private_image_keys/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Private Image Keys",
 			"formAction": "/ui/private_image_keys",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -50,7 +52,7 @@ func ListPrivateImageKeys(sg *client.Client, w http.ResponseWriter, r *http.Requ
 			"field": "username",
 		},
 	}
-	return renderTemplate(w, "private_image_keys/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Private Image Keys",
 		"uiBasePath":  "/ui/private_image_keys",
 		"apiListPath": "/api/v0/private_image_keys",
@@ -67,11 +69,11 @@ func GetPrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return err
 	}
-	item := new(models.PrivateImageKey)
+	item := new(model.PrivateImageKey)
 	if err := sg.PrivateImageKeys.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "private_image_keys/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Private Image Keys",
 		"model": item,
 	})
@@ -82,9 +84,8 @@ func DeletePrivateImageKey(sg *client.Client, w http.ResponseWriter, r *http.Req
 	if err != nil {
 		return err
 	}
-	item := new(models.PrivateImageKey)
-	item.ID = id
-	if err := sg.PrivateImageKeys.Delete(item); err != nil {
+	item := new(model.PrivateImageKey)
+	if err := sg.PrivateImageKeys.Delete(id, item); err != nil {
 		return err
 	}
 	// http.Redirect(w, r, "/ui/private_image_keys", http.StatusFound)

@@ -2,23 +2,20 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
-
-type Error struct {
-	Status int    `json:"status"`
-	Error  string `json:"error"`
-}
 
 type Response struct {
 	Status int
@@ -27,7 +24,7 @@ type Response struct {
 
 //------------------------------------------------------------------------------
 
-type bodyDecodingError struct { // ------- status bad request
+type bodyDecodingError struct { // status bad request
 	err error
 }
 
@@ -35,26 +32,37 @@ func (e *bodyDecodingError) Error() string {
 	return "Error decoding JSON body: " + e.err.Error()
 }
 
+var (
+	errorUnauthorized  = errors.New("Unauthorized")
+	errorBadAuthHeader = errors.New("Improperly formatted Authorization header")
+)
+
 //------------------------------------------------------------------------------
 
-func errorHttpStatus(err error) int {
-	// 400
+func errorHTTPStatus(err error) int {
 	if _, ok := err.(*bodyDecodingError); ok {
-		return http.StatusBadRequest
+		return 400
 	}
-	// 404
+	if err == core.ErrorBadLogin {
+		return 400
+	}
+	if err == errorUnauthorized || err == errorBadAuthHeader {
+		return 401
+	}
+	if _, ok := err.(*errorForbidden); ok {
+		return 403
+	}
 	if err == gorm.ErrRecordNotFound {
-		return http.StatusNotFound
+		return 404
 	}
-	// 500
-	return http.StatusInternalServerError
+	return 500
 }
 
 const logViewBytesize int64 = 2048
 
 func logHandler(core *core.Core) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !validBasicAuth(core, w, r) {
+		if user := loadUser(core, w, r); user == nil {
 			return
 		}
 
@@ -97,41 +105,73 @@ func logHandler(core *core.Core) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func validBasicAuth(core *core.Core, w http.ResponseWriter, r *http.Request) bool {
-	// TODO repeated in UI, move to core helpers
-	w.Header().Set("WWW-Authenticate", `Basic realm="supergiant"`)
-	username, password, _ := r.BasicAuth()
-	if username != core.HTTPBasicUser || password != core.HTTPBasicPass {
-		http.Error(w, "authorization failed", http.StatusUnauthorized)
-		return false
+func loadUser(core *core.Core, w http.ResponseWriter, r *http.Request) *model.User {
+	auth := r.Header.Get("Authorization")
+	tokenMatch := regexp.MustCompile(`^SGAPI (token|session)="([A-Za-z0-9]{32})"$`).FindStringSubmatch(auth)
+
+	if len(tokenMatch) != 3 {
+		respond(w, nil, errorBadAuthHeader)
+		return nil
 	}
-	return true
+
+	switch tokenMatch[1] {
+	case "token":
+		user := new(model.User)
+		if err := core.DB.Where("api_token = ?", tokenMatch[2]).First(user); err != nil {
+			respond(w, nil, errorUnauthorized)
+			return nil
+		}
+
+		return user
+
+	case "session":
+		session := new(model.Session)
+		if err := core.Sessions.Get(tokenMatch[2], session); err != nil {
+			respond(w, nil, errorUnauthorized)
+			return nil
+		}
+
+		return session.User
+	}
+
+	respond(w, nil, errorBadAuthHeader)
+	return nil
 }
 
-func handlerFunc(core *core.Core, fn func(*core.Core, *http.Request) (*Response, error)) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func respond(w http.ResponseWriter, resp *Response, err error) {
+	if err != nil {
+		status := errorHTTPStatus(err)
+		resp = &Response{
+			Status: status,
+			Object: &model.Error{
+				Status:  status,
+				Message: err.Error(),
+			},
+		}
+	}
+	body, marshalErr := json.MarshalIndent(resp.Object, "", "  ")
+	if marshalErr != nil {
+		panic(marshalErr)
+	}
+	w.WriteHeader(resp.Status)
+	w.Write(append(body, []byte{10}...)) // add line break (without string conversion)
+}
 
-		if !validBasicAuth(core, w, r) {
+func openHandler(c *core.Core, fn func(*core.Core, *http.Request) (*Response, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp, err := fn(c, r)
+		respond(w, resp, err)
+	}
+}
+
+func restrictedHandler(core *core.Core, fn func(*core.Core, *model.User, *http.Request) (*Response, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := loadUser(core, w, r)
+		if user == nil {
 			return
 		}
-
-		resp, err := fn(core, r)
-
-		if err != nil {
-			status := errorHttpStatus(err)
-			resp = &Response{
-				Status: status,
-				Object: &Error{status, err.Error()},
-			}
-		}
-
-		body, marshalErr := json.MarshalIndent(resp.Object, "", "  ")
-		if marshalErr != nil {
-			panic(marshalErr)
-		}
-
-		w.WriteHeader(resp.Status)
-		w.Write(append(body, []byte{10}...)) // add line break (without string conversion)
+		resp, err := fn(core, user, r)
+		respond(w, resp, err)
 	}
 }
 
@@ -153,21 +193,21 @@ func parseIncludes(r *http.Request) (includes []string) {
 	return
 }
 
-func decodeBodyInto(r *http.Request, item models.Model) error {
+func decodeBodyInto(r *http.Request, item model.Model) error {
 	if err := json.NewDecoder(r.Body).Decode(item); err != nil {
 		return &bodyDecodingError{err}
 	}
-	models.ZeroReadonlyFields(item)
+	model.ZeroReadonlyFields(item)
 	return nil
 }
 
-func itemResponse(core *core.Core, item models.Model, status int) (*Response, error) {
+func itemResponse(core *core.Core, item model.Model, status int) (*Response, error) {
 	core.SetResourceActionStatus(item)
 	return &Response{status, item}, nil
 }
 
-func handleList(core *core.Core, r *http.Request, model models.Model) (*Response, error) {
-	slice := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(model)), 0, 0)
+func handleList(core *core.Core, r *http.Request, m model.Model) (*Response, error) {
+	slice := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(m)), 0, 0)
 	itemsPtr := reflect.New(slice.Type())
 	items := itemsPtr.Elem()
 	items.Set(slice)
@@ -175,7 +215,7 @@ func handleList(core *core.Core, r *http.Request, model models.Model) (*Response
 	qstr := r.URL.Query()
 
 	var andQueries []string
-	for _, field := range models.IndexedFields(model) {
+	for _, field := range model.IndexedFields(m) {
 		if val := qstr.Get(field.JSONName); val != "" {
 			if field.Kind == reflect.Int64 {
 				andQueries = append(andQueries, fmt.Sprintf("%s = %s", field.JSONName, val))
@@ -196,7 +236,7 @@ func handleList(core *core.Core, r *http.Request, model models.Model) (*Response
 	}
 
 	for i := 0; i < items.Len(); i++ {
-		core.SetResourceActionStatus(items.Index(i).Interface().(models.Model))
+		core.SetResourceActionStatus(items.Index(i).Interface().(model.Model))
 	}
 
 	return &Response{
