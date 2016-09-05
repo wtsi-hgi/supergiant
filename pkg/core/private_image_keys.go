@@ -1,6 +1,6 @@
 package core
 
-import "github.com/supergiant/supergiant/pkg/models"
+import "github.com/supergiant/supergiant/pkg/model"
 
 var defaultRegistryHost = "index.docker.io"
 
@@ -8,7 +8,7 @@ type PrivateImageKeys struct {
 	Collection
 }
 
-func (c *PrivateImageKeys) Create(m *models.PrivateImageKey) error {
+func (c *PrivateImageKeys) Create(m *model.PrivateImageKey) error {
 	if m.Host == "" {
 		m.Host = defaultRegistryHost
 	}
@@ -17,7 +17,7 @@ func (c *PrivateImageKeys) Create(m *models.PrivateImageKey) error {
 }
 
 // // A nil, nil return would mean the image is publicly accessible.
-// func (c *PrivateImageKeys) findByImageRefIfAuthRequired(imageRef string) (*models.PrivateImageKey, error) {
+// func (c *PrivateImageKeys) findByImageRefIfAuthRequired(imageRef string) (*model.PrivateImageKey, error) {
 // 	ref, err := reference.ParseNamed(imageRef)
 // 	if err != nil {
 // 		panic(err)
@@ -50,7 +50,7 @@ func (c *PrivateImageKeys) Create(m *models.PrivateImageKey) error {
 // 	// NOTE I'm not certain if DockerHub is the only that requires token auth...
 // 	requiresTokenAuth := host == "index.docker.io"
 //
-// 	var keys []*models.PrivateImageKey
+// 	var keys []*model.PrivateImageKey
 // 	if err := c.core.DB.Find(&keys, "host = ?", host); err != nil {
 // 		return nil, err
 // 	}

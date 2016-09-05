@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListApps(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.App))
+func ListApps(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.App))
 }
 
-func CreateApp(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.App)
+func CreateApp(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.App)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreateApp(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdateApp(core *core.Core, r *http.Request) (*Response, error) {
+func UpdateApp(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.App)
+	item := new(model.App)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.Apps.Update(id, new(models.App), item); err != nil {
+	if err := core.Apps.Update(id, new(model.App), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetApp(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.App)
+func GetApp(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.App)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func GetApp(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeleteApp(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.App)
+func DeleteApp(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.App)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

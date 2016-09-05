@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type CapacityService struct {
@@ -14,7 +14,7 @@ type CapacityService struct {
 }
 
 func (s *CapacityService) Perform() error {
-	var kubes []*models.Kube
+	var kubes []*model.Kube
 	if err := s.core.DB.Where("ready = ?", true).Preload("CloudAccount").Find(&kubes); err != nil {
 		return err
 	}
@@ -57,12 +57,12 @@ var (
 
 type KubeScaler struct {
 	core            *Core
-	kube            *models.Kube
+	kube            *model.Kube
 	nodeSizes       []*NodeSize
 	largestNodeSize *NodeSize
 }
 
-func newKubeScaler(c *Core, kube *models.Kube) *KubeScaler {
+func newKubeScaler(c *Core, kube *model.Kube) *KubeScaler {
 	s := &KubeScaler{core: c, kube: kube}
 	// We iterate on all nodeSizes here first to preserve the cost order
 	for _, it := range c.NodeSizes[kube.CloudAccount.Provider] {
@@ -155,7 +155,7 @@ func (s *KubeScaler) Scale() error {
 	}
 
 	// Load existing Nodes
-	s.kube.Nodes = make([]*models.Node, 0)
+	s.kube.Nodes = make([]*model.Node, 0)
 	if err := s.core.DB.Preload("Kube.CloudAccount").Find(&s.kube.Nodes, "kube_id = ?", s.kube.ID); err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (s *KubeScaler) Scale() error {
 	// }
 
 	for _, pnode := range projectedNodes {
-		node := &models.Node{
+		node := &model.Node{
 			KubeID: s.kube.ID,
 			Size:   pnode.Size.Name,
 		}
@@ -330,7 +330,7 @@ func (pnode *projectedNode) usedRAM() (u float64) {
 				continue
 			}
 
-			b := new(models.BytesValue)
+			b := new(model.BytesValue)
 			if err := b.UnmarshalJSON([]byte(memStr)); err != nil {
 				panic(err)
 			}
@@ -357,7 +357,7 @@ func (pnode *projectedNode) usedCPU() (u float64) {
 				continue
 			}
 
-			c := new(models.CoresValue)
+			c := new(model.CoresValue)
 			if err := c.UnmarshalJSON([]byte(cpuStr)); err != nil {
 				panic(err)
 			}

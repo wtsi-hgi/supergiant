@@ -25,16 +25,9 @@ See the [docs](docs/v0/apps.md).
 
 ### Development
 
-Run PostgreSQL
+Create Admin User
 ```shell
-pg_ctl -D /usr/local/var/postgres -l /usr/local/var/postgres/server.log start
-```
-
-Create database
-```sql
-CREATE DATABASE supergiant_development;
-CREATE USER supergiant WITH PASSWORD 'password';
-GRANT ALL PRIVILEGES ON DATABASE supergiant_development to supergiant;
+godep go run cmd/generate_admin_user/generate_admin_user.go --config-file config/config.json
 ```
 
 Run
@@ -42,11 +35,10 @@ Run
 godep go run main.go --config-file config/config.json
 ```
 
-<!-- ### Tests
-
+Test
 ```shell
-godep go test ./...
-``` -->
+godep go test -v ./test/...
+```
 
 ### License
 

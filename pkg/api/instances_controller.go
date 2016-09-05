@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListInstances(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.Instance))
+func ListInstances(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.Instance))
 }
 
-func GetInstance(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Instance)
+func GetInstance(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Instance)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -23,8 +23,8 @@ func GetInstance(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func StartInstance(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Instance)
+func StartInstance(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Instance)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -35,8 +35,8 @@ func StartInstance(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func StopInstance(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Instance)
+func StopInstance(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Instance)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -47,8 +47,8 @@ func StopInstance(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func DeleteInstance(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Instance)
+func DeleteInstance(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Instance)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -61,8 +61,8 @@ func DeleteInstance(core *core.Core, r *http.Request) (*Response, error) {
 
 //------------------------------------------------------------------------------
 
-func ViewInstanceLog(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Instance)
+func ViewInstanceLog(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Instance)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

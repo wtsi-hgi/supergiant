@@ -3,14 +3,14 @@ package core
 import (
 	"errors"
 
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type CloudAccounts struct {
 	Collection
 }
 
-func (c *CloudAccounts) Create(m *models.CloudAccount) error {
+func (c *CloudAccounts) Create(m *model.CloudAccount) error {
 	// NOTE we have to do pre-validation here in order to make sure provider is correct
 	if err := validateFields(m); err != nil {
 		return err
@@ -22,7 +22,7 @@ func (c *CloudAccounts) Create(m *models.CloudAccount) error {
 	return c.Collection.Create(m)
 }
 
-func (c *CloudAccounts) Delete(id *int64, m *models.CloudAccount) error {
+func (c *CloudAccounts) Delete(id *int64, m *model.CloudAccount) error {
 	if err := c.core.DB.Find(&m.Kubes, "cloud_account_id = ?", id); err != nil {
 		return err
 	}
@@ -36,10 +36,10 @@ func (c *CloudAccounts) Delete(id *int64, m *models.CloudAccount) error {
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *CloudAccounts) provider(m *models.CloudAccount) Provider {
+func (c *CloudAccounts) provider(m *model.CloudAccount) Provider {
 	switch m.Provider {
 	case "aws":
-		return &AWSProvider{c.core, m.Credentials}
+		return c.core.AWSProvider(m.Credentials)
 	default:
 		panic("Could not load provider interface for " + m.Provider)
 	}

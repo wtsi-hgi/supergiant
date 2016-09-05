@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 // kube_helpers.go is a collection of helper methods that convert a Supergiant
@@ -22,7 +22,7 @@ func isKubeAlreadyExistsErr(err error) bool {
 	return yes
 }
 
-func kubeVolumeMounts(m *models.ContainerBlueprint) (volMounts []*guber.VolumeMount) {
+func kubeVolumeMounts(m *model.ContainerBlueprint) (volMounts []*guber.VolumeMount) {
 	for _, mount := range m.Mounts {
 		volMounts = append(volMounts, &guber.VolumeMount{
 			Name:      mount.Volume,
@@ -32,21 +32,21 @@ func kubeVolumeMounts(m *models.ContainerBlueprint) (volMounts []*guber.VolumeMo
 	return
 }
 
-func kubeContainerPorts(m *models.ContainerBlueprint) (cPorts []*guber.ContainerPort) {
+func kubeContainerPorts(m *model.ContainerBlueprint) (cPorts []*guber.ContainerPort) {
 	for _, port := range m.Ports {
 		cPorts = append(cPorts, &guber.ContainerPort{ContainerPort: port.Number})
 	}
 	return
 }
 
-func interpolatedEnvVars(m *models.ContainerBlueprint, instance *models.Instance) (envVars []*guber.EnvVar) {
+func interpolatedEnvVars(m *model.ContainerBlueprint, instance *model.Instance) (envVars []*guber.EnvVar) {
 	for _, envVar := range m.Env {
 		envVars = append(envVars, asKubeEnvVar(envVar, instance))
 	}
 	return envVars
 }
 
-func asKubeContainer(m *models.ContainerBlueprint, instance *models.Instance) *guber.Container { // NOTE how instance must be passed here
+func asKubeContainer(m *model.ContainerBlueprint, instance *model.Instance) *guber.Container { // NOTE how instance must be passed here
 	// TODO
 	resources := &guber.Resources{
 		Requests: new(guber.ResourceValues),
@@ -54,10 +54,10 @@ func asKubeContainer(m *models.ContainerBlueprint, instance *models.Instance) *g
 	}
 
 	if m.RAMRequest == nil {
-		m.RAMRequest = new(models.BytesValue)
+		m.RAMRequest = new(model.BytesValue)
 	}
 	if m.CPURequest == nil {
-		m.CPURequest = new(models.CoresValue)
+		m.CPURequest = new(model.CoresValue)
 	}
 	resources.Requests.Memory = m.RAMRequest.ToKubeMebibytes()
 	resources.Requests.CPU = m.CPURequest.ToKubeMillicores()
@@ -95,14 +95,14 @@ func asKubeContainer(m *models.ContainerBlueprint, instance *models.Instance) *g
 
 // EnvVar
 //==============================================================================
-func interpolatedValue(m *models.EnvVar, instance *models.Instance) string {
+func interpolatedValue(m *model.EnvVar, instance *model.Instance) string {
 	r := strings.NewReplacer(
 		"{{ instance_id }}", strconv.Itoa(instance.Num),
 		"{{ other_stuff }}", "TODO")
 	return r.Replace(m.Value)
 }
 
-func asKubeEnvVar(m *models.EnvVar, instance *models.Instance) *guber.EnvVar {
+func asKubeEnvVar(m *model.EnvVar, instance *model.Instance) *guber.EnvVar {
 	return &guber.EnvVar{
 		Name:  m.Name,
 		Value: interpolatedValue(m, instance),
@@ -111,7 +111,7 @@ func asKubeEnvVar(m *models.EnvVar, instance *models.Instance) *guber.EnvVar {
 
 // Port
 //==============================================================================
-func asKubeServicePort(m *models.Port) *guber.ServicePort {
+func asKubeServicePort(m *model.Port) *guber.ServicePort {
 	return &guber.ServicePort{
 		Name:     strconv.Itoa(m.Number),
 		Port:     m.Number,
@@ -121,7 +121,7 @@ func asKubeServicePort(m *models.Port) *guber.ServicePort {
 
 // ImageRepo
 //==============================================================================
-func provisionSecret(core *Core, app *models.App, key *models.PrivateImageKey) error {
+func provisionSecret(core *Core, app *model.App, key *model.PrivateImageKey) error {
 	secret := &guber.Secret{
 		Metadata: &guber.Metadata{
 			Name: key.Username,
@@ -138,21 +138,21 @@ func provisionSecret(core *Core, app *models.App, key *models.PrivateImageKey) e
 }
 
 // Misc
-func totalCpuLimit(pod *guber.Pod) *models.CoresValue {
-	cores := new(models.CoresValue)
+func totalCpuLimit(pod *guber.Pod) *model.CoresValue {
+	cores := new(model.CoresValue)
 	for _, container := range pod.Spec.Containers {
 		if container.Resources != nil && container.Resources.Limits != nil {
-			cores.Millicores += models.CoresFromString(container.Resources.Limits.CPU).Millicores
+			cores.Millicores += model.CoresFromString(container.Resources.Limits.CPU).Millicores
 		}
 	}
 	return cores
 }
 
-func totalRamLimit(pod *guber.Pod) *models.BytesValue {
-	bytes := new(models.BytesValue)
+func totalRamLimit(pod *guber.Pod) *model.BytesValue {
+	bytes := new(model.BytesValue)
 	for _, container := range pod.Spec.Containers {
 		if container.Resources != nil && container.Resources.Limits != nil {
-			bytes.Bytes += models.BytesFromString(container.Resources.Limits.Memory).Bytes
+			bytes.Bytes += model.BytesFromString(container.Resources.Limits.Memory).Bytes
 		}
 	}
 	return bytes

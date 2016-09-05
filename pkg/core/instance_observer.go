@@ -1,13 +1,13 @@
 package core
 
-import "github.com/supergiant/supergiant/pkg/models"
+import "github.com/supergiant/supergiant/pkg/model"
 
 type InstanceObserver struct {
 	core *Core
 }
 
 func (s *InstanceObserver) Perform() error {
-	var instances []*models.Instance
+	var instances []*model.Instance
 	if err := s.core.DB.Preload("Component.App.Kube.CloudAccount").Where("started = ?", true).Find(&instances); err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (s *InstanceObserver) Perform() error {
 				// NOTE Heapster will return limits lower than usage values when there
 				// are no limits set, so we lookup the host Node and supply that for limit.
 				if instance.CPULimit < instance.CPUUsage || instance.RAMLimit < instance.RAMUsage {
-					node := new(models.Node)
+					node := new(model.Node)
 					if err := s.core.DB.First(node, "name = ?", pod.Spec.NodeName); err != nil {
 						return err
 					}

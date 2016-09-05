@@ -5,19 +5,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Client struct {
-	BaseURL  string
-	Username string
-	Password string
+	BaseURL   string
+	AuthType  string // token, session
+	AuthToken string
 
 	httpClient *http.Client
 
+	Sessions         *Sessions
+	Users            *Users
 	CloudAccounts    *CloudAccounts
 	Kubes            *Kubes
 	Apps             *Apps
@@ -30,11 +34,11 @@ type Client struct {
 	Nodes            *Nodes
 }
 
-func New(url string, user string, pass string, certFile string) *Client {
+func New(url string, authType string, authToken string, certFile string) *Client {
 	client := &Client{
-		BaseURL:  url,
-		Username: user,
-		Password: pass,
+		BaseURL:   url,
+		AuthType:  authType,
+		AuthToken: authToken,
 	}
 
 	transport := new(http.Transport)
@@ -57,6 +61,8 @@ func New(url string, user string, pass string, certFile string) *Client {
 		Transport: transport,
 	}
 
+	client.Sessions = &Sessions{Collection{client, "sessions"}}
+	client.Users = &Users{Collection{client, "users"}}
 	client.CloudAccounts = &CloudAccounts{Collection{client, "cloud_accounts"}}
 	client.Kubes = &Kubes{Collection{client, "kubes"}}
 	client.Apps = &Apps{Collection{client, "apps"}}
@@ -95,7 +101,7 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		return err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	req.Header.Set("Authorization", fmt.Sprintf(`SGAPI %s="%s"`, c.AuthType, c.AuthToken))
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -108,7 +114,11 @@ func (c *Client) request(method string, path string, in interface{}, out interfa
 		if err != nil {
 			return err
 		}
-		return errors.New(string(body))
+		errModel := new(model.Error)
+		if err := json.Unmarshal(body, errModel); err != nil {
+			return err
+		}
+		return errModel
 	}
 
 	if out != nil {

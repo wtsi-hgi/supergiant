@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/supergiant/supergiant/pkg/deploy"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Components struct {
 	Collection
 }
 
-func (c *Components) Deploy(id *int64, m *models.Component) *Action {
+// NOTE deploy has User passed into pass API token to CustomDeployScript if used
+func (c *Components) Deploy(requester *model.User, id *int64, m *model.Component) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deploying",
 			MaxRetries:  5,
 		},
@@ -44,7 +45,7 @@ func (c *Components) Deploy(id *int64, m *models.Component) *Action {
 					continue
 				}
 
-				instance := &models.Instance{
+				instance := &model.Instance{
 					Component:   m,
 					ComponentID: m.ID,
 					Release:     m.TargetRelease,
@@ -61,7 +62,7 @@ func (c *Components) Deploy(id *int64, m *models.Component) *Action {
 			// Create Volumes in parallel
 			if m.TargetRelease.Config.Volumes != nil {
 				err := c.core.Instances.inParallel(m.Instances, func(mi interface{}) error {
-					instance := mi.(*models.Instance)
+					instance := mi.(*model.Instance)
 					return c.core.Instances.CreateVolumes(instance.ID, instance)
 				})
 				if err != nil {
@@ -102,7 +103,7 @@ func (c *Components) Deploy(id *int64, m *models.Component) *Action {
 				}
 			} else {
 				// This goes to the deploy/ folder which uses the client package.
-				if err := deploy.Deploy(c.core.NewAPIClient(), m.ID); err != nil {
+				if err := deploy.Deploy(c.core.NewAPIClient("token", requester.APIToken), m.ID); err != nil {
 					return err
 				}
 			}
@@ -141,7 +142,7 @@ func (c *Components) Deploy(id *int64, m *models.Component) *Action {
 			if err != nil {
 				return err
 			}
-			m.Addresses = &models.Addresses{
+			m.Addresses = &model.Addresses{
 				External: externalAddrs,
 				Internal: internalAddrs,
 			}
@@ -156,9 +157,9 @@ func (c *Components) Deploy(id *int64, m *models.Component) *Action {
 	}
 }
 
-func (c *Components) Delete(id *int64, m *models.Component) *Action {
+func (c *Components) Delete(id *int64, m *model.Component) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  20,
 		},
@@ -170,7 +171,7 @@ func (c *Components) Delete(id *int64, m *models.Component) *Action {
 		fn: func(action *Action) error {
 			// Delete Instances
 			err := c.inParallel(m.Instances, func(mi interface{}) error {
-				instance := mi.(*models.Instance)
+				instance := mi.(*model.Instance)
 				return c.core.Instances.Delete(instance.ID, instance).Now()
 			})
 			if err != nil {
@@ -208,6 +209,6 @@ func (c *Components) Delete(id *int64, m *models.Component) *Action {
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *Components) serviceSet(m *models.Component) (*ServiceSet, error) {
+func (c *Components) serviceSet(m *model.Component) (*ServiceSet, error) {
 	return NewServiceSet(c.core, m, m.TargetRelease, m.Name, map[string]string{"service": m.Name}, nil)
 }

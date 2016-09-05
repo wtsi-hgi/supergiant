@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/supergiant/guber"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
@@ -21,7 +21,7 @@ var globalK8SHTTPClient = &http.Client{
 	},
 }
 
-func (c *Core) K8S(m *models.Kube) guber.Client {
+func (c *Core) K8S(m *model.Kube) guber.Client {
 	return guber.NewClient(m.MasterPublicIP, m.Username, m.Password, globalK8SHTTPClient)
 }
 
@@ -31,7 +31,7 @@ type Kubes struct {
 	Collection
 }
 
-func (c *Kubes) Create(m *models.Kube) error {
+func (c *Kubes) Create(m *model.Kube) error {
 	// Defaults
 	if m.Username == "" && m.Password == "" {
 		m.Username = util.RandomString(16)
@@ -43,7 +43,7 @@ func (c *Kubes) Create(m *models.Kube) error {
 	}
 
 	provision := &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "provisioning",
 			MaxRetries:  20,
 		},
@@ -57,9 +57,9 @@ func (c *Kubes) Create(m *models.Kube) error {
 	return provision.Async()
 }
 
-func (c *Kubes) Delete(id *int64, m *models.Kube) *Action {
+func (c *Kubes) Delete(id *int64, m *model.Kube) *Action {
 	return &Action{
-		Status: &models.ActionStatus{
+		Status: &model.ActionStatus{
 			Description: "deleting",
 			MaxRetries:  5,
 		},

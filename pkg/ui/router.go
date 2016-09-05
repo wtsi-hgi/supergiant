@@ -10,107 +10,134 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/core"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-var templates map[string]*template.Template
+var templates = make(map[string]*template.Template)
 
 func init() {
-	templates = make(map[string]*template.Template)
-
-	sharedViews, err := filepath.Glob("ui/views/_shared/*.html")
+	partials, err := filepath.Glob("ui/views/partials/*.html")
 	if err != nil {
 		panic(err)
 	}
-
-	fullViews, err := filepath.Glob("ui/views/[a-z]*/[a-z]*.html")
+	layouts, err := filepath.Glob("ui/views/*.html")
 	if err != nil {
 		panic(err)
 	}
-
-	for _, view := range fullViews {
-		key := regexp.MustCompile("/([^/]+/[^/]+.html)$").FindStringSubmatch(view)[1]
-		templates[key] = template.Must(template.ParseFiles(append(sharedViews, view)...))
+	for _, partial := range partials {
+		key := regexp.MustCompile(`([^/]+)\.html$`).FindStringSubmatch(partial)[1]
+		templates[key] = template.Must(template.ParseFiles(append(layouts, partial)...))
 	}
 }
 
-func NewRouter(sg *client.Client, baseRouter *mux.Router) *mux.Router {
+func NewRouter(c *core.Core, baseRouter *mux.Router) *mux.Router {
 	base := baseRouter.StrictSlash(true)
 
 	base.HandleFunc("/", uiRedirect).Methods("GET")
 
 	r := base.PathPrefix("/ui").Subrouter()
 
-	r.HandleFunc("/", handlerFunc(sg, Root)).Methods("GET")
+	r.HandleFunc("/", restrictedHandler(c, Root)).Methods("GET")
 
-	r.HandleFunc("/cloud_accounts/new", handlerFunc(sg, NewCloudAccount)).Methods("GET")
-	r.HandleFunc("/cloud_accounts", handlerFunc(sg, CreateCloudAccount)).Methods("POST")
-	r.HandleFunc("/cloud_accounts", handlerFunc(sg, ListCloudAccounts)).Methods("GET")
-	r.HandleFunc("/cloud_accounts/{id}", handlerFunc(sg, GetCloudAccount)).Methods("GET")
-	r.HandleFunc("/cloud_accounts/{id}/delete", handlerFunc(sg, DeleteCloudAccount)).Methods("PUT")
+	// Login-based functions can't be authenticated
+	sharedClient := c.NewAPIClient("", "")
+	r.HandleFunc("/sessions/new", openHandler(sharedClient, NewSession)).Methods("GET")
+	r.HandleFunc("/sessions", openHandler(sharedClient, CreateSession)).Methods("POST")
+	r.HandleFunc("/sessions/{id}", openHandler(sharedClient, GetSession)).Methods("GET")
 
-	r.HandleFunc("/kubes/new", handlerFunc(sg, NewKube)).Methods("GET")
-	r.HandleFunc("/kubes", handlerFunc(sg, CreateKube)).Methods("POST")
-	r.HandleFunc("/kubes", handlerFunc(sg, ListKubes)).Methods("GET")
-	r.HandleFunc("/kubes/{id}", handlerFunc(sg, GetKube)).Methods("GET")
-	r.HandleFunc("/kubes/{id}/delete", handlerFunc(sg, DeleteKube)).Methods("PUT")
+	r.HandleFunc("/sessions", restrictedHandler(c, ListSessions)).Methods("GET")
+	r.HandleFunc("/sessions/{id}/delete", restrictedHandler(c, DeleteSession)).Methods("PUT")
 
-	r.HandleFunc("/apps/new", handlerFunc(sg, NewApp)).Methods("GET")
-	r.HandleFunc("/apps", handlerFunc(sg, CreateApp)).Methods("POST")
-	r.HandleFunc("/apps", handlerFunc(sg, ListApps)).Methods("GET")
-	r.HandleFunc("/apps/{id}", handlerFunc(sg, GetApp)).Methods("GET")
-	r.HandleFunc("/apps/{id}/delete", handlerFunc(sg, DeleteApp)).Methods("PUT")
+	r.HandleFunc("/users/new", restrictedHandler(c, NewUser)).Methods("GET")
+	r.HandleFunc("/users", restrictedHandler(c, CreateUser)).Methods("POST")
+	r.HandleFunc("/users", restrictedHandler(c, ListUsers)).Methods("GET")
+	r.HandleFunc("/users/{id}", restrictedHandler(c, GetUser)).Methods("GET")
+	r.HandleFunc("/users/{id}/edit", restrictedHandler(c, EditUser)).Methods("GET")
+	r.HandleFunc("/users/{id}", restrictedHandler(c, UpdateUser)).Methods("PUT")
+	r.HandleFunc("/users/{id}/delete", restrictedHandler(c, DeleteUser)).Methods("PUT")
+	r.HandleFunc("/users/{id}/regenerate_api_token", restrictedHandler(c, RegenerateUserAPIToken)).Methods("PUT")
 
-	r.HandleFunc("/components/new", handlerFunc(sg, NewComponent)).Methods("GET")
-	r.HandleFunc("/components", handlerFunc(sg, CreateComponent)).Methods("POST")
-	r.HandleFunc("/components", handlerFunc(sg, ListComponents)).Methods("GET")
-	r.HandleFunc("/components/{id}", handlerFunc(sg, GetComponent)).Methods("GET")
-	r.HandleFunc("/components/{id}/delete", handlerFunc(sg, DeleteComponent)).Methods("PUT")
-	r.HandleFunc("/components/{id}/deploy", handlerFunc(sg, DeployComponent)).Methods("PUT")
-	r.HandleFunc("/components/{id}/configure", handlerFunc(sg, ConfigureComponent)).Methods("GET")
+	r.HandleFunc("/cloud_accounts/new", restrictedHandler(c, NewCloudAccount)).Methods("GET")
+	r.HandleFunc("/cloud_accounts", restrictedHandler(c, CreateCloudAccount)).Methods("POST")
+	r.HandleFunc("/cloud_accounts", restrictedHandler(c, ListCloudAccounts)).Methods("GET")
+	r.HandleFunc("/cloud_accounts/{id}", restrictedHandler(c, GetCloudAccount)).Methods("GET")
+	r.HandleFunc("/cloud_accounts/{id}/delete", restrictedHandler(c, DeleteCloudAccount)).Methods("PUT")
 
-	r.HandleFunc("/releases", handlerFunc(sg, CreateRelease)).Methods("POST")
-	r.HandleFunc("/releases/{id}", handlerFunc(sg, UpdateRelease)).Methods("POST")
+	r.HandleFunc("/kubes/new", restrictedHandler(c, NewKube)).Methods("GET")
+	r.HandleFunc("/kubes", restrictedHandler(c, CreateKube)).Methods("POST")
+	r.HandleFunc("/kubes", restrictedHandler(c, ListKubes)).Methods("GET")
+	r.HandleFunc("/kubes/{id}", restrictedHandler(c, GetKube)).Methods("GET")
+	r.HandleFunc("/kubes/{id}/delete", restrictedHandler(c, DeleteKube)).Methods("PUT")
 
-	r.HandleFunc("/instances", handlerFunc(sg, ListInstances)).Methods("GET")
-	r.HandleFunc("/instances/{id}", handlerFunc(sg, GetInstance)).Methods("GET")
+	r.HandleFunc("/apps/new", restrictedHandler(c, NewApp)).Methods("GET")
+	r.HandleFunc("/apps", restrictedHandler(c, CreateApp)).Methods("POST")
+	r.HandleFunc("/apps", restrictedHandler(c, ListApps)).Methods("GET")
+	r.HandleFunc("/apps/{id}", restrictedHandler(c, GetApp)).Methods("GET")
+	r.HandleFunc("/apps/{id}/delete", restrictedHandler(c, DeleteApp)).Methods("PUT")
 
-	r.HandleFunc("/volumes", handlerFunc(sg, ListVolumes)).Methods("GET")
-	r.HandleFunc("/volumes/{id}", handlerFunc(sg, GetVolume)).Methods("GET")
+	r.HandleFunc("/components/new", restrictedHandler(c, NewComponent)).Methods("GET")
+	r.HandleFunc("/components", restrictedHandler(c, CreateComponent)).Methods("POST")
+	r.HandleFunc("/components", restrictedHandler(c, ListComponents)).Methods("GET")
+	r.HandleFunc("/components/{id}", restrictedHandler(c, GetComponent)).Methods("GET")
+	r.HandleFunc("/components/{id}/delete", restrictedHandler(c, DeleteComponent)).Methods("PUT")
+	r.HandleFunc("/components/{id}/deploy", restrictedHandler(c, DeployComponent)).Methods("PUT")
+	r.HandleFunc("/components/{id}/configure", restrictedHandler(c, ConfigureComponent)).Methods("GET")
 
-	r.HandleFunc("/private_image_keys/new", handlerFunc(sg, NewPrivateImageKey)).Methods("GET")
-	r.HandleFunc("/private_image_keys", handlerFunc(sg, CreatePrivateImageKey)).Methods("POST")
-	r.HandleFunc("/private_image_keys", handlerFunc(sg, ListPrivateImageKeys)).Methods("GET")
-	r.HandleFunc("/private_image_keys/{id}", handlerFunc(sg, GetPrivateImageKey)).Methods("GET")
-	r.HandleFunc("/private_image_keys/{id}/delete", handlerFunc(sg, DeletePrivateImageKey)).Methods("PUT")
+	r.HandleFunc("/releases", restrictedHandler(c, CreateRelease)).Methods("POST")
+	r.HandleFunc("/releases/{id}", restrictedHandler(c, UpdateRelease)).Methods("PUT")
 
-	r.HandleFunc("/entrypoints/new", handlerFunc(sg, NewEntrypoint)).Methods("GET")
-	r.HandleFunc("/entrypoints", handlerFunc(sg, CreateEntrypoint)).Methods("POST")
-	r.HandleFunc("/entrypoints", handlerFunc(sg, ListEntrypoints)).Methods("GET")
-	r.HandleFunc("/entrypoints/{id}", handlerFunc(sg, GetEntrypoint)).Methods("GET")
-	r.HandleFunc("/entrypoints/{id}/delete", handlerFunc(sg, DeleteEntrypoint)).Methods("PUT")
+	r.HandleFunc("/instances", restrictedHandler(c, ListInstances)).Methods("GET")
+	r.HandleFunc("/instances/{id}", restrictedHandler(c, GetInstance)).Methods("GET")
 
-	r.HandleFunc("/nodes/new", handlerFunc(sg, NewNode)).Methods("GET")
-	r.HandleFunc("/nodes", handlerFunc(sg, CreateNode)).Methods("POST")
-	r.HandleFunc("/nodes", handlerFunc(sg, ListNodes)).Methods("GET")
-	r.HandleFunc("/nodes/{id}", handlerFunc(sg, GetNode)).Methods("GET")
-	r.HandleFunc("/nodes/{id}/delete", handlerFunc(sg, DeleteNode)).Methods("PUT")
+	r.HandleFunc("/volumes", restrictedHandler(c, ListVolumes)).Methods("GET")
+	r.HandleFunc("/volumes/{id}", restrictedHandler(c, GetVolume)).Methods("GET")
+
+	r.HandleFunc("/private_image_keys/new", restrictedHandler(c, NewPrivateImageKey)).Methods("GET")
+	r.HandleFunc("/private_image_keys", restrictedHandler(c, CreatePrivateImageKey)).Methods("POST")
+	r.HandleFunc("/private_image_keys", restrictedHandler(c, ListPrivateImageKeys)).Methods("GET")
+	r.HandleFunc("/private_image_keys/{id}", restrictedHandler(c, GetPrivateImageKey)).Methods("GET")
+	r.HandleFunc("/private_image_keys/{id}/delete", restrictedHandler(c, DeletePrivateImageKey)).Methods("PUT")
+
+	r.HandleFunc("/entrypoints/new", restrictedHandler(c, NewEntrypoint)).Methods("GET")
+	r.HandleFunc("/entrypoints", restrictedHandler(c, CreateEntrypoint)).Methods("POST")
+	r.HandleFunc("/entrypoints", restrictedHandler(c, ListEntrypoints)).Methods("GET")
+	r.HandleFunc("/entrypoints/{id}", restrictedHandler(c, GetEntrypoint)).Methods("GET")
+	r.HandleFunc("/entrypoints/{id}/delete", restrictedHandler(c, DeleteEntrypoint)).Methods("PUT")
+
+	r.HandleFunc("/nodes/new", restrictedHandler(c, NewNode)).Methods("GET")
+	r.HandleFunc("/nodes", restrictedHandler(c, CreateNode)).Methods("POST")
+	r.HandleFunc("/nodes", restrictedHandler(c, ListNodes)).Methods("GET")
+	r.HandleFunc("/nodes/{id}", restrictedHandler(c, GetNode)).Methods("GET")
+	r.HandleFunc("/nodes/{id}/delete", restrictedHandler(c, DeleteNode)).Methods("PUT")
 
 	return baseRouter
 }
 
-func handlerFunc(sg *client.Client, fn func(*client.Client, http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
+func restrictedHandler(c *core.Core, fn func(*client.Client, http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		// TODO repeated in API, move to core helpers
-		w.Header().Set("WWW-Authenticate", `Basic realm="supergiant"`)
-		username, password, _ := r.BasicAuth()
-		if username != sg.Username || password != sg.Password {
-			http.Error(w, "authorization failed", http.StatusUnauthorized)
+		// Load Client by Session ID stored in cookie. If either cookie or client
+		// does not exist, redirect to login page with 401.
+		var sessionID string
+		var client *client.Client
+		if sessionCookie, err := r.Cookie(core.SessionCookieName); err == nil {
+			sessionID = sessionCookie.Value
+			client = c.Sessions.Client(sessionID)
+		}
+		if client == nil {
+			http.Redirect(w, r, "/ui/sessions/new", http.StatusFound) // can't do 401 here unless you want browser behavior
 			return
 		}
+		if err := fn(client, w, r); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+	}
+}
 
-		if err := fn(sg, w, r); err != nil {
+func openHandler(sharedClient *client.Client, fn func(*client.Client, http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := fn(sharedClient, w, r); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		}
@@ -132,9 +159,9 @@ func renderTemplate(w http.ResponseWriter, name string, data map[string]interfac
 
 	// TODO
 	if mi := data["model"]; mi != nil {
-		if model, isModel := mi.(models.Model); isModel {
-			models.ZeroPrivateFields(model)
-			data["model"] = model
+		if m, isModel := mi.(model.Model); isModel {
+			model.ZeroPrivateFields(m)
+			data["model"] = m
 		}
 	}
 
@@ -169,7 +196,7 @@ func uiRedirect(w http.ResponseWriter, r *http.Request) {
 //------------------------------------------------------------------------------
 
 func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	var cloudAccounts []*models.CloudAccount
+	var cloudAccounts []*model.CloudAccount
 	if err := sg.CloudAccounts.List(&cloudAccounts); err != nil {
 		return err
 	}
@@ -178,7 +205,7 @@ func Root(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	var kubes []*models.Kube
+	var kubes []*model.Kube
 	if err := sg.Kubes.List(&kubes); err != nil {
 		return err
 	}

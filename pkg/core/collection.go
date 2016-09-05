@@ -5,22 +5,22 @@ import (
 	"sync"
 
 	"github.com/imdario/mergo"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 type Collection struct {
 	core *Core
 }
 
-func (c *Collection) Create(m models.Model) error {
+func (c *Collection) Create(m model.Model) error {
 	return c.core.DB.Create(m)
 }
 
-func (c *Collection) Get(id *int64, m models.Model) error {
+func (c *Collection) Get(id *int64, m model.Model) error {
 	return c.core.DB.First(m, *id)
 }
 
-func (c *Collection) GetWithIncludes(id *int64, m models.Model, includes []string) error {
+func (c *Collection) GetWithIncludes(id *int64, m model.Model, includes []string) error {
 	scope := c.core.DB
 	for _, include := range includes {
 		scope = scope.Preload(include)
@@ -28,8 +28,8 @@ func (c *Collection) GetWithIncludes(id *int64, m models.Model, includes []strin
 	return scope.First(m, *id)
 }
 
-func (c *Collection) Update(id *int64, oldM models.Model, m models.Model) error {
-	// models.ZeroReadonlyFields(m)
+func (c *Collection) Update(id *int64, oldM model.Model, m model.Model) error {
+	// model.ZeroReadonlyFields(m)
 
 	// oldM := reflect.New(reflect.TypeOf(m)).Elem().Elem().Interface()
 
@@ -45,7 +45,7 @@ func (c *Collection) Update(id *int64, oldM models.Model, m models.Model) error 
 	return c.core.DB.Save(m)
 }
 
-func (c *Collection) Delete(id *int64, m models.Model) error { // Loaded so we can render out
+func (c *Collection) Delete(id *int64, m model.Model) error { // Loaded so we can render out
 	if err := c.core.DB.First(m, *id); err != nil {
 		return err
 	}
@@ -56,8 +56,8 @@ func (c *Collection) Delete(id *int64, m models.Model) error { // Loaded so we c
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *Collection) inParallel(models interface{}, fn func(interface{}) error) (err error) {
-	mv := reflect.ValueOf(models)
+func (c *Collection) inParallel(model interface{}, fn func(interface{}) error) (err error) {
+	mv := reflect.ValueOf(model)
 	count := mv.Len()
 
 	var wg sync.WaitGroup

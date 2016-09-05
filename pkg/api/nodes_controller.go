@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
-func ListNodes(core *core.Core, r *http.Request) (*Response, error) {
-	return handleList(core, r, new(models.Node))
+func ListNodes(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	return handleList(core, r, new(model.Node))
 }
 
-func CreateNode(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Node)
+func CreateNode(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Node)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
@@ -22,23 +22,23 @@ func CreateNode(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusCreated)
 }
 
-func UpdateNode(core *core.Core, r *http.Request) (*Response, error) {
+func UpdateNode(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
 	}
-	item := new(models.Node)
+	item := new(model.Node)
 	if err := decodeBodyInto(r, item); err != nil {
 		return nil, err
 	}
-	if err := core.Nodes.Update(id, new(models.Node), item); err != nil {
+	if err := core.Nodes.Update(id, new(model.Node), item); err != nil {
 		return nil, err
 	}
 	return itemResponse(core, item, http.StatusAccepted)
 }
 
-func GetNode(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Node)
+func GetNode(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Node)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func GetNode(core *core.Core, r *http.Request) (*Response, error) {
 	return itemResponse(core, item, http.StatusOK)
 }
 
-func DeleteNode(core *core.Core, r *http.Request) (*Response, error) {
-	item := new(models.Node)
+func DeleteNode(core *core.Core, user *model.User, r *http.Request) (*Response, error) {
+	item := new(model.Node)
 	id, err := parseID(r)
 	if err != nil {
 		return nil, err

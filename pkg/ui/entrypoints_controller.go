@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func NewEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "entrypoints/new.html", map[string]interface{}{
+	return renderTemplate(w, "new", map[string]interface{}{
 		"title":      "Entrypoints",
 		"formAction": "/ui/entrypoints",
+		"formMethod": "POST",
 		"model": map[string]interface{}{
 			"kube_id": nil,
 			"name":    "",
@@ -19,14 +20,15 @@ func NewEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 }
 
 func CreateEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	m := new(models.Entrypoint)
+	m := new(model.Entrypoint)
 	if err := unmarshalFormInto(r, m); err != nil {
 		return err
 	}
 	if err := sg.Entrypoints.Create(m); err != nil {
-		return renderTemplate(w, "entrypoints/new.html", map[string]interface{}{
+		return renderTemplate(w, "new", map[string]interface{}{
 			"title":      "Entrypoints",
 			"formAction": "/ui/entrypoints",
+			"formMethod": "POST",
 			"model":      m,
 			"error":      err.Error(),
 		})
@@ -53,7 +55,7 @@ func ListEntrypoints(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 			"field": "address",
 		},
 	}
-	return renderTemplate(w, "entrypoints/index.html", map[string]interface{}{
+	return renderTemplate(w, "index", map[string]interface{}{
 		"title":       "Entrypoints",
 		"uiBasePath":  "/ui/entrypoints",
 		"apiListPath": "/api/v0/entrypoints",
@@ -70,11 +72,11 @@ func GetEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	item := new(models.Entrypoint)
+	item := new(model.Entrypoint)
 	if err := sg.Entrypoints.Get(id, item); err != nil {
 		return err
 	}
-	return renderTemplate(w, "entrypoints/show.html", map[string]interface{}{
+	return renderTemplate(w, "show", map[string]interface{}{
 		"title": "Entrypoints",
 		"model": item,
 	})
@@ -85,9 +87,8 @@ func DeleteEntrypoint(sg *client.Client, w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return err
 	}
-	item := new(models.Entrypoint)
-	item.ID = id
-	if err := sg.Entrypoints.Delete(item); err != nil {
+	item := new(model.Entrypoint)
+	if err := sg.Entrypoints.Delete(id, item); err != nil {
 		return err
 	}
 	// http.Redirect(w, r, "/ui/entrypoints", http.StatusFound)

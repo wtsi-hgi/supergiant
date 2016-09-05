@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
 type Action struct {
-	Status *models.ActionStatus
+	Status *model.ActionStatus
 	core   *Core
 
 	scope *DB
-	model models.Model
+	model model.Model
 	id    *int64
 
 	resourceID string
@@ -50,19 +50,13 @@ func (a *Action) prepare() error {
 	return nil
 }
 
-func (a *Action) request(reqType actionRequestType) *Action {
-	ch := make(chan *Action)
-	a.core.actionRequestChannel <- &actionRequest{ch, reqType, a}
-	return <-ch
-}
-
 func (a *Action) stopUnlessCancelled() {
 	if !a.Status.Cancelled {
-		a.request(requestActionStop)
+		a.core.Actions.Delete("End    : "+a.description(), a.resourceID)
 	}
 }
 
-func (a *Action) cancellableWaitFor(desc string, d time.Duration, i time.Duration, fn func() (bool, error)) error {
+func (a *Action) CancellableWaitFor(desc string, d time.Duration, i time.Duration, fn func() (bool, error)) error {
 	return util.WaitFor(desc, d, i, func() (bool, error) {
 		if a.Status.Cancelled {
 			return false, fmt.Errorf("Action cancelled while waiting for %s", desc)
@@ -76,10 +70,11 @@ func (a *Action) Now() error {
 		return err
 	}
 
-	if existing := a.request(requestActionFetch); existing != nil {
+	if ei := a.core.Actions.Get(a.resourceID); ei != nil {
+		existing := ei.(*Action)
 		if a.cancelExisting {
 			existing.Status.Cancelled = true
-			existing.request(requestActionStop)
+			a.core.Actions.Delete("Cancel : "+a.description(), a.resourceID)
 		} else {
 			return &RepeatedActionError{a.resourceID}
 		}
@@ -88,7 +83,7 @@ func (a *Action) Now() error {
 	// TODO we may want some means of communicating with the existing action, to
 	// know that it has stopped its goroutines before continuing.
 
-	a.request(requestActionStart)
+	a.core.Actions.Put("Begin  : "+a.description(), a.resourceID, a)
 
 	// Remove Action from map regardless of success or failure
 	defer a.stopUnlessCancelled()
@@ -101,16 +96,17 @@ func (a *Action) Async() error {
 		return err
 	}
 
-	if existing := a.request(requestActionFetch); existing != nil {
+	if ei := a.core.Actions.Get(a.resourceID); ei != nil {
+		existing := ei.(*Action)
 		if a.cancelExisting {
 			existing.Status.Cancelled = true
-			existing.request(requestActionStop)
+			a.core.Actions.Delete("Cancel : "+a.description(), a.resourceID)
 		} else if existing.Status.Retries < existing.Status.MaxRetries {
 			return &RepeatedActionError{a.resourceID}
 		}
 	}
 
-	a.request(requestActionStart)
+	a.core.Actions.Put("Begin  : "+a.description(), a.resourceID, a)
 
 	go func() {
 		retries := 0
@@ -146,8 +142,8 @@ func (a *Action) Async() error {
 ////////////////////////////////////////////////////////////////////////////////
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-func (c *Core) SetResourceActionStatus(m models.Model) {
-	if action, _ := c.Actions[m.GetUUID()]; action != nil {
-		m.SetActionStatus(action.Status)
+func (c *Core) SetResourceActionStatus(m model.Model) {
+	if ai := c.Actions.Get(m.GetUUID()); ai != nil {
+		m.SetActionStatus(ai.(*Action).Status)
 	}
 }

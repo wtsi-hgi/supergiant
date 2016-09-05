@@ -2,7 +2,7 @@ package deploy
 
 import (
 	"github.com/supergiant/supergiant/pkg/client"
-	"github.com/supergiant/supergiant/pkg/models"
+	"github.com/supergiant/supergiant/pkg/model"
 )
 
 func Deploy(sg *client.Client, componentID *int64) error {
@@ -13,7 +13,7 @@ func Deploy(sg *client.Client, componentID *int64) error {
 		"TargetRelease",
 		"Instances.Volumes",
 	}
-	component := new(models.Component)
+	component := new(model.Component)
 	if err := sg.Components.GetWithIncludes(componentID, component, includes); err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func Deploy(sg *client.Client, componentID *int64) error {
 	for _, instance := range component.Instances {
 		// Remove Instances
 		if (instance.Num + 1) > component.TargetRelease.InstanceCount {
-			if err := sg.Instances.Delete(instance); err != nil {
+			if err := sg.Instances.Delete(instance.ID, instance); err != nil {
 				return err
 			}
 			if err := sg.Instances.WaitForDeleted(instance); err != nil {

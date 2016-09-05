@@ -1,35 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
-	"github.com/imdario/mergo"
-	"github.com/supergiant/supergiant/pkg/api"
 	"github.com/supergiant/supergiant/pkg/core"
-	"github.com/supergiant/supergiant/pkg/ui"
+	"github.com/supergiant/supergiant/pkg/provider/aws"
+	"github.com/supergiant/supergiant/pkg/server"
 )
 
-// TODO move
-type SecureInfoHandler struct {
-	core *core.Core
-}
-
-func (s *SecureInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	msg := "<p>Supergiant is running securely at <a href='" + s.core.BaseURL() + "'>" + s.core.BaseURL() + "</a>.</p>"
-	msg += "<p>Unless you have provided your own SSL certificate, this will be a self-signed certificate.</p>"
-	msg += "<p>If using self-signed, your browser will most likely warn of an insecure connection. <strong>You must manually trust the certificate to utilize SSL.</strong></p>"
-	w.Write([]byte(msg))
-}
-
 func main() {
-	var configFilePath string
-	var configFileSettings core.Settings
-
 	c := new(core.Core)
 
 	app := cli.NewApp()
@@ -37,40 +19,14 @@ func main() {
 	app.Usage = "Supergiant"
 
 	app.Action = func(ctx *cli.Context) {
-		// Load and parse config file if provided
-		if configFilePath != "" {
-			configFile, err := os.Open(configFilePath)
-			if err != nil {
-				panic(err)
-			}
-			if err := json.NewDecoder(configFile).Decode(&configFileSettings); err != nil {
-				panic(err)
-			}
-		}
 
-		// Merge in command line settings (which overwrite respective config file settings)
-		if err := mergo.Merge(&c.Settings, configFileSettings); err != nil {
-			panic(err)
-		}
-
-		requiredFlags := map[string]string{
-			"psql-host":       c.PsqlHost,
-			"psql-db":         c.PsqlDb,
-			"psql-user":       c.PsqlUser,
-			"psql-pass":       c.PsqlPass,
-			"publish-host":    c.PublishHost,
-			"http-port":       c.HTTPPort,
-			"http-basic-user": c.HTTPBasicUser,
-			"http-basic-pass": c.HTTPBasicPass,
-		}
-		for flag, val := range requiredFlags {
-			if val == "" {
-				cli.ShowCommandHelp(ctx, fmt.Sprintf("%s required\n", flag))
-				os.Exit(5)
-			}
-		}
-
+		// TODO should check for missing setting here to show cli help
 		c.Initialize()
+
+		// See relevant NOTE in core.go
+		c.AWSProvider = func(creds map[string]string) core.Provider {
+			return &aws.Provider{Core: c, Credentials: creds}
+		}
 
 		// We do this here, and not in core, so that we can ensure the file closes on exit.
 		if c.LogPath != "" {
@@ -87,29 +43,20 @@ func main() {
 			c.Log.Out = file
 		}
 
-		apiRouter := api.NewRouter(c)
-		router := ui.NewRouter(c.NewAPIClient(), apiRouter)
-
-		if c.SSLEnabled() {
-			c.Log.Info("SSL enabled")
-
-			// Secure info page (concurrently)
-			go func() {
-				c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), &SecureInfoHandler{c}))
-			}()
-
-			c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPSPort))
-			c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPSPort))
-			c.Log.Info(http.ListenAndServeTLS(fmt.Sprintf(":%s", c.HTTPSPort), c.SSLCertFile, c.SSLKeyFile, router))
-		} else {
-			c.Log.Info(fmt.Sprintf(":%s/api/v0", c.HTTPPort))
-			c.Log.Info(fmt.Sprintf(":%s/ui", c.HTTPPort))
-			c.Log.Info(http.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), router))
+		srv, err := server.New(c)
+		if err != nil {
+			panic(err)
 		}
 
+		srv.Start()
 	}
 
 	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "sqlite-file",
+			Usage:       "SQLite3 database (.db) file",
+			Destination: &c.SQLiteFile,
+		},
 		cli.StringFlag{
 			Name:        "psql-host",
 			Usage:       "PostgreSQL host",
@@ -131,16 +78,6 @@ func main() {
 			Destination: &c.PsqlPass,
 		},
 		cli.StringFlag{
-			Name:        "http-basic-user",
-			Usage:       "HTTP Basic Auth username used to secure the web interfaces",
-			Destination: &c.HTTPBasicUser,
-		},
-		cli.StringFlag{
-			Name:        "http-basic-pass",
-			Usage:       "HTTP Basic Auth password used to secure the web interfaces",
-			Destination: &c.HTTPBasicPass,
-		},
-		cli.StringFlag{
 			Name:        "publish-host",
 			Usage:       "Host that can be used to connect to this Supergiant server remotely",
 			Destination: &c.PublishHost,
@@ -149,6 +86,11 @@ func main() {
 			Name:        "http-port",
 			Usage:       "HTTP port for the web interfaces",
 			Destination: &c.HTTPPort,
+		},
+		cli.BoolFlag{
+			Name:        "ui-enabled",
+			Usage:       "Enabled UI",
+			Destination: &c.UIEnabled,
 		},
 		cli.StringFlag{
 			Name:        "https-port",
@@ -179,7 +121,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "config-file",
 			Usage:       "JSON config filepath (command line arguments will override the values set here)",
-			Destination: &configFilePath,
+			Destination: &c.ConfigFilePath,
 		},
 	}
 
