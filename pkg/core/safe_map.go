@@ -40,11 +40,11 @@ func NewSafeMap(core *Core) *SafeMap {
 			switch op.opType {
 
 			case safeMapPut:
-				m.core.Log.Infof("PUT :: %s", op.desc)
+				m.core.Log.Debugf("PUT :: %s", op.desc)
 				m.m[op.key] = op.value
 
 			case safeMapDelete:
-				m.core.Log.Infof("DEL :: %s", op.desc)
+				m.core.Log.Debugf("DEL :: %s", op.desc)
 				delete(m.m, op.key)
 			}
 
