@@ -2,4 +2,4 @@
 TODO.md
 tmp/*
 !tmp/.gitkeep
-/config/config.json
+config/config.json
