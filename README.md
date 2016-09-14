@@ -143,6 +143,10 @@ In order to set up a development environment, do the following:
 go run cmd/generate_admin_user/generate_admin_user.go --config-file config/config.json
 ```
 
+#### Initialize Config file
+
+In `config/config.json.example`, there's a sample config file to get you started. Just duplicate and rename to config.json.
+
 #### Run
 
 ```shell
