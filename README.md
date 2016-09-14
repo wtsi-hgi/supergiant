@@ -140,19 +140,19 @@ In order to set up a development environment, do the following:
 #### Create Admin User
 
 ```shell
-godep go run cmd/generate_admin_user/generate_admin_user.go --config-file config/config.json
+go run cmd/generate_admin_user/generate_admin_user.go --config-file config/config.json
 ```
 
 #### Run
 
 ```shell
-godep go run main.go --config-file config/config.json
+go run main.go --config-file config/config.json
 ```
 
 #### Test
 
 ```shell
-godep go test -v ./test/...
+govendor test +local
 ```
 
 
