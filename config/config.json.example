@@ -66,7 +66,7 @@
       {"name": "d2.8xlarge", "ram_gib": 244, "cpu_cores": 36},
       {"name": "i2.8xlarge", "ram_gib": 244, "cpu_cores": 32}
     ],
-    "do": [
+    "digitalocean": [
       {"name": "512mb", "ram_gib": 0.5, "cpu_cores": 1},
       {"name": "1gb", "ram_gib": 1, "cpu_cores": 1},
       {"name": "2gb", "ram_gib": 2, "cpu_cores": 2},

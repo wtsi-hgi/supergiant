@@ -13,11 +13,32 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 	// up. But it's difficult to initialize blank values with omitemptys (which
 	// are needed for certain things), so we should probably have special structs.
 
-	return renderTemplate(w, "new", map[string]interface{}{
-		"title":      "Kubes",
-		"formAction": "/ui/kubes",
-		"formMethod": "POST",
-		"model": map[string]interface{}{
+	var m map[string]interface{}
+	switch r.URL.Query().Get("option") {
+	// case "aws":
+	case "digitalocean":
+		m = map[string]interface{}{
+			"cloud_account_id": nil,
+			"name":             "",
+			"master_node_size": "1gb",
+			"node_sizes": []string{
+				"512mb",
+				"1gb",
+				"2gb",
+				"4gb",
+				"8gb",
+				"16gb",
+				"32gb",
+				"48gb",
+				"64gb",
+			},
+			"digitalocean_config": map[string]interface{}{
+				"region":              "nyc1",
+				"ssh_key_fingerprint": "",
+			},
+		}
+	default: // just default to AWS if option not provided, or mismatched
+		m = map[string]interface{}{
 			"cloud_account_id": nil,
 			"name":             "",
 			"master_node_size": "m4.large",
@@ -34,7 +55,14 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 				"public_subnet_ip_range": "172.20.0.0/24",
 				"master_private_ip":      "172.20.0.9",
 			},
-		},
+		}
+	}
+
+	return renderTemplate(w, "new", map[string]interface{}{
+		"title":      "Kubes",
+		"formAction": "/ui/kubes",
+		"formMethod": "POST",
+		"model":      m,
 	})
 }
 
@@ -75,6 +103,10 @@ func ListKubes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 		"apiListPath": "/api/v0/kubes",
 		"fields":      fields,
 		"showNewLink": true,
+		"newOptions": map[string]string{
+			"aws":          "AWS",
+			"digitalocean": "DigitalOcean",
+		},
 		"batchActionPaths": map[string]string{
 			"Delete": "/delete",
 		},

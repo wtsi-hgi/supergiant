@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strings"
 	"text/template"
@@ -603,7 +602,7 @@ func (p *Provider) createKube(m *model.Kube, action *core.Action) error {
 			return nil
 		}
 
-		userdataTemplate, err := ioutil.ReadFile("config/master_userdata.txt")
+		userdataTemplate, err := Asset("config/providers/aws/master_userdata.txt")
 		if err != nil {
 			return err
 		}
@@ -715,6 +714,13 @@ func (p *Provider) createKube(m *model.Kube, action *core.Action) error {
 	// Create first minion
 
 	procedure.AddStep("creating Kubernetes minion", func() error {
+		// TODO repeated in DO provider
+		if err := p.Core.DB.Model(m).Association("Nodes").Find(&m.Nodes).Error; err != nil {
+			return err
+		}
+		if len(m.Nodes) > 0 {
+			return nil
+		}
 		node := &model.Node{
 			KubeID: m.ID,
 			Size:   m.NodeSizes[0],
@@ -997,7 +1003,7 @@ func (p *Provider) setAttrsFromServer(m *model.Node, server *ec2.Instance) {
 func (p *Provider) createServer(m *model.Node) (*ec2.Instance, error) {
 
 	// TODO move to init outside of func
-	userdataTemplate, err := ioutil.ReadFile("config/minion_userdata.txt")
+	userdataTemplate, err := Asset("config/providers/aws/minion_userdata.txt")
 	if err != nil {
 		return nil, err
 	}

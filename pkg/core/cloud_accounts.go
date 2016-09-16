@@ -40,7 +40,7 @@ func (c *CloudAccounts) provider(m *model.CloudAccount) Provider {
 	switch m.Provider {
 	case "aws":
 		return c.core.AWSProvider(m.Credentials)
-	case "do":
+	case "digitalocean":
 		return c.core.DOProvider(m.Credentials)
 	default:
 		panic("Could not load provider interface for " + m.Provider)

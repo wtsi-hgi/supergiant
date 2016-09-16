@@ -2,7 +2,6 @@ package digitalocean
 
 import (
 	"bytes"
-	"io/ioutil"
 	"strconv"
 	"text/template"
 	"time"
@@ -63,7 +62,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		}
 
 		// Build template
-		masterUserdataTemplate, err := ioutil.ReadFile("config/providers/digitalocean/master.yaml")
+		masterUserdataTemplate, err := Asset("config/providers/digitalocean/master.yaml")
 		if err != nil {
 			return err
 		}
@@ -78,13 +77,13 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 		dropletRequest := &godo.DropletCreateRequest{
 			Name:              m.Name + "-master",
-			Region:            m.DOConfig.Region,
+			Region:            m.DigitalOceanConfig.Region,
 			Size:              m.MasterNodeSize,
 			PrivateNetworking: false,
 			UserData:          string(masterUserdata.Bytes()),
 			SSHKeys: []godo.DropletCreateSSHKey{
 				{
-					Fingerprint: m.DOConfig.SSHKeyFingerprint,
+					Fingerprint: m.DigitalOceanConfig.SSHKeyFingerprint,
 				},
 			},
 			Image: godo.DropletCreateImage{
@@ -98,7 +97,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			return err
 		}
 
-		m.DOConfig.MasterID = masterDroplet.ID
+		m.DigitalOceanConfig.MasterID = masterDroplet.ID
 		m.MasterPublicIP = publicIP
 		return nil
 	})
@@ -148,13 +147,13 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 	}
 
 	procedure.AddStep("deleting master", func() error {
-		if m.DOConfig.MasterID == 0 {
+		if m.DigitalOceanConfig.MasterID == 0 {
 			return nil
 		}
-		if _, err := client.Droplets.Delete(m.DOConfig.MasterID); err != nil {
+		if _, err := client.Droplets.Delete(m.DigitalOceanConfig.MasterID); err != nil {
 			return err
 		}
-		m.DOConfig.MasterID = 0
+		m.DigitalOceanConfig.MasterID = 0
 		return nil
 	})
 
@@ -164,7 +163,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 // CreateNode creates a new minion on DO kubernetes cluster.
 func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	// Build template
-	minionUserdataTemplate, err := ioutil.ReadFile("config/providers/digitalocean/minion.yaml")
+	minionUserdataTemplate, err := Asset("config/providers/digitalocean/minion.yaml")
 	if err != nil {
 		return err
 	}
@@ -185,13 +184,13 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 
 	dropletRequest := &godo.DropletCreateRequest{
 		Name:              m.Kube.Name + "-minion",
-		Region:            m.Kube.DOConfig.Region,
+		Region:            m.Kube.DigitalOceanConfig.Region,
 		Size:              m.Size,
 		PrivateNetworking: true,
 		UserData:          string(minionUserdata.Bytes()),
 		SSHKeys: []godo.DropletCreateSSHKey{
 			{
-				Fingerprint: m.Kube.DOConfig.SSHKeyFingerprint,
+				Fingerprint: m.Kube.DigitalOceanConfig.SSHKeyFingerprint,
 			},
 		},
 		Image: godo.DropletCreateImage{
@@ -236,7 +235,7 @@ func (p *Provider) DeleteNode(m *model.Node) error {
 // CreateVolume createss a Volume on DO for Kubernetes
 func (p *Provider) CreateVolume(m *model.Volume, action *core.Action) error {
 	req := &godo.VolumeCreateRequest{
-		Region:        m.Kube.DOConfig.Region,
+		Region:        m.Kube.DigitalOceanConfig.Region,
 		Name:          m.Name,
 		SizeGigaBytes: int64(m.Size),
 	}
@@ -252,7 +251,7 @@ func (p *Provider) KubernetesVolumeDefinition(m *model.Volume) *guber.Volume {
 	return &guber.Volume{
 		Name: m.Name,
 		FlexVolume: &guber.FlexVolume{
-			Driver: "supergiant.io/do",
+			Driver: "supergiant.io/digitalocean",
 			FSType: "ext4",
 			Options: map[string]string{
 				"volumeID": m.ProviderID,
@@ -264,7 +263,7 @@ func (p *Provider) KubernetesVolumeDefinition(m *model.Volume) *guber.Volume {
 
 // ResizeVolume re-sizes volume on DO kubernetes cluster.
 func (p *Provider) ResizeVolume(m *model.Volume, action *core.Action) error {
-	_, _, err := p.newClient().StorageActions.Resize(m.ProviderID, m.Size, m.Kube.DOConfig.Region)
+	_, _, err := p.newClient().StorageActions.Resize(m.ProviderID, m.Size, m.Kube.DigitalOceanConfig.Region)
 	if err != nil {
 		return err
 	}

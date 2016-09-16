@@ -36,8 +36,8 @@ type Kube struct {
 	AWSConfig     *AWSKubeConfig `json:"aws_config,omitempty" gorm:"-" sg:"store_as_json_in=AWSConfigJSON"`
 	AWSConfigJSON []byte         `json:"-"`
 
-	DOConfig     *DOKubeConfig `json:"do_config,omitempty" gorm:"-" sg:"store_as_json_in=DOConfigJSON"`
-	DOConfigJSON []byte        `json:"-"`
+	DigitalOceanConfig     *DOKubeConfig `json:"digitalocean_config,omitempty" gorm:"-" sg:"store_as_json_in=DigitalOceanConfigJSON"`
+	DigitalOceanConfigJSON []byte        `json:"-"`
 
 	MasterPublicIP string `json:"master_public_ip" sg:"readonly"`
 
