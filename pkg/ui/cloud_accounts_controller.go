@@ -8,18 +8,34 @@ import (
 )
 
 func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
-	return renderTemplate(w, "new", map[string]interface{}{
-		"title":      "Cloud Accounts",
-		"formAction": "/ui/cloud_accounts",
-		"formMethod": "POST",
-		"model": map[string]interface{}{
+
+	var m map[string]interface{}
+	switch r.URL.Query().Get("option") {
+	// case "aws":
+	case "digitalocean":
+		m = map[string]interface{}{
 			"name":     "",
-			"provider": "",
+			"provider": "digitalocean",
+			"credentials": map[string]interface{}{
+				"token": "",
+			},
+		}
+	default: // just default to AWS if option not provided, or mismatched
+		m = map[string]interface{}{
+			"name":     "",
+			"provider": "aws",
 			"credentials": map[string]interface{}{
 				"access_key": "",
 				"secret_key": "",
 			},
-		},
+		}
+	}
+
+	return renderTemplate(w, "new", map[string]interface{}{
+		"title":      "Cloud Accounts",
+		"formAction": "/ui/cloud_accounts",
+		"formMethod": "POST",
+		"model":      m,
 	})
 }
 
@@ -60,6 +76,10 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 		"apiListPath": "/api/v0/cloud_accounts",
 		"fields":      fields,
 		"showNewLink": true,
+		"newOptions": map[string]string{
+			"aws":          "AWS",
+			"digitalocean": "DigitalOcean",
+		},
 		"batchActionPaths": map[string]string{
 			"Delete": "/delete",
 		},

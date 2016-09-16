@@ -218,6 +218,13 @@ making changes to the UI:
 go-bindata -pkg ui -o pkg/ui/generated_assets.go ui/...
 ```
 
+And this, if you're working with provider code:
+
+```shell
+PROVIDER=aws # whichever you're working with
+go-bindata -pkg $PROVIDER -o pkg/provider/$PROVIDER/generated_assets.go config/providers/$PROVIDER/...
+```
+
 ---
 
 ## Installing/Generating Dependencies

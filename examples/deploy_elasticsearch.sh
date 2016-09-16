@@ -1,36 +1,36 @@
 set -e
 
-entrypoint_id=$(curl -s -XPOST https://admin:password@localhost:8080/api/v0/entrypoints -d "{
+entrypoint_id=$(curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -s -XPOST https://localhost:8081/api/v0/entrypoints -d "{
   \"kube_id\": $KUBE_ID,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 sleep 5 # wait for entrypoint address
 
-app_id=$(curl -s -XPOST https://admin:password@localhost:8080/api/v0/apps -d "{
+app_id=$(curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -s -XPOST https://localhost:8081/api/v0/apps -d "{
   \"kube_id\": $KUBE_ID,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 
-component_id=$(curl -s -XPOST https://admin:password@localhost:8080/api/v0/components -d "{
+component_id=$(curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -s -XPOST https://localhost:8081/api/v0/components -d "{
   \"app_id\": $app_id,
   \"name\": \"elasticsearch\"
 }" | grep -Eo '"id": \d+' | head -1 | awk '{ print $2 }')
 
-curl -s -XPOST https://admin:password@localhost:8080/api/v0/releases -d "{
+curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -s -XPOST https://localhost:8081/api/v0/releases -d "{
   \"component_id\": $component_id,
 
-  \"instance_count\": 3,
+  \"instance_count\": 1,
 
   \"config\": {
     \"termination_grace_period\": 10,
     \"volumes\": [
       {
-        \"name\": \"elasticsearch-data-1\",
+        \"name\": \"es-data-1\",
         \"type\": \"gp2\",
         \"size\": 10
       },
       {
-        \"name\": \"elasticsearch-data-2\",
+        \"name\": \"es-data-2\",
         \"type\": \"gp2\",
         \"size\": 10
       }
@@ -50,7 +50,7 @@ curl -s -XPOST https://admin:password@localhost:8080/api/v0/releases -d "{
           \"-Des.path.data=/data-1\",
           \"-Des.path.logs=/data-1\",
           \"-Des.processors=1\",
-          \"-Des.discovery.zen.minimum_master_nodes=2\"
+          \"-Des.discovery.zen.minimum_master_nodes=1\"
         ],
 
         \"cpu_request\": 0,
@@ -61,11 +61,11 @@ curl -s -XPOST https://admin:password@localhost:8080/api/v0/releases -d "{
 
         \"mounts\": [
           {
-            \"volume\": \"elasticsearch-data-1\",
+            \"volume\": \"es-data-1\",
             \"path\": \"/data-1\"
           },
           {
-            \"volume\": \"elasticsearch-data-2\",
+            \"volume\": \"es-data-2\",
             \"path\": \"/data-2\"
           }
         ],
@@ -85,12 +85,12 @@ curl -s -XPOST https://admin:password@localhost:8080/api/v0/releases -d "{
   }
 }"
 
-# echo "deploying"
-# curl -XPOST https://admin:password@localhost:8080/api/v0/components/$component_id/deploy
+echo "deploying"
+curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -XPOST https://localhost:8081/api/v0/components/$component_id/deploy
 
-# curl -s -XPOST https://admin:password@localhost:8080/api/v0/releases -d "{
+# curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -s -XPOST https://localhost:8081/api/v0/releases -d "{
 #   \"component_id\": $component_id,
 #   \"instance_count\": 2
 # }"
 #
-# curl -XPOST https://admin:password@localhost:8080/api/v0/components/$component_id/deploy
+# curl -H "Authorization: SGAPI token=\"$API_TOKEN\"" -XPOST https://localhost:8081/api/v0/components/$component_id/deploy
