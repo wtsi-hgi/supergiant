@@ -26,7 +26,9 @@ func (s *NodeObserver) Perform() error {
 			}
 
 			// node.Ready = true
-			node.ExternalIP = k8sNode.ExternalIP()
+			if ip := k8sNode.ExternalIP(); ip != "" {
+				node.ExternalIP = ip
+			}
 			node.OutOfDisk = k8sNode.IsOutOfDisk()
 
 			stats, err := k8sNode.HeapsterStats()

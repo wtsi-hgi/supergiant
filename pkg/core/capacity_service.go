@@ -50,6 +50,7 @@ var (
 		"PodExceedsFreeMemory",
 		"PodExceedsFreeCPU",
 		"no nodes available to schedule pods",
+		"failed to fit in any node",
 	}
 )
 
@@ -142,7 +143,7 @@ func (s *KubeScaler) Scale() error {
 			projectedNodes = append(projectedNodes[:i], projectedNodes[i+1:]...)
 			pnode1.Pods = append(pnode1.Pods, pnode2.Pods...)
 		} else {
-			// If we can't merge with anyone, can we scale down to the lowest cost.
+			// If we can't merge with anyone, can we scale down to the lowest cost?
 			// nodeSizes are asc. by cost, so the first we find is the cheapest.
 			for _, nodeSize := range s.nodeSizes {
 				if nodeSize.CPUCores >= pnode1.usedCPU() && nodeSize.RAMGIB >= pnode1.usedRAM() {
@@ -150,6 +151,10 @@ func (s *KubeScaler) Scale() error {
 					pnode1.Committed = true
 					break
 				}
+			}
+
+			if !pnode1.Committed {
+				return fmt.Errorf("There is no Node size configured large enough to support %.1f Cores and %1.fGiB RAM", pnode1.usedCPU(), pnode1.usedRAM())
 			}
 		}
 	}
@@ -181,8 +186,9 @@ func (s *KubeScaler) Scale() error {
 		}
 	}
 
+	//----------------------------------------------------------------------------
 	// for _, pnode := range projectedNodes {
-	// 	fmt.Println(pnode.Size.ID)
+	// 	fmt.Println(pnode.Size.Name)
 	// 	for _, pod := range pnode.Pods {
 	// 		fmt.Println(pod.Metadata.Name)
 	// 		for _, container := range pod.Spec.Containers {
@@ -194,6 +200,7 @@ func (s *KubeScaler) Scale() error {
 	// 	}
 	// 	fmt.Println("")
 	// }
+	//----------------------------------------------------------------------------
 
 	for _, pnode := range projectedNodes {
 		node := &model.Node{
@@ -370,7 +377,7 @@ func (pnode *projectedNode) usedCPU() (u float64) {
 func (pnode *projectedNode) usedVolumes() (u int) {
 	for _, pod := range pnode.Pods {
 		for _, vol := range pod.Spec.Volumes {
-			if vol.AwsElasticBlockStore != nil {
+			if vol.AwsElasticBlockStore != nil || vol.FlexVolume != nil {
 				u++
 			}
 		}

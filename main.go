@@ -8,6 +8,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/provider/aws"
+	"github.com/supergiant/supergiant/pkg/provider/digitalocean"
 	"github.com/supergiant/supergiant/pkg/server"
 )
 
@@ -26,6 +27,9 @@ func main() {
 		// See relevant NOTE in core.go
 		c.AWSProvider = func(creds map[string]string) core.Provider {
 			return &aws.Provider{Core: c, Credentials: creds}
+		}
+		c.DOProvider = func(creds map[string]string) core.Provider {
+			return &digitalocean.Provider{Core: c, Token: creds["token"]}
 		}
 
 		// We do this here, and not in core, so that we can ensure the file closes on exit.
@@ -89,8 +93,13 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:        "ui-enabled",
-			Usage:       "Enabled UI",
+			Usage:       "Enable UI",
 			Destination: &c.UIEnabled,
+		},
+		cli.BoolFlag{
+			Name:        "capacity-service-enabled",
+			Usage:       "Enable Capacity Service (automated server management)",
+			Destination: &c.CapacityServiceEnabled,
 		},
 		cli.StringFlag{
 			Name:        "https-port",

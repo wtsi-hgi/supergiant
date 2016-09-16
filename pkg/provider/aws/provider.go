@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/supergiant/guber"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
@@ -44,111 +45,198 @@ type Provider struct {
 }
 
 func (p *Provider) ValidateAccount(m *model.CloudAccount) error {
+	// Doesn't really matter what we do here, as long as it works
 	_, err := p.ec2("us-east-1").DescribeKeyPairs(new(ec2.DescribeKeyPairsInput))
 	return err
 }
 
 func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
+	return p.createKube(m, action)
+}
+
+func (p *Provider) DeleteKube(m *model.Kube) error {
+	return p.deleteKube(m)
+}
+
+func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
+	return p.createNode(m)
+}
+
+func (p *Provider) DeleteNode(m *model.Node) error {
+	return p.deleteServer(m)
+}
+
+func (p *Provider) CreateVolume(m *model.Volume, action *core.Action) error {
+	return p.createVolume(m, nil)
+}
+
+func (p *Provider) KubernetesVolumeDefinition(m *model.Volume) *guber.Volume {
+	return &guber.Volume{
+		Name: m.Name,
+		AwsElasticBlockStore: &guber.AwsElasticBlockStore{
+			VolumeID: m.ProviderID,
+			FSType:   "ext4",
+		},
+	}
+}
+
+func (p *Provider) ResizeVolume(m *model.Volume, action *core.Action) error {
+	return p.resizeVolume(m) // TODO pass action for cancellableWaitFor
+}
+
+func (p *Provider) WaitForVolumeAvailable(m *model.Volume, action *core.Action) error {
+	return p.waitForAvailable(m)
+}
+
+func (p *Provider) DeleteVolume(m *model.Volume) error {
+	return p.deleteVolume(m)
+}
+
+func (p *Provider) CreateEntrypoint(m *model.Entrypoint, action *core.Action) error {
+	return p.createELB(m)
+}
+
+func (p *Provider) AddPortToEntrypoint(m *model.Entrypoint, lbPort int64, nodePort int64) error {
+	return p.addPortToEntrypoint(m, lbPort, nodePort)
+}
+
+func (p *Provider) RemovePortFromEntrypoint(m *model.Entrypoint, lbPort int64) error {
+	return p.removePortFromEntrypoint(m, lbPort)
+}
+
+func (p *Provider) DeleteEntrypoint(m *model.Entrypoint) error {
+	return p.deleteELB(m)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Private methods                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
+func (p *Provider) awsConfig(region string) *aws.Config {
+	creds := credentials.NewStaticCredentials(p.Credentials["access_key"], p.Credentials["secret_key"], "")
+	creds.Get()
+	return aws.NewConfig().WithRegion(region).WithCredentials(creds)
+}
+
+func (p *Provider) ec2(region string) *ec2.EC2 {
+	return ec2.New(globalAWSSession, p.awsConfig(region))
+}
+
+func (p *Provider) iam(region string) *iam.IAM {
+	return iam.New(globalAWSSession, p.awsConfig(region))
+}
+
+func (p *Provider) elb(region string) *elb.ELB {
+	return elb.New(globalAWSSession, p.awsConfig(region))
+}
+
+//------------------------------------------------------------------------------
+
+func (p *Provider) createKube(m *model.Kube, action *core.Action) error {
 	iamS := p.iam(m.AWSConfig.Region)
 	ec2S := p.ec2(m.AWSConfig.Region)
-	provisioner := &provisioner{core: p.Core, kube: m}
+	procedure := &core.Procedure{
+		Core:  p.Core,
+		Name:  "Create Kube",
+		Model: m,
+	}
 
-	provisioner.addStep("preparing IAM Role kubernetes-master", func() error {
+	procedure.AddStep("preparing IAM Role kubernetes-master", func() error {
 		policy := `{
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Action": "sts:AssumeRole",
-          "Principal": {"AWS": "*"},
-          "Effect": "Allow",
-          "Sid": ""
-        }
-      ]
-    }`
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Action": "sts:AssumeRole",
+					"Principal": {"AWS": "*"},
+					"Effect": "Allow",
+					"Sid": ""
+				}
+			]
+		}`
 		return createIAMRole(iamS, "kubernetes-master", policy)
 	})
 
-	provisioner.addStep("preparing IAM Role Policy kubernetes-master", func() error {
+	procedure.AddStep("preparing IAM Role Policy kubernetes-master", func() error {
 		policy := `{
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Action": ["ec2:*"],
-          "Resource": ["*"]
-        },
-        {
-          "Effect": "Allow",
-          "Action": ["elasticloadbalancing:*"],
-          "Resource": ["*"]
-        },
-        {
-          "Effect": "Allow",
-          "Action": "s3:*",
-          "Resource": [
-            "arn:aws:s3:::kubernetes-*"
-          ]
-        }
-      ]
-    }`
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Effect": "Allow",
+					"Action": ["ec2:*"],
+					"Resource": ["*"]
+				},
+				{
+					"Effect": "Allow",
+					"Action": ["elasticloadbalancing:*"],
+					"Resource": ["*"]
+				},
+				{
+					"Effect": "Allow",
+					"Action": "s3:*",
+					"Resource": [
+						"arn:aws:s3:::kubernetes-*"
+					]
+				}
+			]
+		}`
 		return createIAMRolePolicy(iamS, "kubernetes-master", policy)
 	})
 
-	provisioner.addStep("preparing IAM Instance Profile kubernetes-minion", func() error {
+	procedure.AddStep("preparing IAM Instance Profile kubernetes-minion", func() error {
 		return createIAMInstanceProfile(iamS, "kubernetes-minion")
 	})
 
-	provisioner.addStep("preparing IAM Role kubernetes-minion", func() error {
+	procedure.AddStep("preparing IAM Role kubernetes-minion", func() error {
 		policy := `{
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Action": "sts:AssumeRole",
-          "Principal": {"AWS": "*"},
-          "Effect": "Allow",
-          "Sid": ""
-        }
-      ]
-    }`
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Action": "sts:AssumeRole",
+					"Principal": {"AWS": "*"},
+					"Effect": "Allow",
+					"Sid": ""
+				}
+			]
+		}`
 		return createIAMRole(iamS, "kubernetes-minion", policy)
 	})
 
-	provisioner.addStep("preparing IAM Role Policy kubernetes-minion", func() error {
+	procedure.AddStep("preparing IAM Role Policy kubernetes-minion", func() error {
 		policy := `{
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Action": "s3:*",
-          "Resource": [
-            "arn:aws:s3:::kubernetes-*"
-          ]
-        },
-        {
-          "Effect": "Allow",
-          "Action": "ec2:Describe*",
-          "Resource": "*"
-        },
-        {
-          "Effect": "Allow",
-          "Action": "ec2:AttachVolume",
-          "Resource": "*"
-        },
-        {
-          "Effect": "Allow",
-          "Action": "ec2:DetachVolume",
-          "Resource": "*"
-        }
-      ]
-    }`
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Effect": "Allow",
+					"Action": "s3:*",
+					"Resource": [
+						"arn:aws:s3:::kubernetes-*"
+					]
+				},
+				{
+					"Effect": "Allow",
+					"Action": "ec2:Describe*",
+					"Resource": "*"
+				},
+				{
+					"Effect": "Allow",
+					"Action": "ec2:AttachVolume",
+					"Resource": "*"
+				},
+				{
+					"Effect": "Allow",
+					"Action": "ec2:DetachVolume",
+					"Resource": "*"
+				}
+			]
+		}`
 		return createIAMRolePolicy(iamS, "kubernetes-minion", policy)
 	})
 
-	provisioner.addStep("preparing IAM Instance Profile kubernetes-minion", func() error {
+	procedure.AddStep("preparing IAM Instance Profile kubernetes-minion", func() error {
 		return createIAMInstanceProfile(iamS, "kubernetes-minion")
 	})
 
-	provisioner.addStep("creating SSH Key Pair", func() error {
+	procedure.AddStep("creating SSH Key Pair", func() error {
 		if m.AWSConfig.PrivateKey != "" {
 			return nil
 		}
@@ -172,7 +260,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("creating VPC", func() error {
+	procedure.AddStep("creating VPC", func() error {
 		if m.AWSConfig.VPCID != "" {
 			return nil
 		}
@@ -187,14 +275,14 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging VPC", func() error {
+	procedure.AddStep("tagging VPC", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.VPCID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-vpc",
 		})
 	})
 
-	provisioner.addStep("enabling VPC DNS", func() error {
+	procedure.AddStep("enabling VPC DNS", func() error {
 		input := &ec2.ModifyVpcAttributeInput{
 			VpcId:              aws.String(m.AWSConfig.VPCID),
 			EnableDnsHostnames: &ec2.AttributeBooleanValue{Value: aws.Bool(true)},
@@ -205,7 +293,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create Internet Gateway
 
-	provisioner.addStep("creating Internet Gateway", func() error {
+	procedure.AddStep("creating Internet Gateway", func() error {
 		if m.AWSConfig.InternetGatewayID != "" {
 			return nil
 		}
@@ -217,14 +305,14 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging Internet Gateway", func() error {
+	procedure.AddStep("tagging Internet Gateway", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.InternetGatewayID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-ig",
 		})
 	})
 
-	provisioner.addStep("attaching Internet Gateway to VPC", func() error {
+	procedure.AddStep("attaching Internet Gateway to VPC", func() error {
 		input := &ec2.AttachInternetGatewayInput{
 			VpcId:             aws.String(m.AWSConfig.VPCID),
 			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
@@ -237,7 +325,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create Subnet
 
-	provisioner.addStep("creating Subnet", func() error {
+	procedure.AddStep("creating Subnet", func() error {
 		if m.AWSConfig.PublicSubnetID != "" {
 			return nil
 		}
@@ -254,14 +342,14 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging Subnet", func() error {
+	procedure.AddStep("tagging Subnet", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.PublicSubnetID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-psub",
 		})
 	})
 
-	provisioner.addStep("enabling public IP assignment setting of Subnet", func() error {
+	procedure.AddStep("enabling public IP assignment setting of Subnet", func() error {
 		input := &ec2.ModifySubnetAttributeInput{
 			SubnetId:            aws.String(m.AWSConfig.PublicSubnetID),
 			MapPublicIpOnLaunch: &ec2.AttributeBooleanValue{Value: aws.Bool(true)},
@@ -272,7 +360,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Route Table
 
-	provisioner.addStep("creating Route Table", func() error {
+	procedure.AddStep("creating Route Table", func() error {
 		if m.AWSConfig.RouteTableID != "" {
 			return nil
 		}
@@ -287,14 +375,14 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging Route Table", func() error {
+	procedure.AddStep("tagging Route Table", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.RouteTableID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-rt",
 		})
 	})
 
-	provisioner.addStep("associating Route Table with Subnet", func() error {
+	procedure.AddStep("associating Route Table with Subnet", func() error {
 		if m.AWSConfig.RouteTableSubnetAssociationID != "" {
 			return nil
 		}
@@ -310,7 +398,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("creating Route for Internet Gateway", func() error {
+	procedure.AddStep("creating Route for Internet Gateway", func() error {
 		input := &ec2.CreateRouteInput{
 			DestinationCidrBlock: aws.String("0.0.0.0/0"),
 			RouteTableId:         aws.String(m.AWSConfig.RouteTableID),
@@ -324,7 +412,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create Security Groups
 
-	provisioner.addStep("creating ELB Security Group", func() error {
+	procedure.AddStep("creating ELB Security Group", func() error {
 		if m.AWSConfig.ELBSecurityGroupID != "" {
 			return nil
 		}
@@ -341,13 +429,13 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging ELB Security Group", func() error {
+	procedure.AddStep("tagging ELB Security Group", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.ELBSecurityGroupID, map[string]string{
 			"KubernetesCluster": m.Name,
 		})
 	})
 
-	provisioner.addStep("creating ELB Security Group ingress rules", func() error {
+	procedure.AddStep("creating ELB Security Group ingress rules", func() error {
 		input := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
 			IpPermissions: []*ec2.IpPermission{
@@ -369,7 +457,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("creating ELB Security Group egress rules", func() error {
+	procedure.AddStep("creating ELB Security Group egress rules", func() error {
 		input := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
 			IpPermissions: []*ec2.IpPermission{
@@ -401,7 +489,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("creating Node Security Group", func() error {
+	procedure.AddStep("creating Node Security Group", func() error {
 		if m.AWSConfig.NodeSecurityGroupID != "" {
 			return nil
 		}
@@ -418,13 +506,13 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging Node Security Group", func() error {
+	procedure.AddStep("tagging Node Security Group", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.NodeSecurityGroupID, map[string]string{
 			"KubernetesCluster": m.Name,
 		})
 	})
 
-	provisioner.addStep("creating Node Security Group ingress rules", func() error {
+	procedure.AddStep("creating Node Security Group ingress rules", func() error {
 		input := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID),
 			IpPermissions: []*ec2.IpPermission{
@@ -486,7 +574,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("creating Node Security Group egress rules", func() error {
+	procedure.AddStep("creating Node Security Group egress rules", func() error {
 		input := &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID),
 			IpPermissions: []*ec2.IpPermission{
@@ -510,7 +598,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Master Instance
 
-	provisioner.addStep("creating Server for Kubernetes master", func() error {
+	procedure.AddStep("creating Server for Kubernetes master", func() error {
 		if m.AWSConfig.MasterID != "" {
 			return nil
 		}
@@ -573,7 +661,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	provisioner.addStep("tagging Kubernetes master", func() error {
+	procedure.AddStep("tagging Kubernetes master", func() error {
 		return tagAWSResource(ec2S, m.AWSConfig.MasterID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-master",
@@ -583,7 +671,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Wait for server to be ready
 
-	provisioner.addStep("waiting for Kubernetes master to launch", func() error {
+	procedure.AddStep("waiting for Kubernetes master to launch", func() error {
 		input := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{
 				aws.String(m.AWSConfig.MasterID),
@@ -614,7 +702,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create route for master
 
-	provisioner.addStep("creating Route for Kubernetes master", func() error {
+	procedure.AddStep("creating Route for Kubernetes master", func() error {
 		input := &ec2.CreateRouteInput{
 			DestinationCidrBlock: aws.String("10.246.0.0/24"),
 			RouteTableId:         aws.String(m.AWSConfig.RouteTableID),
@@ -626,7 +714,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create first minion
 
-	provisioner.addStep("creating Kubernetes minion", func() error {
+	procedure.AddStep("creating Kubernetes minion", func() error {
 		node := &model.Node{
 			KubeID: m.ID,
 			Size:   m.NodeSizes[0],
@@ -634,8 +722,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return p.Core.Nodes.Create(node)
 	})
 
-	provisioner.addStep("waiting for Kubernetes", func() error {
-		return action.CancellableWaitFor("Kubernetes API and first minion", 20*time.Minute, time.Second, func() (bool, error) {
+	procedure.AddStep("waiting for Kubernetes", func() error {
+		return action.CancellableWaitFor("Kubernetes API and first minion", 20*time.Minute, 3*time.Second, func() (bool, error) {
 			nodes, err := p.Core.K8S(m).Nodes().List()
 			if err != nil {
 				return false, nil
@@ -644,18 +732,18 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		})
 	})
 
-	if err := provisioner.run(); err != nil {
-		return err
-	}
-
-	return p.Core.DB.Model(m).Update("ready", true).Error
+	return procedure.Run()
 }
 
-func (p *Provider) DeleteKube(m *model.Kube) error {
+func (p *Provider) deleteKube(m *model.Kube) error {
 	ec2S := p.ec2(m.AWSConfig.Region)
-	provisioner := &provisioner{core: p.Core, kube: m}
+	procedure := &core.Procedure{
+		Core:  p.Core,
+		Name:  "Delete Kube",
+		Model: m,
+	}
 
-	provisioner.addStep("deleting master", func() error {
+	procedure.AddStep("deleting master", func() error {
 		if m.AWSConfig.MasterID == "" {
 			return nil
 		}
@@ -695,7 +783,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("disassociating Route Table from Subnet", func() error {
+	procedure.AddStep("disassociating Route Table from Subnet", func() error {
 		if m.AWSConfig.RouteTableSubnetAssociationID == "" {
 			return nil
 		}
@@ -709,7 +797,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting Internet Gateway", func() error {
+	procedure.AddStep("deleting Internet Gateway", func() error {
 		if m.AWSConfig.InternetGatewayID == "" {
 			return nil
 		}
@@ -743,7 +831,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting Route Table", func() error {
+	procedure.AddStep("deleting Route Table", func() error {
 		if m.AWSConfig.RouteTableID == "" {
 			return nil
 		}
@@ -757,7 +845,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting public Subnet", func() error {
+	procedure.AddStep("deleting public Subnet", func() error {
 		if m.AWSConfig.PublicSubnetID == "" {
 			return nil
 		}
@@ -779,7 +867,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting Node Security Group", func() error {
+	procedure.AddStep("deleting Node Security Group", func() error {
 		if m.AWSConfig.NodeSecurityGroupID == "" {
 			return nil
 		}
@@ -793,7 +881,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting ELB Security Group", func() error {
+	procedure.AddStep("deleting ELB Security Group", func() error {
 		if m.AWSConfig.ELBSecurityGroupID == "" {
 			return nil
 		}
@@ -807,7 +895,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting VPC", func() error {
+	procedure.AddStep("deleting VPC", func() error {
 		if m.AWSConfig.VPCID == "" {
 			return nil
 		}
@@ -821,7 +909,7 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	provisioner.addStep("deleting SSH Key Pair", func() error {
+	procedure.AddStep("deleting SSH Key Pair", func() error {
 		input := &ec2.DeleteKeyPairInput{
 			KeyName: aws.String(m.Name + "-key"),
 		}
@@ -831,10 +919,10 @@ func (p *Provider) DeleteKube(m *model.Kube) error {
 		return nil
 	})
 
-	return provisioner.run()
+	return procedure.Run()
 }
 
-func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
+func (p *Provider) createNode(m *model.Node) error {
 	server, err := p.createServer(m)
 	if err != nil {
 		return err
@@ -850,100 +938,6 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	}
 	return nil
 }
-
-func (p *Provider) DeleteNode(m *model.Node) error {
-	return p.deleteServer(m)
-}
-
-func (p *Provider) CreateVolume(m *model.Volume, action *core.Action) error {
-	return p.createVolume(m, nil)
-}
-
-func (p *Provider) ResizeVolume(m *model.Volume, action *core.Action) error {
-	snapshot, err := p.createSnapshot(m)
-	if err != nil {
-		return err
-	}
-	if err := p.deleteVolume(m); err != nil {
-		return err
-	}
-	if err := p.createVolume(m, snapshot.SnapshotId); err != nil {
-		return err
-	}
-	if err := p.deleteSnapshot(m, snapshot); err != nil {
-		p.Core.Log.Errorf("Error deleting snapshot %s: %s", *snapshot.SnapshotId, err.Error())
-	}
-	return nil
-}
-
-func (p *Provider) WaitForVolumeAvailable(m *model.Volume, action *core.Action) error {
-	return p.waitForAvailable(m)
-}
-
-func (p *Provider) DeleteVolume(m *model.Volume) error {
-	return p.deleteVolume(m)
-}
-
-func (p *Provider) CreateEntrypoint(m *model.Entrypoint, action *core.Action) error {
-	return p.createELB(m)
-}
-
-func (p *Provider) AddPortToEntrypoint(m *model.Entrypoint, lbPort int64, nodePort int64) error {
-	input := &elb.CreateLoadBalancerListenersInput{
-		LoadBalancerName: aws.String(m.ProviderID),
-		Listeners: []*elb.Listener{
-			{
-				LoadBalancerPort: aws.Int64(lbPort),
-				InstancePort:     aws.Int64(nodePort),
-				Protocol:         aws.String("TCP"),
-			},
-		},
-	}
-	_, err := p.elb(m.Kube.AWSConfig.Region).CreateLoadBalancerListeners(input)
-	return err
-}
-
-func (p *Provider) RemovePortFromEntrypoint(m *model.Entrypoint, lbPort int64) error {
-	params := &elb.DeleteLoadBalancerListenersInput{
-		LoadBalancerName: aws.String(m.ProviderID),
-		LoadBalancerPorts: []*int64{
-			aws.Int64(lbPort),
-		},
-	}
-	_, err := p.elb(m.Kube.AWSConfig.Region).DeleteLoadBalancerListeners(params)
-	if isErrAndNotAWSNotFound(err) {
-		return err
-	}
-	return nil
-}
-
-func (p *Provider) DeleteEntrypoint(m *model.Entrypoint) error {
-	return p.deleteELB(m)
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Private methods                                                            //
-////////////////////////////////////////////////////////////////////////////////
-
-func (p *Provider) awsConfig(region string) *aws.Config {
-	creds := credentials.NewStaticCredentials(p.Credentials["access_key"], p.Credentials["secret_key"], "")
-	creds.Get()
-	return aws.NewConfig().WithRegion(region).WithCredentials(creds)
-}
-
-func (p *Provider) ec2(region string) *ec2.EC2 {
-	return ec2.New(globalAWSSession, p.awsConfig(region))
-}
-
-func (p *Provider) iam(region string) *iam.IAM {
-	return iam.New(globalAWSSession, p.awsConfig(region))
-}
-
-func (p *Provider) elb(region string) *elb.ELB {
-	return elb.New(globalAWSSession, p.awsConfig(region))
-}
-
-//------------------------------------------------------------------------------
 
 func (p *Provider) servers(m *model.Kube) (instances []*ec2.Instance, err error) {
 	return p.filteredServers(m, map[string][]string{
@@ -1141,6 +1135,35 @@ func (p *Provider) createELB(m *model.Entrypoint) error {
 	return err
 }
 
+func (p *Provider) addPortToEntrypoint(m *model.Entrypoint, lbPort int64, nodePort int64) error {
+	input := &elb.CreateLoadBalancerListenersInput{
+		LoadBalancerName: aws.String(m.ProviderID),
+		Listeners: []*elb.Listener{
+			{
+				LoadBalancerPort: aws.Int64(lbPort),
+				InstancePort:     aws.Int64(nodePort),
+				Protocol:         aws.String("TCP"),
+			},
+		},
+	}
+	_, err := p.elb(m.Kube.AWSConfig.Region).CreateLoadBalancerListeners(input)
+	return err
+}
+
+func (p *Provider) removePortFromEntrypoint(m *model.Entrypoint, lbPort int64) error {
+	params := &elb.DeleteLoadBalancerListenersInput{
+		LoadBalancerName: aws.String(m.ProviderID),
+		LoadBalancerPorts: []*int64{
+			aws.Int64(lbPort),
+		},
+	}
+	_, err := p.elb(m.Kube.AWSConfig.Region).DeleteLoadBalancerListeners(params)
+	if isErrAndNotAWSNotFound(err) {
+		return err
+	}
+	return nil
+}
+
 func (p *Provider) registerNodes(m *model.Entrypoint, nodes ...*model.Node) error {
 	var elbInstances []*elb.Instance
 	for _, node := range nodes {
@@ -1199,6 +1222,23 @@ func (p *Provider) createVolume(volume *model.Volume, snapshotID *string) error 
 	}
 	_, err = p.ec2(volume.Kube.AWSConfig.Region).CreateTags(tagsInput)
 	return err
+}
+
+func (p *Provider) resizeVolume(m *model.Volume) error {
+	snapshot, err := p.createSnapshot(m)
+	if err != nil {
+		return err
+	}
+	if err := p.deleteVolume(m); err != nil {
+		return err
+	}
+	if err := p.createVolume(m, snapshot.SnapshotId); err != nil {
+		return err
+	}
+	if err := p.deleteSnapshot(m, snapshot); err != nil {
+		p.Core.Log.Errorf("Error deleting snapshot %s: %s", *snapshot.SnapshotId, err.Error())
+	}
+	return nil
 }
 
 func (p *Provider) deleteVolume(volume *model.Volume) error {
@@ -1261,6 +1301,11 @@ func (p *Provider) createSnapshot(volume *model.Volume) (*ec2.Snapshot, error) {
 	waitInput := &ec2.DescribeSnapshotsInput{
 		SnapshotIds: []*string{snapshot.SnapshotId},
 	}
+	//
+	// TODO
+	//
+	// We should use action.CancellableWaitFor here
+	//
 	if err := p.ec2(volume.Kube.AWSConfig.Region).WaitUntilSnapshotCompleted(waitInput); err != nil {
 		return nil, err // TODO destroy snapshot that failed to complete?
 	}
@@ -1273,36 +1318,6 @@ func (p *Provider) deleteSnapshot(volume *model.Volume, snapshot *ec2.Snapshot) 
 	}
 	if _, err := p.ec2(volume.Kube.AWSConfig.Region).DeleteSnapshot(input); isErrAndNotAWSNotFound(err) {
 		return err
-	}
-	return nil
-}
-
-//------------------------------------------------------------------------------
-
-type provisioner struct {
-	core  *core.Core
-	kube  *model.Kube
-	steps []*step
-}
-
-type step struct {
-	desc string
-	fn   func() error
-}
-
-func (p *provisioner) addStep(desc string, fn func() error) {
-	p.steps = append(p.steps, &step{desc, fn})
-}
-
-func (p *provisioner) run() error {
-	for _, step := range p.steps {
-		p.core.Log.Infof("Running step of Kube provisioner: %s", step.desc)
-		if err := step.fn(); err != nil {
-			return err
-		}
-		if err := p.core.DB.Save(p.kube); err != nil {
-			return err
-		}
 	}
 	return nil
 }

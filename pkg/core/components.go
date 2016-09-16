@@ -20,14 +20,22 @@ func (c *Components) Deploy(requester *model.User, id *int64, m *model.Component
 			MaxRetries:  5,
 		},
 		core:  c.core,
-		scope: c.core.DB.Preload("App.Kube.CloudAccount").Preload("PrivateImageKeys.Key").Preload("CurrentRelease").Preload("TargetRelease").Preload("Instances"),
+		scope: c.core.DB.Preload("PrivateImageKeys.Key").Preload("CurrentRelease").Preload("TargetRelease").Preload("Instances"),
 		model: m,
 		id:    id,
 		fn: func(_ *Action) error {
 
-			// TODO something is causing Kube to not exist by time it gets to
-			// serviceSet provision, there's a note below.
-			kube := *m.App.Kube
+			// NOTE
+			//
+			// I'm not really sure what is going on here, but it's not hard to see
+			// where the complexity could be causing an issue. Preloading App and Kube
+			// here will fail sporadically, generally on the 1st retry after failure
+			// with the action.Async() method...
+			//
+			m.App = new(model.App)
+			if err := c.core.DB.Preload("Kube.CloudAccount").First(m.App, m.AppID); err != nil {
+				return err
+			}
 
 			// TODO this should not be handled async
 			if m.TargetRelease == nil {
@@ -70,9 +78,6 @@ func (c *Components) Deploy(requester *model.User, id *int64, m *model.Component
 				}
 			}
 
-			// TODO see above.... something unsets Preloaded Kube from App
-			m.App.Kube = &kube
-
 			// Provision Secrets
 			for _, imageKey := range m.PrivateImageKeys {
 				if err := provisionSecret(c.core, m.App, imageKey.Key); err != nil {
@@ -80,36 +85,45 @@ func (c *Components) Deploy(requester *model.User, id *int64, m *model.Component
 				}
 			}
 
+			// TODO
+			//
+			// see above note... something here is causing Kube to unset
+			//
+			m.App = new(model.App)
+			if err := c.core.DB.Preload("Kube.CloudAccount").First(m.App, m.AppID); err != nil {
+				return err
+			}
+
 			// Provision Services
 			serviceSet, err := c.serviceSet(m)
 			if err != nil {
 				return err
 			}
-			if err := serviceSet.provision(); err != nil {
+			if err = serviceSet.provision(); err != nil {
 				return err
 			}
 
 			// Add new ports to existing service, if there is one, and there are any.
 			if m.CurrentRelease != nil {
-				if err := serviceSet.addNewPorts(); err != nil {
+				if err = serviceSet.addNewPorts(); err != nil {
 					return err
 				}
 			}
 
 			// Run "inner" deployment
 			if m.CustomDeployScript != nil {
-				if err := RunCustomDeployment(c.core, m); err != nil {
+				if err = RunCustomDeployment(c.core, m); err != nil {
 					return err
 				}
 			} else {
 				// This goes to the deploy/ folder which uses the client package.
-				if err := deploy.Deploy(c.core.NewAPIClient("token", requester.APIToken), m.ID); err != nil {
+				if err = deploy.Deploy(c.core.NewAPIClient("token", requester.APIToken), m.ID); err != nil {
 					return err
 				}
 			}
 
 			// Reload Instances
-			if err := c.core.DB.Where("component_id = ?", m.ID).Find(&m.Instances); err != nil {
+			if err = c.core.DB.Where("component_id = ?", m.ID).Find(&m.Instances); err != nil {
 				return err
 			}
 
@@ -122,13 +136,13 @@ func (c *Components) Deploy(requester *model.User, id *int64, m *model.Component
 
 			if m.CurrentRelease != nil {
 				// Remove old ports from service if there are any
-				if err := serviceSet.removeOldPorts(); err != nil {
+				if err = serviceSet.removeOldPorts(); err != nil {
 					return err
 				}
 
 				// Mark old Release as retired
 				m.CurrentRelease.InUse = false
-				if err := c.core.DB.Save(m.CurrentRelease); err != nil {
+				if err = c.core.DB.Save(m.CurrentRelease); err != nil {
 					return err
 				}
 			}
