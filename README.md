@@ -36,12 +36,14 @@ SUPERGIANT: Easy container orchestration using Kubernetes
 [Travis URL]: https://travis-ci.org/supergiant/supergiant
 [Release Widget]: https://img.shields.io/github/release/supergiant/supergiant.svg
 [Release URL]: https://github.com/supergiant/supergiant/releases/latest
+[Coverage Status]: https://coveralls.io/github/supergiant/supergiant?branch=master
+[Coverage Status Widget]: https://coveralls.io/repos/github/supergiant/supergiant/badge.svg?branch=master
 <!-- [Swagger API Widget]: http://online.swagger.io/validator?url=http://swagger.supergiant.io/api-docs -->
 <!-- [Swagger URL]: http://swagger.supergiant.io/docs/ -->
 
 ### <img src="http://supergiant.io/img/logo_dark.svg" width="400">
 
-[![GoReportCard Widget]][GoReportCard URL] [![GoDoc Widget]][GoDoc URL] [![Travis Widget]][Travis URL] [![Release Widget]][Release URL]
+[![GoReportCard Widget]][GoReportCard URL] [![GoDoc Widget]][GoDoc URL] [![Travis Widget]][Travis URL] [![Release Widget]][Release URL] [![Coverage Status Widget]][Coverage Status]
 
 ---
 
