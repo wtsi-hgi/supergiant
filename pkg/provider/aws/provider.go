@@ -1,13 +1,10 @@
 package aws
 
 import (
-	"bytes"
-	"encoding/base64"
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"regexp"
-	"strings"
-	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,36 +16,27 @@ import (
 	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/supergiant/supergiant/bindata"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/kubernetes"
 	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
-var AWSMasterAMIs = map[string]string{
-	"ap-northeast-1": "ami-907fa690",
-	"ap-southeast-1": "ami-b4a79de6",
-	"eu-central-1":   "ami-e8635bf5",
-	"eu-west-1":      "ami-0fd0ae78",
-	"sa-east-1":      "ami-f9f675e4",
-	"us-east-1":      "ami-f57b8f9e",
-	"us-west-1":      "ami-87b643c3",
-	"cn-north-1":     "ami-3abf2203",
-	"ap-southeast-2": "ami-1bb9c221",
-	"us-west-2":      "ami-33566d03",
-}
-
 // TODO this and the similar concept in Kubes should be moved to core, not global vars
 var globalAWSSession = session.New()
 
+// Provider AWS provider object
 type Provider struct {
 	Core *core.Core
 	EC2  func(*model.Kube) ec2iface.EC2API
+	S3   func(*model.Kube) s3iface.S3API
 	IAM  func(*model.Kube) iamiface.IAMAPI
 	ELB  func(*model.Kube) elbiface.ELBAPI
 }
 
+// ValidateAccount validates that the AWS credentials entered work.
 func (p *Provider) ValidateAccount(m *model.CloudAccount) error {
 	// Doesn't really matter what we do here, as long as it works
 	mockKube := &model.Kube{
@@ -61,26 +49,17 @@ func (p *Provider) ValidateAccount(m *model.CloudAccount) error {
 	return err
 }
 
-func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
-	return p.createKube(m, action)
-}
-
-func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
-	return p.deleteKube(m, action)
-}
-
-func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
-	return p.createNode(m)
-}
-
+// DeleteNode deletes a Kubernetes minion.
 func (p *Provider) DeleteNode(m *model.Node, action *core.Action) error {
 	return p.deleteServer(m)
 }
 
+// CreateVolume creates a kubernetes Volume.
 func (p *Provider) CreateVolume(m *model.Volume, action *core.Action) error {
 	return p.createVolume(m, nil)
 }
 
+// KubernetesVolumeDefinition defines object layout of a AWS volume.
 func (p *Provider) KubernetesVolumeDefinition(m *model.Volume) *kubernetes.Volume {
 	return &kubernetes.Volume{
 		Name: m.Name,
@@ -91,26 +70,32 @@ func (p *Provider) KubernetesVolumeDefinition(m *model.Volume) *kubernetes.Volum
 	}
 }
 
+// ResizeVolume resizes a AWS volume.
 func (p *Provider) ResizeVolume(m *model.Volume, action *core.Action) error {
 	return p.resizeVolume(m, action)
 }
 
+// WaitForVolumeAvailable waits for AWS volume to be available.
 func (p *Provider) WaitForVolumeAvailable(m *model.Volume, action *core.Action) error {
 	return p.waitForAvailable(m)
 }
 
+// DeleteVolume deletes a aws volume.
 func (p *Provider) DeleteVolume(m *model.Volume, action *core.Action) error {
 	return p.deleteVolume(m)
 }
 
+// CreateEntrypoint creates a AWS LoadBalancer
 func (p *Provider) CreateEntrypoint(m *model.Entrypoint, action *core.Action) error {
 	return p.createELB(m)
 }
 
+// DeleteEntrypoint deletes a aws loadbalancer.
 func (p *Provider) DeleteEntrypoint(m *model.Entrypoint, action *core.Action) error {
 	return p.deleteELB(m)
 }
 
+// CreateEntrypointListener creates a listener for a aws loadbalancer.
 func (p *Provider) CreateEntrypointListener(m *model.EntrypointListener, action *core.Action) error {
 	input := &elb.CreateLoadBalancerListenersInput{
 		LoadBalancerName: aws.String(m.Entrypoint.ProviderID),
@@ -127,6 +112,7 @@ func (p *Provider) CreateEntrypointListener(m *model.EntrypointListener, action 
 	return err
 }
 
+// DeleteEntrypointListener deletes a listener form an aws loadbalancer.
 func (p *Provider) DeleteEntrypointListener(m *model.EntrypointListener, action *core.Action) error {
 	input := &elb.DeleteLoadBalancerListenersInput{
 		LoadBalancerName: aws.String(m.Entrypoint.ProviderID),
@@ -145,14 +131,22 @@ func (p *Provider) DeleteEntrypointListener(m *model.EntrypointListener, action 
 // Private methods                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
+// EC2 client
 func EC2(kube *model.Kube) ec2iface.EC2API {
 	return ec2.New(globalAWSSession, awsConfig(kube))
 }
 
+// S3 client
+func S3(kube *model.Kube) s3iface.S3API {
+	return s3.New(globalAWSSession, awsConfig(kube))
+}
+
+// ELB client
 func ELB(kube *model.Kube) elbiface.ELBAPI {
 	return elb.New(globalAWSSession, awsConfig(kube))
 }
 
+// IAM client
 func IAM(kube *model.Kube) iamiface.IAMAPI {
 	return iam.New(globalAWSSession, awsConfig(kube))
 }
@@ -166,906 +160,28 @@ func awsConfig(kube *model.Kube) *aws.Config {
 
 //------------------------------------------------------------------------------
 
-func (p *Provider) createKube(m *model.Kube, action *core.Action) error {
-	iamS := p.IAM(m)
-	ec2S := p.EC2(m)
-	procedure := &core.Procedure{
-		Core:   p.Core,
-		Name:   "Create Kube",
-		Model:  m,
-		Action: action,
-	}
-
-	procedure.AddStep("preparing IAM Role kubernetes-master", func() error {
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Action": "sts:AssumeRole",
-					"Principal": {"AWS": "*"},
-					"Effect": "Allow",
-					"Sid": ""
-				}
-			]
-		}`
-		return createIAMRole(iamS, "kubernetes-master", policy)
-	})
-
-	procedure.AddStep("preparing IAM Role Policy kubernetes-master", func() error {
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Effect": "Allow",
-					"Action": ["ec2:*"],
-					"Resource": ["*"]
-				},
-				{
-					"Effect": "Allow",
-					"Action": ["elasticloadbalancing:*"],
-					"Resource": ["*"]
-				},
-				{
-					"Effect": "Allow",
-					"Action": "s3:*",
-					"Resource": [
-						"arn:aws:s3:::kubernetes-*"
-					]
-				}
-			]
-		}`
-		return createIAMRolePolicy(iamS, "kubernetes-master", policy)
-	})
-
-	procedure.AddStep("preparing IAM Instance Profile kubernetes-master", func() error {
-		return createIAMInstanceProfile(iamS, "kubernetes-master")
-	})
-
-	procedure.AddStep("preparing IAM Role kubernetes-minion", func() error {
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Action": "sts:AssumeRole",
-					"Principal": {"AWS": "*"},
-					"Effect": "Allow",
-					"Sid": ""
-				}
-			]
-		}`
-		return createIAMRole(iamS, "kubernetes-minion", policy)
-	})
-
-	procedure.AddStep("preparing IAM Role Policy kubernetes-minion", func() error {
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Effect": "Allow",
-					"Action": "s3:*",
-					"Resource": [
-						"arn:aws:s3:::kubernetes-*"
-					]
-				},
-				{
-					"Effect": "Allow",
-					"Action": "ec2:Describe*",
-					"Resource": "*"
-				},
-				{
-					"Effect": "Allow",
-					"Action": "ec2:AttachVolume",
-					"Resource": "*"
-				},
-				{
-					"Effect": "Allow",
-					"Action": "ec2:DetachVolume",
-					"Resource": "*"
-				}
-			]
-		}`
-		return createIAMRolePolicy(iamS, "kubernetes-minion", policy)
-	})
-
-	procedure.AddStep("preparing IAM Instance Profile kubernetes-minion", func() error {
-		return createIAMInstanceProfile(iamS, "kubernetes-minion")
-	})
-
-	procedure.AddStep("creating SSH Key Pair", func() error {
-		if m.AWSConfig.PrivateKey != "" {
-			return nil
-		}
-		input := &ec2.CreateKeyPairInput{
-			KeyName: aws.String(m.Name + "-key"),
-		}
-		resp, err := ec2S.CreateKeyPair(input)
-		if err != nil {
-			if strings.Contains(err.Error(), "Duplicate") {
-
-				delInput := &ec2.DeleteKeyPairInput{
-					KeyName: aws.String(m.Name + "-key"),
-				}
-				_, _ = ec2S.DeleteKeyPair(delInput)
-				return errors.New("KeyPair existed, but key material was not captured. Deleted KeyPair... will retry")
-
-			}
-			return err
-		}
-		m.AWSConfig.PrivateKey = *resp.KeyMaterial
-		return nil
-	})
-
-	procedure.AddStep("creating VPC", func() error {
-		if m.AWSConfig.VPCID != "" {
-			return nil
-		}
-		input := &ec2.CreateVpcInput{
-			CidrBlock: aws.String(m.AWSConfig.VPCIPRange),
-		}
-		resp, err := ec2S.CreateVpc(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.VPCID = *resp.Vpc.VpcId
-		return nil
-	})
-
-	procedure.AddStep("tagging VPC", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.VPCID, map[string]string{
-			"KubernetesCluster": m.Name,
-			"Name":              m.Name + "-vpc",
-		})
-	})
-
-	procedure.AddStep("enabling VPC DNS", func() error {
-		input := &ec2.ModifyVpcAttributeInput{
-			VpcId:              aws.String(m.AWSConfig.VPCID),
-			EnableDnsHostnames: &ec2.AttributeBooleanValue{Value: aws.Bool(true)},
-		}
-		_, err := ec2S.ModifyVpcAttribute(input)
-		return err
-	})
-
-	// Create Internet Gateway
-
-	procedure.AddStep("creating Internet Gateway", func() error {
-		if m.AWSConfig.InternetGatewayID != "" {
-			return nil
-		}
-		resp, err := ec2S.CreateInternetGateway(new(ec2.CreateInternetGatewayInput))
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.InternetGatewayID = *resp.InternetGateway.InternetGatewayId
-		return nil
-	})
-
-	procedure.AddStep("tagging Internet Gateway", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.InternetGatewayID, map[string]string{
-			"KubernetesCluster": m.Name,
-			"Name":              m.Name + "-ig",
-		})
-	})
-
-	procedure.AddStep("attaching Internet Gateway to VPC", func() error {
-		input := &ec2.AttachInternetGatewayInput{
-			VpcId:             aws.String(m.AWSConfig.VPCID),
-			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
-		}
-		if _, err := ec2S.AttachInternetGateway(input); err != nil && !strings.Contains(err.Error(), "already attached") {
-			return err
-		}
-		return nil
-	})
-
-	// Create Subnet
-
-	procedure.AddStep("creating Subnet", func() error {
-		if m.AWSConfig.PublicSubnetID != "" {
-			return nil
-		}
-		input := &ec2.CreateSubnetInput{
-			VpcId:            aws.String(m.AWSConfig.VPCID),
-			CidrBlock:        aws.String(m.AWSConfig.PublicSubnetIPRange),
-			AvailabilityZone: aws.String(m.AWSConfig.AvailabilityZone),
-		}
-		resp, err := ec2S.CreateSubnet(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.PublicSubnetID = *resp.Subnet.SubnetId
-		return nil
-	})
-
-	procedure.AddStep("tagging Subnet", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.PublicSubnetID, map[string]string{
-			"KubernetesCluster": m.Name,
-			"Name":              m.Name + "-psub",
-		})
-	})
-
-	procedure.AddStep("enabling public IP assignment setting of Subnet", func() error {
-		input := &ec2.ModifySubnetAttributeInput{
-			SubnetId:            aws.String(m.AWSConfig.PublicSubnetID),
-			MapPublicIpOnLaunch: &ec2.AttributeBooleanValue{Value: aws.Bool(true)},
-		}
-		_, err := ec2S.ModifySubnetAttribute(input)
-		return err
-	})
-
-	// Route Table
-
-	procedure.AddStep("creating Route Table", func() error {
-		if m.AWSConfig.RouteTableID != "" {
-			return nil
-		}
-		input := &ec2.CreateRouteTableInput{
-			VpcId: aws.String(m.AWSConfig.VPCID),
-		}
-		resp, err := ec2S.CreateRouteTable(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.RouteTableID = *resp.RouteTable.RouteTableId
-		return nil
-	})
-
-	procedure.AddStep("tagging Route Table", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.RouteTableID, map[string]string{
-			"KubernetesCluster": m.Name,
-			"Name":              m.Name + "-rt",
-		})
-	})
-
-	procedure.AddStep("associating Route Table with Subnet", func() error {
-		if m.AWSConfig.RouteTableSubnetAssociationID != "" {
-			return nil
-		}
-		input := &ec2.AssociateRouteTableInput{
-			RouteTableId: aws.String(m.AWSConfig.RouteTableID),
-			SubnetId:     aws.String(m.AWSConfig.PublicSubnetID),
-		}
-		resp, err := ec2S.AssociateRouteTable(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.RouteTableSubnetAssociationID = *resp.AssociationId
-		return nil
-	})
-
-	procedure.AddStep("creating Route for Internet Gateway", func() error {
-		input := &ec2.CreateRouteInput{
-			DestinationCidrBlock: aws.String("0.0.0.0/0"),
-			RouteTableId:         aws.String(m.AWSConfig.RouteTableID),
-			GatewayId:            aws.String(m.AWSConfig.InternetGatewayID),
-		}
-		if _, err := ec2S.CreateRoute(input); err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
-			return err
-		}
-		return nil
-	})
-
-	// Create Security Groups
-
-	procedure.AddStep("creating ELB Security Group", func() error {
-		if m.AWSConfig.ELBSecurityGroupID != "" {
-			return nil
-		}
-		input := &ec2.CreateSecurityGroupInput{
-			GroupName:   aws.String(m.Name + "_elb_sg"),
-			Description: aws.String("Allow any external port through to internal 30-40k range"),
-			VpcId:       aws.String(m.AWSConfig.VPCID),
-		}
-		resp, err := ec2S.CreateSecurityGroup(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.ELBSecurityGroupID = *resp.GroupId
-		return nil
-	})
-
-	procedure.AddStep("tagging ELB Security Group", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.ELBSecurityGroupID, map[string]string{
-			"KubernetesCluster": m.Name,
-		})
-	})
-
-	procedure.AddStep("creating ELB Security Group ingress rules", func() error {
-		input := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(0),
-					ToPort:     aws.Int64(0),
-					IpProtocol: aws.String("-1"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-			},
-		}
-		if _, err := ec2S.AuthorizeSecurityGroupIngress(input); err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
-			return err
-		}
-		return nil
-	})
-
-	procedure.AddStep("creating ELB Security Group egress rules", func() error {
-		input := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(30000),
-					ToPort:     aws.Int64(40000),
-					IpProtocol: aws.String("tcp"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-				{
-					FromPort:   aws.Int64(10250),
-					ToPort:     aws.Int64(10250),
-					IpProtocol: aws.String("tcp"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-			},
-		}
-		if _, err := ec2S.AuthorizeSecurityGroupIngress(input); err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
-			return err
-		}
-		return nil
-	})
-
-	procedure.AddStep("creating Node Security Group", func() error {
-		if m.AWSConfig.NodeSecurityGroupID != "" {
-			return nil
-		}
-		input := &ec2.CreateSecurityGroupInput{
-			GroupName:   aws.String(m.Name + "_sg"),
-			Description: aws.String("Allow any traffic to 443 and 22, but only traffic from ELB for 10250 and 30k-40k"),
-			VpcId:       aws.String(m.AWSConfig.VPCID),
-		}
-		resp, err := ec2S.CreateSecurityGroup(input)
-		if err != nil {
-			return err
-		}
-		m.AWSConfig.NodeSecurityGroupID = *resp.GroupId
-		return nil
-	})
-
-	procedure.AddStep("tagging Node Security Group", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.NodeSecurityGroupID, map[string]string{
-			"KubernetesCluster": m.Name,
-		})
-	})
-
-	procedure.AddStep("creating Node Security Group ingress rules", func() error {
-		input := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID),
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(0),
-					ToPort:     aws.Int64(0),
-					IpProtocol: aws.String("-1"),
-					UserIdGroupPairs: []*ec2.UserIdGroupPair{
-						{
-							GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID), // ?? TODO is this correct? -- https://github.com/supergiant/terraform-assets/blob/master/aws/1.1.7/security_groups.tf#L39
-						},
-					},
-				},
-				{
-					FromPort:   aws.Int64(22),
-					ToPort:     aws.Int64(22),
-					IpProtocol: aws.String("tcp"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-				{
-					FromPort:   aws.Int64(443),
-					ToPort:     aws.Int64(443),
-					IpProtocol: aws.String("tcp"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-				{
-					FromPort:   aws.Int64(30000),
-					ToPort:     aws.Int64(40000),
-					IpProtocol: aws.String("tcp"),
-					UserIdGroupPairs: []*ec2.UserIdGroupPair{
-						{
-							GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
-						},
-					},
-				},
-				{
-					FromPort:   aws.Int64(10250),
-					ToPort:     aws.Int64(10250),
-					IpProtocol: aws.String("tcp"),
-					UserIdGroupPairs: []*ec2.UserIdGroupPair{
-						{
-							GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
-						},
-					},
-				},
-			},
-		}
-		if _, err := ec2S.AuthorizeSecurityGroupIngress(input); err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
-			return err
-		}
-		return nil
-	})
-
-	procedure.AddStep("creating Node Security Group egress rules", func() error {
-		input := &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID),
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(0),
-					ToPort:     aws.Int64(0),
-					IpProtocol: aws.String("-1"),
-					IpRanges: []*ec2.IpRange{
-						{
-							CidrIp: aws.String("0.0.0.0/0"),
-						},
-					},
-				},
-			},
-		}
-		if _, err := ec2S.AuthorizeSecurityGroupIngress(input); err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
-			return err
-		}
-		return nil
-	})
-
-	// Master Instance
-
-	procedure.AddStep("creating Server for Kubernetes master", func() error {
-		if m.AWSConfig.MasterID != "" {
-			return nil
-		}
-
-		userdataTemplate, err := bindata.Asset("config/providers/aws/master_userdata.txt")
-		if err != nil {
-			return err
-		}
-		template, err := template.New("master_template").Parse(string(userdataTemplate))
-		if err != nil {
-			return err
-		}
-		var userdata bytes.Buffer
-		if err = template.Execute(&userdata, m); err != nil {
-			return err
-		}
-		encodedUserdata := base64.StdEncoding.EncodeToString(userdata.Bytes())
-
-		input := &ec2.RunInstancesInput{
-			MinCount:     aws.Int64(1),
-			MaxCount:     aws.Int64(1),
-			ImageId:      aws.String(AWSMasterAMIs[m.AWSConfig.Region]),
-			InstanceType: aws.String(m.MasterNodeSize),
-			KeyName:      aws.String(m.Name + "-key"),
-			NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
-				{
-					DeviceIndex:              aws.Int64(0),
-					AssociatePublicIpAddress: aws.Bool(true),
-					DeleteOnTermination:      aws.Bool(true),
-					Groups: []*string{
-						aws.String(m.AWSConfig.NodeSecurityGroupID),
-					},
-					SubnetId:         aws.String(m.AWSConfig.PublicSubnetID),
-					PrivateIpAddress: aws.String(m.AWSConfig.MasterPrivateIP),
-				},
-			},
-			IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-				Name: aws.String("kubernetes-master"),
-			},
-			BlockDeviceMappings: []*ec2.BlockDeviceMapping{
-				{
-					DeviceName: aws.String("/dev/xvdb"),
-					Ebs: &ec2.EbsBlockDevice{
-						DeleteOnTermination: aws.Bool(true),
-						VolumeType:          aws.String("gp2"),
-						VolumeSize:          aws.Int64(20),
-					},
-				},
-			},
-			UserData: aws.String(encodedUserdata),
-		}
-		resp, err := ec2S.RunInstances(input)
-		if err != nil {
-			return err
-		}
-
-		instance := resp.Instances[0]
-
-		m.AWSConfig.MasterID = *instance.InstanceId
-		return nil
-	})
-
-	procedure.AddStep("tagging Kubernetes master", func() error {
-		return tagAWSResource(ec2S, m.AWSConfig.MasterID, map[string]string{
-			"KubernetesCluster": m.Name,
-			"Name":              m.Name + "-master",
-			"Role":              m.Name + "-master",
-		})
-	})
-
-	// Wait for server to be ready
-
-	procedure.AddStep("waiting for Kubernetes master to launch", func() error {
-		input := &ec2.DescribeInstancesInput{
-			InstanceIds: []*string{
-				aws.String(m.AWSConfig.MasterID),
-			},
-		}
-
-		return action.CancellableWaitFor("Kubernetes master launch", 5*time.Minute, 3*time.Second, func() (bool, error) {
-			resp, err := ec2S.DescribeInstances(input)
-			if err != nil {
-				return false, err
-			}
-
-			instance := resp.Reservations[0].Instances[0]
-
-			// Save IP when ready
-			if m.MasterPublicIP == "" {
-				if ip := instance.PublicIpAddress; ip != nil {
-					m.MasterPublicIP = *ip
-					if err := p.Core.DB.Save(m); err != nil {
-						return false, err
-					}
-				}
-			}
-
-			return *instance.State.Name == "running", nil
-		})
-	})
-
-	// Create route for master
-
-	procedure.AddStep("creating Route for Kubernetes master", func() error {
-		input := &ec2.CreateRouteInput{
-			DestinationCidrBlock: aws.String("10.246.0.0/24"),
-			RouteTableId:         aws.String(m.AWSConfig.RouteTableID),
-			InstanceId:           aws.String(m.AWSConfig.MasterID),
-		}
-		_, err := ec2S.CreateRoute(input)
-		return err
-	})
-
-	// Create first minion
-
-	procedure.AddStep("creating Kubernetes minion", func() error {
-		// TODO repeated in DO provider
-		if err := p.Core.DB.Find(&m.Nodes, "kube_name = ?", m.Name); err != nil {
-			return err
-		}
-		if len(m.Nodes) > 0 {
-			return nil
-		}
-
-		node := &model.Node{
-			KubeName: m.Name,
-			Size:     m.NodeSizes[0],
-		}
-		return p.Core.Nodes.Create(node)
-	})
-
-	procedure.AddStep("waiting for Kubernetes", func() error {
-
-		k8s := p.Core.K8S(m)
-
-		return action.CancellableWaitFor("Kubernetes API and first minion", 20*time.Minute, time.Second, func() (bool, error) {
-			nodes, err := k8s.ListNodes("")
-			if err != nil {
-				return false, nil
-			}
-			return len(nodes) > 0, nil
-		})
-	})
-
-	return procedure.Run()
-}
-
-func (p *Provider) deleteKube(m *model.Kube, action *core.Action) error {
-	ec2S := p.EC2(m)
-	procedure := &core.Procedure{
-		Core:   p.Core,
-		Name:   "Delete Kube",
-		Model:  m,
-		Action: action,
-	}
-
-	procedure.AddStep("deleting master", func() error {
-		if m.AWSConfig.MasterID == "" {
-			return nil
-		}
-
-		input := &ec2.TerminateInstancesInput{
-			InstanceIds: []*string{
-				aws.String(m.AWSConfig.MasterID),
-			},
-		}
-		if _, err := ec2S.TerminateInstances(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-
-		// Wait for termination
-		descinput := &ec2.DescribeInstancesInput{
-			InstanceIds: []*string{
-				aws.String(m.AWSConfig.MasterID),
-			},
-		}
-		waitErr := util.WaitFor("Kubernetes master termination", 5*time.Minute, 3*time.Second, func() (bool, error) { // TODO --------- use server() method
-			resp, err := ec2S.DescribeInstances(descinput)
-			if err != nil {
-				return false, err
-			}
-			if len(resp.Reservations) == 0 || len(resp.Reservations[0].Instances) == 0 {
-				return true, nil
-			}
-			instance := resp.Reservations[0].Instances[0]
-			return *instance.State.Name == "terminated", nil
-		})
-		// Done waiting
-		if waitErr != nil {
-			return waitErr
-		}
-
-		m.AWSConfig.MasterID = ""
-		return nil
-	})
-
-	procedure.AddStep("disassociating Route Table from Subnet", func() error {
-		if m.AWSConfig.RouteTableSubnetAssociationID == "" {
-			return nil
-		}
-		input := &ec2.DisassociateRouteTableInput{
-			AssociationId: aws.String(m.AWSConfig.RouteTableSubnetAssociationID),
-		}
-		if _, err := ec2S.DisassociateRouteTable(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.RouteTableSubnetAssociationID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting Internet Gateway", func() error {
-		if m.AWSConfig.InternetGatewayID == "" {
-			return nil
-		}
-		diginput := &ec2.DetachInternetGatewayInput{
-			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
-			VpcId:             aws.String(m.AWSConfig.VPCID),
-		}
-
-		// NOTE we do this (maybe we should just describe, not spam detach) because
-		// we can't wait directly on minions to terminate (we can, but I'm lazy rn)
-		waitErr := util.WaitFor("Internet Gateway to detach", 5*time.Minute, 5*time.Second, func() (bool, error) {
-			if _, err := ec2S.DetachInternetGateway(diginput); err != nil && !strings.Contains(err.Error(), "not attached") {
-
-				p.Core.Log.Warn(err.Error())
-
-				return false, nil
-			}
-			return true, nil
-		})
-		if waitErr != nil {
-			return waitErr
-		}
-
-		input := &ec2.DeleteInternetGatewayInput{
-			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
-		}
-		if _, err := ec2S.DeleteInternetGateway(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.InternetGatewayID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting Route Table", func() error {
-		if m.AWSConfig.RouteTableID == "" {
-			return nil
-		}
-		input := &ec2.DeleteRouteTableInput{
-			RouteTableId: aws.String(m.AWSConfig.RouteTableID),
-		}
-		if _, err := ec2S.DeleteRouteTable(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.RouteTableID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting public Subnet", func() error {
-		if m.AWSConfig.PublicSubnetID == "" {
-			return nil
-		}
-		input := &ec2.DeleteSubnetInput{
-			SubnetId: aws.String(m.AWSConfig.PublicSubnetID),
-		}
-
-		waitErr := util.WaitFor("Public Subnet to delete", 2*time.Minute, 5*time.Second, func() (bool, error) {
-			if _, err := ec2S.DeleteSubnet(input); isErrAndNotAWSNotFound(err) {
-				return false, nil
-			}
-			return true, nil
-		})
-		if waitErr != nil {
-			return waitErr
-		}
-
-		m.AWSConfig.PublicSubnetID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting Node Security Group", func() error {
-		if m.AWSConfig.NodeSecurityGroupID == "" {
-			return nil
-		}
-		input := &ec2.DeleteSecurityGroupInput{
-			GroupId: aws.String(m.AWSConfig.NodeSecurityGroupID),
-		}
-		if _, err := ec2S.DeleteSecurityGroup(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.NodeSecurityGroupID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting ELB Security Group", func() error {
-		if m.AWSConfig.ELBSecurityGroupID == "" {
-			return nil
-		}
-		input := &ec2.DeleteSecurityGroupInput{
-			GroupId: aws.String(m.AWSConfig.ELBSecurityGroupID),
-		}
-		if _, err := ec2S.DeleteSecurityGroup(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.ELBSecurityGroupID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting VPC", func() error {
-		if m.AWSConfig.VPCID == "" {
-			return nil
-		}
-		input := &ec2.DeleteVpcInput{
-			VpcId: aws.String(m.AWSConfig.VPCID),
-		}
-		if _, err := ec2S.DeleteVpc(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		m.AWSConfig.VPCID = ""
-		return nil
-	})
-
-	procedure.AddStep("deleting SSH Key Pair", func() error {
-		input := &ec2.DeleteKeyPairInput{
-			KeyName: aws.String(m.Name + "-key"),
-		}
-		if _, err := ec2S.DeleteKeyPair(input); isErrAndNotAWSNotFound(err) {
-			return err
-		}
-		return nil
-	})
-
-	return procedure.Run()
-}
-
-func (p *Provider) createNode(m *model.Node) error {
-	server, err := p.createServer(m)
-	if err != nil {
-		return err
-	}
-	p.setAttrsFromServer(m, server)
-	if err := p.Core.DB.Save(m); err != nil {
-		return err
-	}
-	for _, entrypoint := range m.Kube.Entrypoints {
-		if err := p.registerNodes(entrypoint, m); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+//func (p *Provider) createNode(m *model.Node) error {
+//	server, err := p.createServer(m)
+//	if err != nil {
+//		return err
+//	}
+//	p.setAttrsFromServer(m, server)
+//	if err := p.Core.DB.Save(m); err != nil {
+//		return err
+//	}
+//	for _, entrypoint := range m.Kube.Entrypoints {
+//		if err := p.registerNodes(entrypoint, m); err != nil {
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
 func (p *Provider) setAttrsFromServer(m *model.Node, server *ec2.Instance) {
 	m.ProviderID = *server.InstanceId
 	m.Name = *server.PrivateDnsName
 	m.Size = *server.InstanceType
 	m.ProviderCreationTimestamp = *server.LaunchTime
-}
-
-func (p *Provider) createServer(m *model.Node) (*ec2.Instance, error) {
-
-	// TODO move to init outside of func
-	userdataTemplate, err := bindata.Asset("config/providers/aws/minion_userdata.txt")
-	if err != nil {
-		return nil, err
-	}
-	template, err := template.New("minion_template").Parse(string(userdataTemplate))
-	if err != nil {
-		return nil, err
-	}
-	var userdata bytes.Buffer
-	if err = template.Execute(&userdata, m.Kube); err != nil {
-		return nil, err
-	}
-	encodedUserdata := base64.StdEncoding.EncodeToString(userdata.Bytes())
-
-	input := &ec2.RunInstancesInput{
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		InstanceType: aws.String(m.Size),
-		ImageId:      aws.String(AWSMasterAMIs[m.Kube.AWSConfig.Region]),
-		EbsOptimized: aws.Bool(true),
-		KeyName:      aws.String(m.Kube.Name + "-key"),
-		SecurityGroupIds: []*string{
-			aws.String(m.Kube.AWSConfig.NodeSecurityGroupID),
-		},
-		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-			Name: aws.String("kubernetes-minion"),
-		},
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
-			// root device ? TODO (do we need the one after this?)
-			{
-				DeviceName: aws.String("/dev/sda1"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeType:          aws.String("gp2"),
-					VolumeSize:          aws.Int64(80),
-					DeleteOnTermination: aws.Bool(true),
-				},
-			},
-			&ec2.BlockDeviceMapping{
-				DeviceName: aws.String("/dev/xvdb"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeType:          aws.String("gp2"),
-					VolumeSize:          aws.Int64(80),
-					DeleteOnTermination: aws.Bool(true),
-				},
-			},
-		},
-		UserData: aws.String(encodedUserdata),
-		SubnetId: aws.String(m.Kube.AWSConfig.PublicSubnetID),
-	}
-
-	ec2S := p.EC2(m.Kube)
-
-	resp, err := ec2S.RunInstances(input)
-	if err != nil {
-		return nil, err
-	}
-
-	server := resp.Instances[0]
-
-	err = tagAWSResource(ec2S, *server.InstanceId, map[string]string{
-		"KubernetesCluster": m.Kube.Name,
-		"Name":              m.Kube.Name + "-minion",
-		"Role":              m.Kube.Name + "-minion",
-	})
-	if err != nil {
-		// TODO
-		p.Core.Log.Error("Failed to tag EC2 Instance " + *server.InstanceId)
-	}
-
-	return server, nil
 }
 
 func (p *Provider) deleteServer(m *model.Node) error {
@@ -1111,11 +227,13 @@ func (p *Provider) createELB(m *model.Entrypoint) error {
 
 	// Save Address
 	m.Address = *resp.DNSName
-	if err := p.Core.DB.Save(m); err != nil {
+	err = p.Core.DB.Save(m)
+	if err != nil {
 		return err
 	}
 
-	if err := p.registerNodes(m, m.Kube.Nodes...); err != nil {
+	err = p.registerNodes(m, m.Kube.Nodes...)
+	if err != nil {
 		return err
 	}
 
@@ -1175,7 +293,8 @@ func (p *Provider) createVolume(volume *model.Volume, snapshotID *string) error 
 
 	volume.ProviderID = *awsVol.VolumeId
 	volume.Size = int(*awsVol.Size)
-	if err := p.Core.DB.Save(volume); err != nil {
+	err = p.Core.DB.Save(volume)
+	if err != nil {
 		return err
 	}
 
@@ -1397,4 +516,75 @@ func tagAWSResource(ec2S ec2iface.EC2API, idstr string, tags map[string]string) 
 	}
 	_, err := ec2S.CreateTags(input)
 	return err
+}
+
+func getAMI(ec2S ec2iface.EC2API) (string, error) {
+	images, err := ec2S.DescribeImages(&ec2.DescribeImagesInput{
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name: aws.String("architecture"),
+				Values: []*string{
+					aws.String("x86_64"),
+				},
+			},
+			&ec2.Filter{
+				Name: aws.String("owner-id"),
+				Values: []*string{
+					aws.String("595879546273"),
+				},
+			},
+			&ec2.Filter{
+				Name: aws.String("name"),
+				Values: []*string{
+					aws.String("*stable*"),
+				},
+			},
+			&ec2.Filter{
+				Name: aws.String("virtualization-type"),
+				Values: []*string{
+					aws.String("hvm"),
+				},
+			},
+		},
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var latestImage *ec2.Image
+	for _, image := range images.Images {
+		// latest year
+		if latestImage == nil {
+			latestImage = image
+			continue
+		}
+
+		latestImageCreationTime, err := time.Parse("2006-01-02T15:04:05.000Z", *latestImage.CreationDate)
+		if err != nil {
+			panic(err)
+		}
+		imageCreationTime, err := time.Parse("2006-01-02T15:04:05.000Z", *image.CreationDate)
+		if err != nil {
+			panic(err)
+		}
+
+		if imageCreationTime.After(latestImageCreationTime) {
+			latestImage = image
+		}
+	}
+	return *latestImage.ImageId, nil
+}
+
+func etcdToken(num string) (string, error) {
+	resp, err := http.Get("https://discovery.etcd.io/new?size=" + num + "")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }

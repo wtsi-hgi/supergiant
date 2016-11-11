@@ -36,6 +36,7 @@ func main() {
 				EC2:  aws.EC2,
 				IAM:  aws.IAM,
 				ELB:  aws.ELB,
+				S3:   aws.S3,
 			}
 		}
 		c.DOProvider = func(creds map[string]string) core.Provider {
