@@ -46,7 +46,7 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 				"m1.smaller",
 				"m1.small",
 			},
-			"digitalocean_config": map[string]interface{}{
+			"openstack_config": map[string]interface{}{
 				"region":              "RegionOne",
 				"ssh_key_fingerprint": "",
 				"ssh_pub_key":         "",
@@ -64,11 +64,15 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 				"m4.4xlarge",
 			},
 			"aws_config": map[string]interface{}{
-				"region":                 "us-east-1",
-				"availability_zone":      "us-east-1b",
-				"vpc_ip_range":           "172.20.0.0/16",
-				"public_subnet_ip_range": "172.20.0.0/24",
-				"master_private_ip":      "172.20.0.9",
+				"region":       "us-east-1",
+				"vpc_ip_range": "172.20.0.0/16",
+				"public_subnet_ip_range": []map[string]string{
+					map[string]string{
+						"zone":      "us-east-1b",
+						"ip_range":  "172.20.0.0/24",
+						"subnet_id": "",
+					},
+				},
 			},
 		}
 	}

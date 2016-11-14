@@ -231,7 +231,6 @@ func TestEntrypointsCreate(t *testing.T) {
 			}
 
 			err := sg.Entrypoints.Create(item.model)
-
 			if item.err == nil {
 				// NOTE The Provider part of Create is Async.
 				// We can only call this if the non-Async err is nil (meaning the Action started).

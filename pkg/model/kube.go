@@ -57,21 +57,29 @@ type Kube struct {
 
 // AWSKubeConfig holds aws specific information about AWS based KUbernetes clusters.
 type AWSKubeConfig struct {
-	Region              string `json:"region" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9]$"`
-	AvailabilityZone    string `json:"availability_zone" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9][a-z]$"`
-	VPCIPRange          string `json:"vpc_ip_range" validate:"nonzero" sg:"default=172.20.0.0/16"`
-	PublicSubnetIPRange string `json:"public_subnet_ip_range" validate:"nonzero" sg:"default=172.20.0.0/24"`
-	MasterPrivateIP     string `json:"master_private_ip" validate:"nonzero" sg:"default=172.20.0.9"`
+	Region              string              `json:"region" validate:"nonzero,regexp=^[a-z]{2}-[a-z]+-[0-9]$"`
+	AvailabilityZone    string              `json:"availability_zone"`
+	VPCIPRange          string              `json:"vpc_ip_range" validate:"nonzero" sg:"default=172.20.0.0/16"`
+	PublicSubnetIPRange []map[string]string `json:"public_subnet_ip_range"`
+	MasterPrivateIP     string              `json:"master_private_ip" sg:"readonly"`
+	KubeMasterCount     int                 `json:"kube_master_count"`
+	MultiAZ             bool                `json:"multi_az"`
+	LastSelectedAZ      string              `json:"last_selected_az" sg:"readonly"` // if using multiAZ this is the last az the node build used.
+	ETCDDiscoveryURL    string              `json:"etcd_discovery_url" sg:"readonly"`
 
-	PrivateKey                    string `json:"private_key,omitempty" sg:"readonly,private"`
-	VPCID                         string `json:"vpc_id" sg:"readonly"`
-	InternetGatewayID             string `json:"internet_gateway_id" sg:"readonly"`
-	PublicSubnetID                string `json:"public_subnet_id" sg:"readonly"`
-	RouteTableID                  string `json:"route_table_id" sg:"readonly"`
-	RouteTableSubnetAssociationID string `json:"route_table_subnet_association_id" sg:"readonly"`
-	ELBSecurityGroupID            string `json:"elb_security_group_id" sg:"readonly"`
-	NodeSecurityGroupID           string `json:"node_security_group_id" sg:"readonly"`
-	MasterID                      string `json:"master_id" sg:"readonly"`
+	PrivateKey                    string   `json:"private_key,omitempty" sg:"readonly"`
+	SSHPubKey                     string   `json:"ssh_pub_key"`
+	VPCID                         string   `json:"vpc_id" sg:"readonly"`
+	InternetGatewayID             string   `json:"internet_gateway_id" sg:"readonly"`
+	PublicSubnetID                string   `json:"public_subnet_id" sg:"readonly"`
+	RouteTableID                  string   `json:"route_table_id" sg:"readonly"`
+	RouteTableSubnetAssociationID []string `json:"route_table_subnet_association_id" sg:"readonly"`
+	ELBSecurityGroupID            string   `json:"elb_security_group_id" sg:"readonly"`
+	NodeSecurityGroupID           string   `json:"node_security_group_id" sg:"readonly"`
+	MasterID                      string   `json:"master_id" sg:"readonly"`
+	MasterNodes                   []string `json:"master_nodes" sg:"readonly"`
+
+	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.4.3"`
 }
 
 // DOKubeConfig holds do specific information about DO based KUbernetes clusters.
