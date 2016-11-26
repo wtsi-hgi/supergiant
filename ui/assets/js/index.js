@@ -1,11 +1,20 @@
 // This file contains all the mess for rendering list views
 
+
+
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+
+
 $(function() {
 
   var table = $("table#item_list"),
       uiBasePath = table.data("ui-base-path"),
       apiBasePath = table.data('api-base-path'),
       fields = table.data('fields-json'),
+      showStatusCol = table.data('show-status'),
       thead = $('<thead>'),
       tbody = $('<tbody>'),
       paginator = $('ul.pagination');
@@ -14,13 +23,15 @@ $(function() {
   // Table headers
   var headerTrHtml = '<tr>';
   headerTrHtml += "<th></th>"; // for checkbox
-  headerTrHtml += '<th>ID</th>';
+  // headerTrHtml += '<th>ID</th>';
 
   $.each(fields, function(fx, field) {
     headerTrHtml += '<th>' + field.title + '</th>'
   });
 
-  headerTrHtml += '<th>Status</th>';
+  if (showStatusCol) {
+    headerTrHtml += '<th>Status</th>';
+  }
   headerTrHtml += '</tr>';
 
   thead.append($(headerTrHtml))
@@ -63,12 +74,12 @@ $(function() {
   // Render the doo-dads
 
   function renderFilterPill(key, val) {
-    var filterPill = $('<span class="search-filter"><strong>' + key + ':</strong> ' + val + '<span class="glyphicon glyphicon-remove"></span></span>');
+    var filterPill = $('<div class="search-filter"><span><strong>' + key + ':</strong> ' + val + '</span><button type="button" class="close" data-dismiss="modal">&times;</button></div>');
     filterDiv.append(filterPill);
   }
 
   function padSearchBar() {
-    searchBar.css("padding-left", filterDiv.width() + 10)
+    searchBar.css("padding-left", filterDiv.width() + 13)
   }
 
   if (filterBits) {
@@ -127,19 +138,15 @@ $(function() {
 
   // Removing filters
   //--------------------------------------------------------------------
-  $('span.search-filter .glyphicon-remove').click(function() {
+  $('.search-filter .close').click(function() {
     // Just for the satisfaction, remove the pill
     var pill = $(this).parent();
     pill.remove();
     padSearchBar();
     // Remove filter param, reload page
-    var keyVal = pill.text().split(': ');
+    var keyVal = pill.children('span').text().split(': ');
 
     var newQ = window.location.search.replace(RegExp("[\?&]filter." + keyVal[0] + "=" + keyVal[1]), "");
-
-    // if (newQ.startsWith("&")) {
-    //   newQ = newQ.substring(1);
-    // }
 
     window.location.search = newQ;
   });
@@ -275,47 +282,53 @@ $(function() {
       // Checkbox column (for batch actions)
       // var disabledCheckbox = item.status ? " disabled" : "";
       var disabledCheckbox = ""; // TODO we do need some type of disabling, but doing this prevents deleting hanging deploy
-      trHtml += '<td class="item_selector"><input type="checkbox" id="' + item.id + '"' + disabledCheckbox + '></td>';
+      trHtml += '<td class="item_selector"><div class="checkbox"><input type="checkbox" id="' + item.id + '"' + disabledCheckbox + '><label for="' + item.id + '"></label</div></td>>';
 
       // ID column
-      trHtml += '<td><a href="' + uiBasePath + '/' + item.id + '">' + item.id + '</a></td>';
+      // trHtml += '<td><a href="' + uiBasePath + '/' + item.id + '">' + item.id + '</a></td>';
 
       // Attribute columns
       $.each(fieldVals, function(vx, val) {
-        trHtml += '<td>' + val + '</td>';
+        if (vx == 0) {
+          trHtml += '<td><a href="' + uiBasePath + '/' + item.id + '">' + val + '</a></td>';
+        } else {
+          trHtml += '<td>' + val + '</td>';
+        }
       });
 
       // Status column
-      var statusTd = '<td';
-      if (item.status) {
+      if (showStatusCol) {
 
-        if (item.status.error && item.status.retries == item.status.max_retries) {
+        var statusTd = '<td>';
 
-          statusTd += '><a class="text-danger" href="' + uiBasePath + '/' + item.id + '">Failure</a>'
+        if (item.status && item.status.error && item.status.retries == item.status.max_retries) {
+
+          // Red + "Failure" text
+          statusTd += '<div class="status status-danger"></div>';
+          statusTd += '<span class="status-text text-danger">Failure<span>';
+
+        } else if (item.status) {
+
+          // Blue (rotating) + text
+          statusTd += '<div class="status status-transitioning"></div>';
+          statusTd += '<span class="status-text text-primary">' + capitalizeFirstLetter(item.status.description) + '<span>';
+
+        } else if (item.passive_status && !item.passive_status_okay) {
+
+          // Yellow
+          statusTd += '<div class="status status-warning"></div>';
 
         } else {
 
-          var color = item.status.description == "deleting" ? "danger" : "info";
-          statusTd += ' class="text-' + color + '">';
-          statusTd += '<span>' + item.status.description + '</span>';
-          // Loader
-          statusTd += '<div id="circleG"><div id="circleG_1" class="circleG"></div><div id="circleG_2" class="circleG"></div><div id="circleG_3" class="circleG"></div></div>'
+          // Green
+          statusTd += '<div class="status status-ok"></div>';
 
         }
 
-        statusTd += '</td>'
-
-      } else if (item.passive_status) {
-
-        var color = item.passive_status_okay ? "success": "warning";
-        statusTd += ' style="opacity: 0.7" class="text-' + color + '">' + item.passive_status + '</td>';
-
-      } else {
-        statusTd += '></td>';
+        statusTd += '</td>';
+        trHtml += statusTd;
+        trHtml += '</tr>';
       }
-      trHtml += statusTd;
-
-      trHtml += '</tr>';
 
 
       var newTr = $(trHtml);
@@ -389,18 +402,18 @@ $(function() {
 
 
 
-  tbody.on("click", "td.item_selector", function(event) {
-    var input = $(this).children('input'),
+  tbody.on("click", "tr", function(event) {
+    var input = $(this).find('input'),
         itemID = input[0].id;
 
-    if (event.target.tagName == "INPUT") {
-      // do its natural thing...
-    } else {
-      input.prop('checked', !input.prop('checked')) // toggle
+
+    if (event.target.tagName == "TD") {
+      input.prop('checked', !input.prop('checked'));
     }
 
+
     selectedItemIDs = [];
-    $("td.item_selector > input:checked").each(function(chx, checkbox) {
+    $("td.item_selector input:checked").each(function(chx, checkbox) {
       selectedItemIDs.push(checkbox.id);
     });
 
@@ -461,7 +474,7 @@ $(function() {
     modalConfirmBtn.data("method", link.data("method"));
     modalConfirmBtn.data("batch-action-path", link.data("batch-action-path"));
 
-    confirmModal.modal();
+    // confirmModal.modal();
 
     return false;
   });
@@ -496,7 +509,7 @@ $(function() {
       });
     });
 
-    confirmModal.modal("hide");
+    // confirmModal.modal("hide");
   });
 
 
@@ -529,22 +542,24 @@ $(function() {
   if (logDiv.length) {
 
     var renderLogs = function() {
-      $.get({
-        beforeSend: function(xhr){
-          xhr.setRequestHeader('Authorization', 'SGAPI session="' + getCookie('supergiant_session') + '"');
-        },
-        url: "/api/v0/log",
-        success: function(data) {
+      if (logDiv.is(':visible')) {
+        $.get({
+          beforeSend: function(xhr){
+            xhr.setRequestHeader('Authorization', 'SGAPI session="' + getCookie('supergiant_session') + '"');
+          },
+          url: "/api/v0/log",
+          success: function(data) {
 
-          data = data.replace(/[\x00-\x7F]\[\d+mINFO[\x00-\x7F]\[0m/g, "<span class='text-info'>INFO</span> ")
-          data = data.replace(/[\x00-\x7F]\[\d+mWARN[\x00-\x7F]\[0m/g, "<span class='text-warning'>WARN</span> ")
-          data = data.replace(/[\x00-\x7F]\[\d+mERRO[\x00-\x7F]\[0m/g, "<span class='text-danger'>ERRO</span> ")
-          data = data.replace(/[\x00-\x7F]\[\d+mDEBU[\x00-\x7F]\[0m/g, "<span class='text-muted'>DEBU</span> ")
+            data = data.replace(/[\x00-\x7F]\[\d+mINFO[\x00-\x7F]\[0m/g, "<span class='text-info'>INFO</span> ")
+            data = data.replace(/[\x00-\x7F]\[\d+mWARN[\x00-\x7F]\[0m/g, "<span class='text-warning'>WARN</span> ")
+            data = data.replace(/[\x00-\x7F]\[\d+mERRO[\x00-\x7F]\[0m/g, "<span class='text-danger'>ERRO</span> ")
+            data = data.replace(/[\x00-\x7F]\[\d+mDEBU[\x00-\x7F]\[0m/g, "<span class='text-muted'>DEBU</span> ")
 
-          logDiv.html(data);
+            logDiv.html(data);
 
-        }
-      });
+          }
+        });
+      }
     };
 
     renderLogs();

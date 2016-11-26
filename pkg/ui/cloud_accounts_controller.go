@@ -81,11 +81,12 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 		},
 	}
 	return renderTemplate(sg, w, "index", map[string]interface{}{
-		"title":       "Cloud Accounts",
-		"uiBasePath":  "/ui/cloud_accounts",
-		"apiBasePath": "/api/v0/cloud_accounts",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Cloud Accounts",
+		"uiBasePath":    "/ui/cloud_accounts",
+		"apiBasePath":   "/api/v0/cloud_accounts",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": false,
 		"newOptions": map[string]string{
 			"aws":          "AWS",
 			"digitalocean": "DigitalOcean",

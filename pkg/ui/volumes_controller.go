@@ -64,11 +64,12 @@ func ListVolumes(sg *client.Client, w http.ResponseWriter, r *http.Request) erro
 		},
 	}
 	return renderTemplate(sg, w, "index", map[string]interface{}{
-		"title":       "Volumes",
-		"uiBasePath":  "/ui/volumes",
-		"apiBasePath": "/api/v0/volumes",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Volumes",
+		"uiBasePath":    "/ui/volumes",
+		"apiBasePath":   "/api/v0/volumes",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": true,
 		"actionPaths": map[string]string{
 			"Edit": "/edit",
 		},
