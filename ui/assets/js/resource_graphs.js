@@ -88,7 +88,7 @@ function renderGraph(name, graph, podMetrics, yTickFormatter) {
   graph.append("text")
        .style("fill", "black")
        .style("font-size", "12px")
-       .style("font-family", "'Doppio One', sans-serif")
+       .style("font-family", "'Open Sans', sans-serif")
        .attr("y", 10)
        .text(name);
 
@@ -133,7 +133,7 @@ function renderGraph(name, graph, podMetrics, yTickFormatter) {
       continue;
     }
 
-    var label = $('<span style="font-family: Doppio One, sans-serif; font-size: 11px; color: hsla(' + color.hue + ',65%,' + color.lightness + '%,1); padding-right: 8px">' + podName + '</span>')
+    var label = $('<span style="font-family: Open Sans, sans-serif; font-size: 11px; color: hsla(' + color.hue + ',65%,' + color.lightness + '%,1); padding-right: 8px">' + podName + '</span>')
     podLabelDiv.append(label);
 
 

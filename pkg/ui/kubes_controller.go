@@ -116,11 +116,12 @@ func ListKubes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 		},
 	}
 	return renderTemplate(sg, w, "index", map[string]interface{}{
-		"title":       "Kubes",
-		"uiBasePath":  "/ui/kubes",
-		"apiBasePath": "/api/v0/kubes",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Kubes",
+		"uiBasePath":    "/ui/kubes",
+		"apiBasePath":   "/api/v0/kubes",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": true,
 		"newOptions": map[string]string{
 			"aws":          "AWS",
 			"digitalocean": "DigitalOcean",

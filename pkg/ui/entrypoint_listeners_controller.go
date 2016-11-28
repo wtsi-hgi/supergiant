@@ -68,11 +68,12 @@ func ListEntrypointListeners(sg *client.Client, w http.ResponseWriter, r *http.R
 		},
 	}
 	return renderTemplate(sg, w, "index", map[string]interface{}{
-		"title":       "Entrypoint Listeners",
-		"uiBasePath":  "/ui/entrypoint_listeners",
-		"apiBasePath": "/api/v0/entrypoint_listeners",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Entrypoint Listeners",
+		"uiBasePath":    "/ui/entrypoint_listeners",
+		"apiBasePath":   "/api/v0/entrypoint_listeners",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": false,
 		"batchActionPaths": map[string]map[string]string{
 			"Delete": map[string]string{
 				"method":       "DELETE",

@@ -64,7 +64,7 @@ func ListSessions(sg *client.Client, w http.ResponseWriter, r *http.Request) err
 		"uiBasePath":  "/ui/sessions",
 		"apiBasePath": "/api/v0/sessions",
 		"fields":      fields,
-		"showNewLink": true,
+		"showNewLink": false,
 		"batchActionPaths": map[string]map[string]string{
 			"Delete": map[string]string{
 				"method":       "DELETE",

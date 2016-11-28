@@ -119,11 +119,12 @@ func ListKubeResources(sg *client.Client, w http.ResponseWriter, r *http.Request
 		},
 	}
 	return renderTemplate(sg, w, "kube_resources", map[string]interface{}{
-		"title":       "Kube Resources",
-		"uiBasePath":  "/ui/kube_resources",
-		"apiBasePath": "/api/v0/kube_resources",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Kube Resources",
+		"uiBasePath":    "/ui/kube_resources",
+		"apiBasePath":   "/api/v0/kube_resources",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": true,
 		"newOptions": map[string]string{
 			"pod":     "Pod",
 			"service": "Service",

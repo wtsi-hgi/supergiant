@@ -68,11 +68,12 @@ func ListNodes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 		},
 	}
 	return renderTemplate(sg, w, "index", map[string]interface{}{
-		"title":       "Nodes",
-		"uiBasePath":  "/ui/nodes",
-		"apiBasePath": "/api/v0/nodes",
-		"fields":      fields,
-		"showNewLink": true,
+		"title":         "Nodes",
+		"uiBasePath":    "/ui/nodes",
+		"apiBasePath":   "/api/v0/nodes",
+		"fields":        fields,
+		"showNewLink":   true,
+		"showStatusCol": true,
 		"batchActionPaths": map[string]map[string]string{
 			"Delete": map[string]string{
 				"method":       "DELETE",

@@ -208,6 +208,9 @@ func renderTemplate(sg *client.Client, w http.ResponseWriter, name string, data 
 	// Version number
 	data["supergiantVersion"] = sg.Version
 
+	// Session ID (for JS-based logout)
+	data["sessionID"] = sg.AuthToken
+
 	if err := templates[name].ExecuteTemplate(w, "layout", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err

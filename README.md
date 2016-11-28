@@ -62,7 +62,7 @@ Quick start...
 
 ---
 
-![Supergiant UI](http://g.recordit.co/LQm27EPbCH.gif)
+![Supergiant UI](http://g.recordit.co/EfUk4D863W.gif)
 
 ## Features
 
@@ -72,8 +72,8 @@ Quick start...
 * Filterable container metrics views (RAM / CPU timeseries graphs)
 * Deploy / Update / Restart containers with a few clicks
 * Launch and manage multiple Kubes across multiple cloud providers from the UI
-* Works with multiple cloud providers (AWS, DigitalOcean, and _actively_ adding
-  more, in addition to on-premise hardware support)
+* Works with multiple cloud providers (AWS, DigitalOcean, OpenStack, and
+  _actively_ adding more, in addition to on-premise hardware support)
 * Automatic server management (background server autoscaling, up/down depending
   on container resource needs)
 * Role-based Users, Session-based login, self-signed SSL, and API tokens for
