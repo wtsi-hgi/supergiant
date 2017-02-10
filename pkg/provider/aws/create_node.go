@@ -68,6 +68,16 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
 			Name: aws.String("kubernetes-minion"),
 		},
+		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+			&ec2.BlockDeviceMapping{
+				DeviceName: aws.String("/dev/xvda"),
+				Ebs: &ec2.EbsBlockDevice{
+					DeleteOnTermination: aws.Bool(true),
+					VolumeType:          aws.String("gp2"),
+					VolumeSize:          aws.Int64(int64(m.Kube.AWSConfig.NodeVolumeSize)),
+				},
+			},
+		},
 		UserData: aws.String(encodedUserdata),
 		SubnetId: aws.String(selectedSubnet),
 	})

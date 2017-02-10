@@ -736,11 +736,11 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				},
 				BlockDeviceMappings: []*ec2.BlockDeviceMapping{
 					{
-						DeviceName: aws.String("/dev/xvdb"),
+						DeviceName: aws.String("/dev/xvda"),
 						Ebs: &ec2.EbsBlockDevice{
 							DeleteOnTermination: aws.Bool(true),
 							VolumeType:          aws.String("gp2"),
-							VolumeSize:          aws.Int64(20),
+							VolumeSize:          aws.Int64(int64(m.AWSConfig.MasterVolumeSize)),
 						},
 					},
 				},
