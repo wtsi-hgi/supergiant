@@ -139,6 +139,13 @@ Contribution Guidelines. Please see these links to get started.
 
 ## Development
 
+#### Use Docker in development
+
+    docker-compose build server
+    docker-compose run --rm --service-ports server
+
+#### Native go on your host
+
 If you would like to contribute changes to Supergiant, first see the pages in
 the section above, [Community and Contributing][Community and Contributing Anchor].
 

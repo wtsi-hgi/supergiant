@@ -5,3 +5,5 @@ tmp/*
 config/config.json
 .sass-cache
 /bindata/
+/build/dist/
+/data/
