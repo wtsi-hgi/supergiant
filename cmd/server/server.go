@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/provider/aws"
 	"github.com/supergiant/supergiant/pkg/provider/digitalocean"
@@ -25,6 +25,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "supergiant-server"
 	app.Usage = "Supergiant server " + version
+	app.Version = version
 
 	app.Action = func(ctx *cli.Context) {
 
