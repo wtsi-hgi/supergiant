@@ -44,15 +44,13 @@ type CLI struct {
 	*cli.App
 	Client  func(*cli.Context) *client.Client
 	Stdin   *os.File
-	Version string
 }
 
 func New(clientFn func(*cli.Context) *client.Client, stdin *os.File, version string) *CLI {
-	sgcli := &CLI{cli.NewApp(), clientFn, stdin, version}
+	sgcli := &CLI{cli.NewApp(), clientFn, stdin}
 
 	sgcli.Name = "supergiant"
 	sgcli.Usage = "Supergiant CLI " + version
-	// TODO for whatever reason the version always reports 0.0.0
 	sgcli.Version = version
 
 	sgcli.Commands = []cli.Command{
