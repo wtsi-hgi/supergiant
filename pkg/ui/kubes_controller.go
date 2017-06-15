@@ -68,6 +68,24 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 				"ssh_pub_key": "",
 			},
 		}
+	case "packet":
+		m = map[string]interface{}{
+			"cloud_account_name": "",
+			"name":               "",
+			"master_node_size":   "Type 0",
+			"node_sizes": []string{
+				"Type 0",
+				"Type 1",
+				"Type 2",
+				"Type 3",
+			},
+			"packet_config": map[string]interface{}{
+				"project":           "",
+				"facility":          "ewr1",
+				"kube_master_count": 1,
+				"ssh_pub_key":       "",
+			},
+		}
 	default: // just default to AWS if option not provided, or mismatched
 		m = map[string]interface{}{
 			"cloud_account_name": "",
@@ -136,6 +154,7 @@ func ListKubes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 			"digitalocean": "DigitalOcean",
 			"openstack":    "OpenStack",
 			"gce":          "GCE",
+			"packet":       "Packet",
 		},
 		"batchActionPaths": map[string]map[string]string{
 			"Reprovision": map[string]string{

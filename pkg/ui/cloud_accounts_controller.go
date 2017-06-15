@@ -48,6 +48,14 @@ func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 				"client_x509_cert_url":        "",
 			},
 		}
+	case "packet":
+		m = map[string]interface{}{
+			"name":     "",
+			"provider": "packet",
+			"credentials": map[string]interface{}{
+				"api_token": "",
+			},
+		}
 	default: // just default to AWS if option not provided, or mismatched
 		m = map[string]interface{}{
 			"name":     "",
@@ -109,6 +117,7 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 			"digitalocean": "DigitalOcean",
 			"openstack":    "OpenStack",
 			"gce":          "GCE",
+			"packet":       "Packet",
 		},
 		"batchActionPaths": map[string]map[string]string{
 			"Delete": map[string]string{
