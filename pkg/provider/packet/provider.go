@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	consumerToken = "aZ9GmqHTPtxevvFq9SK3Pi2yr9YCbRzduCSXF2SNem5sjB91mDq7Th3ZwTtRqMWZ"
+	consumerToken = ""
 )
 
 // Provider Holds DO account info.
