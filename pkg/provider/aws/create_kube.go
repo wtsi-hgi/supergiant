@@ -118,7 +118,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
       "Effect": "Allow",
       "Action": "s3:*",
       "Resource": [
-        "arn:aws:s3:::kubernetes-*"
+        "*"
       ]
     }
   ]
@@ -152,7 +152,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
       "Effect": "Allow",
       "Action": "s3:*",
       "Resource": [
-        "arn:aws:s3:::kubernetes-*"
+        "*"
       ]
     },
     {
@@ -344,7 +344,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			VpcId:             aws.String(m.AWSConfig.VPCID),
 			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
 		}
-		if _, err := ec2S.AttachInternetGateway(input); err != nil && !strings.Contains(err.Error(), "already attached") {
+		if _, err := ec2S.AttachInternetGateway(input); err != nil && !strings.Contains(err.Error(), "already has an internet gateway attached") {
 			return err
 		}
 		return nil

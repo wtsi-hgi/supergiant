@@ -501,57 +501,7 @@ write_files:
             - name: etcd-storage
               emptyDir: {}
             dnsPolicy: Default
-  - path: "/etc/kubernetes/manifests/kube-podmaster.yaml"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      apiVersion: v1
-      kind: Pod
-      metadata:
-        name: kube-podmaster
-        namespace: kube-system
-      spec:
-        hostNetwork: true
-        containers:
-        - name: scheduler-elector
-          image: gcr.io/google_containers/podmaster:1.1
-          command:
-          - /podmaster
-          - --etcd-servers=http://127.0.0.1:2379
-          - --key=scheduler
-          - --whoami=$private_ipv4
-          - --source-file=/src/manifests/kube-scheduler.yaml
-          - --dest-file=/dst/manifests/kube-scheduler.yaml
-          volumeMounts:
-          - mountPath: /src/manifests
-            name: manifest-src
-            readOnly: true
-          - mountPath: /dst/manifests
-            name: manifest-dst
-        - name: controller-manager-elector
-          image: gcr.io/google_containers/podmaster:1.1
-          command:
-          - /podmaster
-          - --etcd-servers=http://127.0.0.1:2379
-          - --key=controller
-          - --whoami=$private_ipv4
-          - --source-file=/src/manifests/kube-controller-manager.yaml
-          - --dest-file=/dst/manifests/kube-controller-manager.yaml
-          terminationMessagePath: /dev/termination-log
-          volumeMounts:
-          - mountPath: /src/manifests
-            name: manifest-src
-            readOnly: true
-          - mountPath: /dst/manifests
-            name: manifest-dst
-        volumes:
-        - hostPath:
-            path: /srv/kubernetes/manifests
-          name: manifest-src
-        - hostPath:
-            path: /etc/kubernetes/manifests
-          name: manifest-dst
-  - path: "/srv/kubernetes/manifests/kube-controller-manager.yaml"
+  - path: "/etc/kubernetes/manifests/kube-controller-manager.yaml"
     permissions: "0644"
     owner: "root"
     content: |
@@ -593,7 +543,7 @@ write_files:
         - hostPath:
             path: /usr/share/ca-certificates
           name: ssl-certs-host
-  - path: "/srv/kubernetes/manifests/kube-scheduler.yaml"
+  - path: "/etc/kubernetes/manifests/kube-scheduler.yaml"
     permissions: "0644"
     owner: "root"
     content: |
@@ -669,7 +619,7 @@ coreos:
          --pod-manifest-path=/etc/kubernetes/manifests \
          --cluster-dns=10.3.0.10 \
          --cluster_domain=cluster.local \
-         --register-schedulable=false \
+         --register-node=false \
          --cloud-provider=aws
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
         Restart=on-failure

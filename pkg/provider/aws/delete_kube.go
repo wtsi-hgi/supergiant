@@ -78,7 +78,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("disassociating Route Table from Subnet(s)", func() error {
-		if len(m.AWSConfig.RouteTableSubnetAssociationID) == 0 {
+		if len(m.AWSConfig.RouteTableSubnetAssociationID) == 0 || m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 
@@ -96,6 +96,9 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 
 	procedure.AddStep("deleting Internet Gateway", func() error {
 		if m.AWSConfig.InternetGatewayID == "" {
+			return nil
+		}
+		if m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 		diginput := &ec2.DetachInternetGatewayInput{
@@ -136,7 +139,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("deleting Route Table", func() error {
-		if m.AWSConfig.RouteTableID == "" {
+		if m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 		input := &ec2.DeleteRouteTableInput{
@@ -151,6 +154,9 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 
 	procedure.AddStep("deleting public Subnet(s)", func() error {
 		if len(m.AWSConfig.PublicSubnetIPRange) == 0 {
+			return nil
+		}
+		if m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 
