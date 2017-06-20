@@ -61,10 +61,11 @@ type Core struct {
 
 	// NOTE we set these 2 in cmd/server.go to prevent having to load all the
 	// cloud provider various lib code everytime we load core
-	AWSProvider func(map[string]string) Provider
-	DOProvider  func(map[string]string) Provider
-	OSProvider  func(map[string]string) Provider
-	GCEProvider func(map[string]string) Provider
+	AWSProvider  func(map[string]string) Provider
+	DOProvider   func(map[string]string) Provider
+	OSProvider   func(map[string]string) Provider
+	GCEProvider  func(map[string]string) Provider
+	PACKProvider func(map[string]string) Provider
 
 	// A little different from the above
 	K8SProvider Provider

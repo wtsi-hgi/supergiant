@@ -46,6 +46,8 @@ func (c *CloudAccounts) provider(m *model.CloudAccount) Provider {
 		return c.Core.OSProvider(m.Credentials)
 	case "gce":
 		return c.Core.GCEProvider(m.Credentials)
+	case "packet":
+		return c.Core.PACKProvider(m.Credentials)
 	default:
 		panic("Could not load provider interface for " + m.Provider)
 	}

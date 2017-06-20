@@ -323,6 +323,12 @@
 			"revisionTime": "2016-03-05T13:56:38Z"
 		},
 		{
+			"checksumSHA1": "b8F628srIitj5p7Y130xc9k0QWs=",
+			"path": "github.com/hashicorp/go-cleanhttp",
+			"revision": "3573b8b52aa7b37b9358d966a898feb387f62437",
+			"revisionTime": "2017-02-11T01:34:15Z"
+		},
+		{
 			"checksumSHA1": "DiusiFOi/TekkUctoSEMJQmhNHs=",
 			"path": "github.com/imdario/mergo",
 			"revision": "ea0151498788f6fab6365eae24f29f41c0ac0acc",
@@ -400,6 +406,12 @@
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "ca63d7c062ee3c9f34db231e352b60012b4fd0c1",
 			"revisionTime": "2016-08-08T18:12:53Z"
+		},
+		{
+			"checksumSHA1": "RWSNwVw4LdSSTdG7hQo/k8LWur0=",
+			"path": "github.com/packethost/packngo",
+			"revision": "91d54000aa56874149d348a884ba083c41d38091",
+			"revisionTime": "2017-04-11T13:00:46Z"
 		},
 		{
 			"checksumSHA1": "hcyoctYs0NjsvAXXVRc4mVt+FBg=",

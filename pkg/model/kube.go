@@ -53,6 +53,9 @@ type Kube struct {
 	GCEConfig     *GCEKubeConfig `json:"gce_config,omitempty" gorm:"-" sg:"store_as_json_in=GCEConfigJSON,immutable"`
 	GCEConfigJSON []byte         `json:"-"`
 
+	PACKConfig     *PACKKubeConfig `json:"packet_config,omitempty" gorm:"-" sg:"store_as_json_in=PACKConfigJSON,immutable"`
+	PACKConfigJSON []byte          `json:"-"`
+
 	MasterPublicIP string `json:"master_public_ip" sg:"readonly"`
 
 	Ready bool `json:"ready" sg:"readonly" gorm:"index"`
@@ -114,8 +117,8 @@ type OSKubeConfig struct {
 // GCEKubeConfig holds do specific information about DO based KUbernetes clusters.
 type GCEKubeConfig struct {
 	Zone                string   `json:"zone" validate:"nonzero"`
-	MasterInstanceGroup string   `json:"instance_group" sg:"readonly"`
-	MinionInstanceGroup string   `json:"instance_group" sg:"readonly"`
+	MasterInstanceGroup string   `json:"master_instance_group" sg:"readonly"`
+	MinionInstanceGroup string   `json:"minion_instance_group" sg:"readonly"`
 	MasterNodes         []string `json:"master_nodes" sg:"readonly"`
 	MasterName          string   `json:"master_name" sg:"readonly"`
 	KubeMasterCount     int      `json:"kube_master_count"`
@@ -125,4 +128,19 @@ type GCEKubeConfig struct {
 	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.1"`
 	ETCDDiscoveryURL  string `json:"etcd_discovery_url" sg:"readonly"`
 	MasterPrivateIP   string `json:"master_private_ip" sg:"readonly"`
+}
+
+type PACKKubeConfig struct {
+	Project   string `json:"project" validate:"nonzero"`
+	ProjectID string `json:"project_id" sg:"readonly"`
+	Facility  string `json:"facility" validate:"nonzero"`
+
+	MasterNodes      []string `json:"master_nodes" sg:"readonly"`
+	MasterName       string   `json:"master_name" sg:"readonly"`
+	KubeMasterCount  int      `json:"kube_master_count"`
+	MasterPrivateIP  string   `json:"master_private_ip" sg:"readonly"`
+	ETCDDiscoveryURL string   `json:"etcd_discovery_url" sg:"readonly"`
+	SSHPubKey        string   `json:"ssh_pub_key" validate:"nonzero"`
+
+	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.1"`
 }
