@@ -74,7 +74,7 @@ type AWSKubeConfig struct {
 	BucketName          string              `json:"bucket_name,omitempty" sg:"readonly"`
 	NodeVolumeSize      int                 `json:"node_volume_size" sg:"default=100"`
 	MasterVolumeSize    int                 `json:"master_volume_size" sg:"default=100"`
-	KubernetesVersion   string              `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.1"`
+	KubernetesVersion   string              `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.7"`
 
 	MasterPrivateIP               string   `json:"master_private_ip" sg:"readonly"`
 	LastSelectedAZ                string   `json:"last_selected_az" sg:"readonly"` // if using multiAZ this is the last az the node build used.
