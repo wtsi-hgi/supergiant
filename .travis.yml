@@ -48,7 +48,7 @@ script:
   - xgo -ldflags "$LDFLAGS" -go 1.7.1 --targets=$BUILD_TARGETS -out dist/supergiant-server ./cmd/server
   - xgo -ldflags "$LDFLAGS" -go 1.7.1 --targets=$BUILD_TARGETS -out dist/supergiant-cli ./cmd/cli
 
-  - travis_wait 30 build/travis_build.sh
+  - travis_wait 60 build/travis_build.sh
 
 after_success:
   - build/ghr.sh
