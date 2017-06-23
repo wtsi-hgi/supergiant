@@ -116,7 +116,8 @@ func TestDigitalOceanProviderCreateKube(t *testing.T) {
 							// Get
 							GetFn: func(int) (*godo.Droplet, *godo.Response, error) {
 								return &godo.Droplet{
-									ID: 1,
+									ID:     1,
+									Status: "active",
 									Networks: &godo.Networks{
 										V4: []godo.NetworkV4{
 											{
