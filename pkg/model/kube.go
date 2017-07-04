@@ -28,7 +28,7 @@ type Kube struct {
 	Name string `json:"name" validate:"nonzero,max=12,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$" gorm:"not null;unique_index" sg:"immutable"`
 	// Kubernetes
 	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.7"`
-	SSHPubKey         string `json:"ssh_pub_key" validate:"nonzero"`
+	SSHPubKey         string `json:"ssh_pub_key"`
 	ETCDDiscoveryURL  string `json:"etcd_discovery_url" sg:"readonly"`
 
 	// Kubernetes Master
