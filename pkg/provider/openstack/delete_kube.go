@@ -13,7 +13,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/model"
 )
 
-// DeleteKube deletes a DO kubernetes cluster.
+// DeleteKube deletes a kubernetes cluster.
 func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	// Initialize steps
 	procedure := &core.Procedure{

@@ -23,7 +23,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
-// CreateKube creates a new DO kubernetes cluster.
+// CreateKube creates a new kubernetes cluster.
 func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Initialize steps
@@ -105,10 +105,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	// save the token
 	m.ETCDDiscoveryURL = url
 
-	// Proceedures
+	// Procedures
 	// Check for image.
 	procedure.AddStep("Checking that a CoreOS image exists...", func() error {
-		// Create network
 		_, err = images.IDFromName(computeClient, "CoreOS")
 		if err != nil {
 			return err
@@ -154,7 +153,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	// Network
+	// Router
 	procedure.AddStep("Creating Kubernetes Router...", func() error {
 		err := err
 		// Create Router
@@ -211,7 +210,6 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			if err = masterTemplate.Execute(&masterUserdata, m); err != nil {
 				return err
 			}
-			//fmt.Println(masterUserdata.String())
 			// Create Server
 
 			serverCreateOpts := servers.CreateOpts{

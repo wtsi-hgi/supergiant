@@ -10,7 +10,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/model"
 )
 
-// DeleteNode deletes a minsion on a DO kubernetes cluster.
+// DeleteNode deletes a node on a kubernetes cluster.
 func (p *Provider) DeleteNode(m *model.Node, action *core.Action) error {
 	// fetch an authenticated provider.
 	authenticatedProvider, err := p.Client(m.Kube)

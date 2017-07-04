@@ -14,7 +14,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/util"
 )
 
-// CreateNode creates a new minion on DO kubernetes cluster.
+// CreateNode creates a new node for a kubernetes cluster.
 func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	// fetch an authenticated provider.
 	authenticatedProvider, err := p.Client(m.Kube)
@@ -43,7 +43,6 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	if err = minionTemplate.Execute(&minionUserdata, m); err != nil {
 		return err
 	}
-	//fmt.Println(minionUserdata.String())
 	serverCreateOpts := servers.CreateOpts{
 		ServiceClient: computeClient,
 		Name:          m.Name,
