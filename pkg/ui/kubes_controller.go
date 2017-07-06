@@ -41,6 +41,7 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 		m = map[string]interface{}{
 			"cloud_account_name": "",
 			"name":               "",
+			"ssh_pub_key":        "",
 			"master_node_size":   "m1.smaller",
 			"node_sizes": []string{
 				"m1.smaller",
@@ -50,7 +51,6 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 				"image_name":          "CoreOS",
 				"region":              "RegionOne",
 				"ssh_key_fingerprint": "",
-				"ssh_pub_key":         "",
 			},
 		}
 	case "gce":

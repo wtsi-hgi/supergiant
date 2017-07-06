@@ -26,8 +26,22 @@ type Kube struct {
 	HelmReleases []*HelmRelease `json:"helm_releases,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name"`
 
 	Name string `json:"name" validate:"nonzero,max=12,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$" gorm:"not null;unique_index" sg:"immutable"`
+	// Kubernetes
+	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.7"`
+	SSHPubKey         string `json:"ssh_pub_key"`
+	ETCDDiscoveryURL  string `json:"etcd_discovery_url" sg:"readonly"`
 
-	MasterNodeSize string `json:"master_node_size" validate:"nonzero" sg:"immutable"`
+	// Kubernetes Master
+	MasterNodeSize     string   `json:"master_node_size" validate:"nonzero" sg:"immutable"`
+	MasterID           string   `json:"master_id" sg:"readonly"`
+	MasterPrivateIP    string   `json:"master_private_ip" sg:"readonly"`
+	KubeMasterCount    int      `json:"kube_master_count"`
+	MasterNodes        []string `json:"master_nodes" gorm:"-" sg:"store_as_json_in=MasterNodesJSON"`
+	MasterNodesJSON    []byte   `json:"-"`
+	MasterName         string   `json:"master_name" sg:"readonly"`
+	CustomFiles        string   `json:"custom_files" sg:"readonly"`
+	ProviderString     string   `json:"provider_string" sg:"readonly"`
+	KubeProviderString string   `json:"Kube_provider_string" sg:"readonly"`
 
 	NodeSizes     []string `json:"node_sizes" gorm:"-" validate:"min=1" sg:"store_as_json_in=NodeSizesJSON"`
 	NodeSizesJSON []byte   `json:"-" gorm:"not null"`
@@ -109,17 +123,14 @@ type DOKubeConfig struct {
 // OSKubeConfig holds do specific information about Open Stack based KUbernetes clusters.
 type OSKubeConfig struct {
 	Region             string `json:"region" validate:"nonzero"`
-	SSHPubKey          string `json:"ssh_pub_key" validate:"nonzero"`
 	PrivateSubnetRange string `json:"private_subnet_ip_range" validate:"nonzero" sg:"default=172.20.0.0/24"`
 	PublicGatwayID     string `json:"public_gateway_id" validate:"nonzero" sg:"default=disabled"`
 
-	MasterID        string `json:"master_id" sg:"readonly"`
-	MasterPrivateIP string `json:"master_private_ip" sg:"readonly"`
-	NetworkID       string `json:"network_id" sg:"readonly"`
-	SubnetID        string `json:"subnet_id" sg:"readonly"`
-	RouterID        string `json:"router_id" sg:"readonly"`
-	FloatingIPID    string `json:"floating_ip_id" sg:"readonly"`
-	ImageName       string `json:"image_name" validate:"nonzero"`
+	NetworkID    string `json:"network_id" sg:"readonly"`
+	SubnetID     string `json:"subnet_id" sg:"readonly"`
+	RouterID     string `json:"router_id" sg:"readonly"`
+	FloatingIPID string `json:"floating_ip_id" sg:"readonly"`
+	ImageName    string `json:"image_name" validate:"nonzero"`
 }
 
 // GCEKubeConfig holds do specific information about DO based KUbernetes clusters.
