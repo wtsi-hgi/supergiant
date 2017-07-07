@@ -105,17 +105,18 @@ func TestAWSProviderCreateKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:         []string{"m4.large"},
+					SSHPubKey:         "SSHPubKey",
+					MasterNodes:       []string{"MasterNode"},
+					MasterID:          "MasterID",
+					KubernetesVersion: "1.5.7",
 					AWSConfig: &model.AWSKubeConfig{
 						PrivateKey:                    "PrivateKey",
-						SSHPubKey:                     "SSHPubKey",
 						InternetGatewayID:             "InternetGatewayID",
 						RouteTableID:                  "RouteTableID",
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
-						MasterNodes:                   []string{"MasterNode"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
 					},
 				},
 				err: nil,
@@ -125,18 +126,19 @@ func TestAWSProviderCreateKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:         []string{"m4.large"},
+					SSHPubKey:         "SSHPubKey",
+					MasterNodes:       []string{"MasterNode"},
+					MasterID:          "MasterID",
+					KubernetesVersion: "1.5.7",
 					AWSConfig: &model.AWSKubeConfig{
 						PrivateKey:        "PrivateKey",
-						SSHPubKey:         "SSHPubKey",
 						InternetGatewayID: "InternetGatewayID",
 						RouteTableID:      "RouteTableID",
 						MultiAZ:           true,
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
-						MasterNodes:                   []string{"MasterNode"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
 					},
 				},
 				err: nil,

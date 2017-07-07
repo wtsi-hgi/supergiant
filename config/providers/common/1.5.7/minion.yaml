@@ -120,6 +120,7 @@ coreos:
             [Unit]
             Requires=flanneld.service
             After=flanneld.service
+{{- .Kube.ServiceString }}
     - name: iscsid.service
       enable: true
       command: start
