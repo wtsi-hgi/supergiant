@@ -8,6 +8,8 @@ import (
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -46,6 +48,7 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			mockPutObjectError              error
 			mockDeleteBucketError           error
 			mockDeleteLoadBalancerError     error
+			mockDeleteMountTargetError      error
 			// Expectations
 			err error
 		}{
@@ -329,6 +332,14 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						DeleteLoadBalancerFn: func(input *elb.DeleteLoadBalancerInput) (*elb.DeleteLoadBalancerOutput, error) {
 							output := &elb.DeleteLoadBalancerOutput{}
 							return output, item.mockDeleteLoadBalancerError
+						},
+					}
+				},
+				EFS: func(kube *model.Kube) efsiface.EFSAPI {
+					return &fake_aws_provider.EFS{
+						DeleteMountTargetfn: func(input *efs.DeleteMountTargetInput) (*efs.DeleteMountTargetOutput, error) {
+							output := &efs.DeleteMountTargetOutput{}
+							return output, item.mockDeleteMountTargetError
 						},
 					}
 				},
