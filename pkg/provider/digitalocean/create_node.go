@@ -3,6 +3,7 @@ package digitalocean
 import (
 	"bytes"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -10,10 +11,13 @@ import (
 	"github.com/supergiant/supergiant/bindata"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/model"
+	"github.com/supergiant/supergiant/pkg/util"
 )
 
 // CreateNode creates a new minion on DO kubernetes cluster.
 func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
+
+	name := m.Kube.Name + "-node" + "-" + strings.ToLower(util.RandomString(5))
 	// Build template
 	minionUserdataTemplate, err := bindata.Asset("config/providers/digitalocean/minion.yaml")
 	if err != nil {
@@ -38,7 +42,7 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	}
 
 	dropletRequest := &godo.DropletCreateRequest{
-		Name:              m.Kube.Name + "-minion",
+		Name:              name,
 		Region:            m.Kube.DigitalOceanConfig.Region,
 		Size:              m.Size,
 		PrivateNetworking: true,
