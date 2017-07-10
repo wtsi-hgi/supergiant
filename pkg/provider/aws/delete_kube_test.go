@@ -8,6 +8,8 @@ import (
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -46,6 +48,7 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			mockPutObjectError              error
 			mockDeleteBucketError           error
 			mockDeleteLoadBalancerError     error
+			mockDeleteMountTargetError      error
 			// Expectations
 			err error
 		}{
@@ -54,6 +57,7 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 				// Input
 				kube: &model.Kube{
 					NodeSizes: []string{"m4.large"},
+					MasterID:  "MasterID",
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -61,7 +65,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
 					},
 				},
 			},
@@ -79,7 +82,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -87,8 +92,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockTerminateInstancesError: errors.New("TerminateInstances ERROR"),
@@ -99,7 +102,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -107,8 +112,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDescribeInstancesError: errors.New("DescribeInstances ERROR"),
@@ -119,7 +122,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -127,8 +132,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDisassociateRouteTableError: errors.New("DisassociateRouteTable ERROR"),
@@ -139,7 +142,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -147,8 +152,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDescribeInstancesError: errors.New("DescribeInstances ERROR"),
@@ -159,7 +162,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -167,8 +172,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDeleteInternetGatewayError: errors.New("DeleteInternetGateway ERROR"),
@@ -179,7 +182,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -187,8 +192,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDeleteRouteTableError: errors.New("DeleteRouteTable ERROR"),
@@ -199,7 +202,9 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:   []string{"m4.large"},
+					MasterID:    "MasterID",
+					MasterNodes: []string{"MasterNode"},
 					AWSConfig: &model.AWSKubeConfig{
 						VPCID:                         "VPCID",
 						InternetGatewayID:             "InternetGatewayID",
@@ -207,8 +212,6 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
-						MasterNodes:                   []string{"MasterNode"},
 					},
 				},
 				mockDeleteSecurityGroupError: errors.New("DeleteSecurityGroup ERROR"),
@@ -329,6 +332,14 @@ func TestAWSProviderDeleteKube(t *testing.T) {
 						DeleteLoadBalancerFn: func(input *elb.DeleteLoadBalancerInput) (*elb.DeleteLoadBalancerOutput, error) {
 							output := &elb.DeleteLoadBalancerOutput{}
 							return output, item.mockDeleteLoadBalancerError
+						},
+					}
+				},
+				EFS: func(kube *model.Kube) efsiface.EFSAPI {
+					return &fake_aws_provider.EFS{
+						DeleteMountTargetfn: func(input *efs.DeleteMountTargetInput) (*efs.DeleteMountTargetOutput, error) {
+							output := &efs.DeleteMountTargetOutput{}
+							return output, item.mockDeleteMountTargetError
 						},
 					}
 				},

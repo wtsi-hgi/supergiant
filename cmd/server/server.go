@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/urfave/cli"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/provider/aws"
 	"github.com/supergiant/supergiant/pkg/provider/digitalocean"
@@ -14,6 +13,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/provider/openstack"
 	"github.com/supergiant/supergiant/pkg/provider/packet"
 	"github.com/supergiant/supergiant/pkg/server"
+	"github.com/urfave/cli"
 )
 
 var version = "unversioned"
@@ -41,6 +41,7 @@ func main() {
 				IAM:  aws.IAM,
 				ELB:  aws.ELB,
 				S3:   aws.S3,
+				EFS:  aws.EFS,
 			}
 		}
 		c.DOProvider = func(creds map[string]string) core.Provider {

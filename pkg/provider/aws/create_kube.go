@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"text/template"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/supergiant/supergiant/bindata"
@@ -24,6 +26,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	iamS := p.IAM(m)
 	ec2S := p.EC2(m)
 	s3S := p.S3(m)
+	efsS := p.EFS(m)
 	procedure := &core.Procedure{
 		Core:   p.Core,
 		Name:   "Create Kube",
@@ -33,8 +36,18 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// mock a fake ssh key if the user does not enter one. CoreOS may barf if we don't.
 	// Don't worry. This key is a example key used in github doc.
-	if m.AWSConfig.SSHPubKey == "" {
-		m.AWSConfig.SSHPubKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAklOUpkDHrfHY17SbrmTIpNLTGK9Tjom/BWDSUGPl+nafzlHDTYW7hdI4yZ5ew18JH4JW9jbhUFrviQzM7xlELEVf4h9lFX5QVkbPppSwg0cda3Pbv7kOdJ/MTyBlWXFCR+HAo3FXRitBqxiX1nKhXpHAZsMciLq8V6RjsNAQwdsdMFvSlVK/7XAt3FaoJoAsncM1Q9x5+3V0Ww68/eIFmb1zuUFljQJKprrX88XypNDvjYNby6vw/Pb0rwert/EnmZ+AW4OZPnTPI89ZPmVMLuayrD2cE86Z/il8b+gw3r3+1nKatmIkjn2so1d01QraTlMqVSsbxNrRFi9wrf+M7Q== schacon@mylaptop.local"
+	if m.SSHPubKey == "" {
+		m.SSHPubKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAklOUpkDHrfHY17SbrmTIpNLTGK9Tjom/BWDSUGPl+nafzlHDTYW7hdI4yZ5ew18JH4JW9jbhUFrviQzM7xlELEVf4h9lFX5QVkbPppSwg0cda3Pbv7kOdJ/MTyBlWXFCR+HAo3FXRitBqxiX1nKhXpHAZsMciLq8V6RjsNAQwdsdMFvSlVK/7XAt3FaoJoAsncM1Q9x5+3V0Ww68/eIFmb1zuUFljQJKprrX88XypNDvjYNby6vw/Pb0rwert/EnmZ+AW4OZPnTPI89ZPmVMLuayrD2cE86Z/il8b+gw3r3+1nKatmIkjn2so1d01QraTlMqVSsbxNrRFi9wrf+M7Q== schacon@mylaptop.local"
+	}
+
+	m.KubeProviderString = `
+         --cloud-provider=aws \`
+
+	m.ProviderString = `
+          - --cloud-provider=aws`
+
+	if m.KubernetesVersion == "" {
+		m.KubernetesVersion = "1.5.7"
 	}
 
 	// Init our AZ setup
@@ -197,6 +210,47 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return createIAMInstanceProfile(iamS, "kubernetes-minion")
 	})
 
+	if m.AWSConfig.BuildElasticFileSystem {
+
+		procedure.AddStep("creating EFS share", func() error {
+
+			input := &efs.CreateFileSystemInput{
+				CreationToken: aws.String("cheese"),
+			}
+			resp, err := efsS.CreateFileSystem(input)
+			if err != nil {
+				return err
+			}
+
+			m.ServiceString = fmt.Sprintf(`
+    - name: rpc-statd.service
+      command: start
+      enable: true
+    - name: efs.service
+      command: start
+      content: |
+        [Unit]
+        After=network-online.target
+        [Service]
+        Type=oneshot
+        ExecStartPre=-/usr/bin/mkdir -p /efs
+        ExecStart=/bin/sh -c 'grep -qs /efs /proc/mounts || /usr/bin/mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone).%s.efs.%s.amazonaws.com:/ /efs'
+        ExecStop=/usr/bin/umount /efs
+        RemainAfterExit=yes
+        [Install]
+        WantedBy=kubelet.service`, *resp.FileSystemId, m.AWSConfig.Region)
+
+			m.AWSConfig.ElasticFileSystemID = *resp.FileSystemId
+
+			err = p.Core.DB.Save(m)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+	}
+
 	procedure.AddStep("creating SSH Key Pair", func() error {
 		if m.AWSConfig.PrivateKey != "" {
 			return nil
@@ -245,17 +299,17 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	procedure.AddStep("upload assets to S3", func() error {
 		// fetch the etcd clustering token
-		if m.AWSConfig.KubeMasterCount == 0 {
-			m.AWSConfig.KubeMasterCount = 1
+		if m.KubeMasterCount == 0 {
+			m.KubeMasterCount = 1
 		}
-		url, err := etcdToken(strconv.Itoa(m.AWSConfig.KubeMasterCount))
+		url, err := etcdToken(strconv.Itoa(m.KubeMasterCount))
 		if err != nil {
 			return err
 		}
 
-		m.AWSConfig.ETCDDiscoveryURL = url
+		m.ETCDDiscoveryURL = url
 
-		userdataTemplate, err := bindata.Asset("config/providers/aws/master.yaml")
+		userdataTemplate, err := bindata.Asset("config/providers/common/" + m.KubernetesVersion + "/master.yaml")
 		if err != nil {
 			return err
 		}
@@ -664,14 +718,51 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
+	procedure.AddStep("setting EFS share target info", func() error {
+
+		if m.AWSConfig.ElasticFileSystemID == "" {
+			return nil
+		}
+		for _, subnet := range m.AWSConfig.PublicSubnetIPRange {
+			input := &efs.CreateMountTargetInput{
+				FileSystemId:   aws.String(m.AWSConfig.ElasticFileSystemID),
+				SecurityGroups: []*string{&m.AWSConfig.NodeSecurityGroupID},
+				SubnetId:       aws.String(subnet["subnet_id"]),
+			}
+			target, err := efsS.CreateMountTarget(input)
+			if err != nil {
+				return err
+			}
+
+			m.AWSConfig.ElasticFileSystemTargets = append(m.AWSConfig.ElasticFileSystemTargets, *target.MountTargetId)
+			err = p.Core.DB.Save(m)
+			if err != nil {
+				return err
+			}
+
+			return action.CancellableWaitFor("EFS target status", 20*time.Minute, time.Second, func() (bool, error) {
+				resp, err := efsS.DescribeMountTargets(&efs.DescribeMountTargetsInput{
+					MountTargetId: target.MountTargetId,
+				})
+				if err != nil {
+					return false, nil
+				}
+				return *resp.MountTargets[0].LifeCycleState == "available", nil
+			})
+
+		}
+
+		return nil
+	})
+
 	// Master Instance
 
 	procedure.AddStep("creating Server for Kubernetes master(s)", func() error {
-		if m.AWSConfig.MasterID != "" {
+		if m.MasterID != "" {
 			return nil
 		}
 
-		userdataTemplate, err := bindata.Asset("config/providers/aws/bootstrap.yaml")
+		userdataTemplate, err := bindata.Asset("config/providers/common/" + m.KubernetesVersion + "/bootstrap.yaml")
 		if err != nil {
 			return err
 		}
@@ -690,11 +781,11 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			return err
 		}
 
-		if m.AWSConfig.KubeMasterCount == 0 {
-			m.AWSConfig.KubeMasterCount = 1
+		if m.KubeMasterCount == 0 {
+			m.KubeMasterCount = 1
 		}
 
-		for i := 1; i <= m.AWSConfig.KubeMasterCount; i++ {
+		for i := 1; i <= m.KubeMasterCount; i++ {
 
 			// Grab our subnets
 			var subnets []string
@@ -750,7 +841,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				return err
 			}
 
-			m.AWSConfig.MasterNodes = append(m.AWSConfig.MasterNodes, *resp.Instances[0].InstanceId)
+			m.MasterNodes = append(m.MasterNodes, *resp.Instances[0].InstanceId)
 
 		}
 		return nil
@@ -758,7 +849,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Tag all of our masters.
 	procedure.AddStep("tagging Kubernetes master", func() error {
-		for _, master := range m.AWSConfig.MasterNodes {
+		for _, master := range m.MasterNodes {
 			err := tagAWSResource(ec2S, master, map[string]string{
 				"KubernetesCluster": m.Name,
 				"Name":              m.Name + "-master",
@@ -774,7 +865,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	// If we have more then one master... Lets get them on a internal loadbalancer.
 	procedure.AddStep("creating master loadbalancer if needed", func() error {
 
-		if m.AWSConfig.KubeMasterCount == 1 {
+		if m.KubeMasterCount == 1 {
 			return nil
 		}
 
@@ -809,10 +900,10 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			return err
 		}
 
-		m.AWSConfig.MasterPrivateIP = *loadbalancer.DNSName
+		m.MasterPrivateIP = *loadbalancer.DNSName
 
 		var elbInstances []*elb.Instance
-		for _, node := range m.AWSConfig.MasterNodes {
+		for _, node := range m.MasterNodes {
 			elbInstances = append(elbInstances, &elb.Instance{
 				InstanceId: aws.String(node),
 			})
@@ -833,7 +924,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	procedure.AddStep("waiting for Kubernetes master to launch", func() error {
 		input := &ec2.DescribeInstancesInput{
 			InstanceIds: []*string{
-				aws.String(m.AWSConfig.MasterNodes[0]),
+				aws.String(m.MasterNodes[0]),
 			},
 		}
 		return action.CancellableWaitFor("Kubernetes master launch", 5*time.Minute, 3*time.Second, func() (bool, error) {
@@ -847,8 +938,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			if m.MasterPublicIP == "" {
 				if ip := instance.PublicIpAddress; ip != nil {
 					m.MasterPublicIP = *ip
-					if m.AWSConfig.MasterPrivateIP == "" {
-						m.AWSConfig.MasterPrivateIP = *instance.PrivateIpAddress
+					if m.MasterPrivateIP == "" {
+						m.MasterPrivateIP = *instance.PrivateIpAddress
 					}
 					if err := p.Core.DB.Save(m); err != nil {
 						return false, err

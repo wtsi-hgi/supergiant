@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -32,6 +34,7 @@ type Provider struct {
 	S3   func(*model.Kube) s3iface.S3API
 	IAM  func(*model.Kube) iamiface.IAMAPI
 	ELB  func(*model.Kube) elbiface.ELBAPI
+	EFS  func(*model.Kube) efsiface.EFSAPI
 }
 
 // ValidateAccount validates that the AWS credentials entered work.
@@ -86,6 +89,11 @@ func S3(kube *model.Kube) s3iface.S3API {
 // IAM client
 func IAM(kube *model.Kube) iamiface.IAMAPI {
 	return iam.New(globalAWSSession, awsConfig(kube))
+}
+
+// EFS client
+func EFS(kube *model.Kube) efsiface.EFSAPI {
+	return efs.New(globalAWSSession, awsConfig(kube))
 }
 
 func awsConfig(kube *model.Kube) *aws.Config {

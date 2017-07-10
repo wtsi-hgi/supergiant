@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/efs"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/supergiant/supergiant/pkg/core"
@@ -17,6 +18,7 @@ import (
 func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	ec2S := p.EC2(m)
 	s3S := p.S3(m)
+	efS := p.EFS(m)
 	procedure := &core.Procedure{
 		Core:   p.Core,
 		Name:   "Delete Kube",
@@ -25,11 +27,11 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	}
 
 	procedure.AddStep("deleting master(s)", func() error {
-		if len(m.AWSConfig.MasterNodes) == 0 {
+		if len(m.MasterNodes) == 0 {
 			return nil
 		}
 
-		for _, master := range m.AWSConfig.MasterNodes {
+		for _, master := range m.MasterNodes {
 			input := &ec2.TerminateInstancesInput{
 				InstanceIds: []*string{
 					aws.String(master),
@@ -62,7 +64,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 			}
 
 		}
-		m.AWSConfig.MasterID = ""
+		m.MasterID = ""
 		return nil
 	})
 
@@ -73,6 +75,22 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 		})
 		if isErrAndNotAWSNotFound(err) {
 			return err
+		}
+		return nil
+	})
+
+	procedure.AddStep("delete EFS targets", func() error {
+		// Delete EFS targets
+		if len(m.AWSConfig.ElasticFileSystemTargets) == 0 {
+			return nil
+		}
+		for _, target := range m.AWSConfig.ElasticFileSystemTargets {
+			_, err := efS.DeleteMountTarget(&efs.DeleteMountTargetInput{
+				MountTargetId: aws.String(target),
+			})
+			if isErrAndNotAWSNotFound(err) {
+				return err
+			}
 		}
 		return nil
 	})
@@ -139,7 +157,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("deleting Route Table", func() error {
-		if m.AWSConfig.VPCMANAGED == true {
+		if m.AWSConfig.VPCMANAGED == true || m.AWSConfig.RouteTableID == "" {
 			return nil
 		}
 		input := &ec2.DeleteRouteTableInput{

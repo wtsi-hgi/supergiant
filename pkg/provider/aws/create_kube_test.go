@@ -8,6 +8,8 @@ import (
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/efs"
+	"github.com/aws/aws-sdk-go/service/efs/efsiface"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/elb/elbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -52,6 +54,9 @@ func TestAWSProviderCreateKube(t *testing.T) {
 			mockDeleteObjectError                  error
 			mockPutObjectError                     error
 			mockDeleteBucketError                  error
+			mockCreateFileSystem                   error
+			mockCreateMountTarget                  error
+			mockDescribeMountTargets               error
 			// Expectations
 			err error
 		}{
@@ -105,17 +110,18 @@ func TestAWSProviderCreateKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:         []string{"m4.large"},
+					SSHPubKey:         "SSHPubKey",
+					MasterNodes:       []string{"MasterNode"},
+					MasterID:          "MasterID",
+					KubernetesVersion: "1.5.7",
 					AWSConfig: &model.AWSKubeConfig{
 						PrivateKey:                    "PrivateKey",
-						SSHPubKey:                     "SSHPubKey",
 						InternetGatewayID:             "InternetGatewayID",
 						RouteTableID:                  "RouteTableID",
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
-						MasterNodes:                   []string{"MasterNode"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
 					},
 				},
 				err: nil,
@@ -125,18 +131,19 @@ func TestAWSProviderCreateKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"m4.large"},
+					NodeSizes:         []string{"m4.large"},
+					SSHPubKey:         "SSHPubKey",
+					MasterNodes:       []string{"MasterNode"},
+					MasterID:          "MasterID",
+					KubernetesVersion: "1.5.7",
 					AWSConfig: &model.AWSKubeConfig{
 						PrivateKey:        "PrivateKey",
-						SSHPubKey:         "SSHPubKey",
 						InternetGatewayID: "InternetGatewayID",
 						RouteTableID:      "RouteTableID",
 						MultiAZ:           true,
 						RouteTableSubnetAssociationID: []string{"RouteTableSubnetAssociationID"},
-						MasterNodes:                   []string{"MasterNode"},
 						ELBSecurityGroupID:            "ELBSecurityGroupID",
 						NodeSecurityGroupID:           "NodeSecurityGroupID",
-						MasterID:                      "MasterID",
 					},
 				},
 				err: nil,
@@ -491,6 +498,33 @@ func TestAWSProviderCreateKube(t *testing.T) {
 						// here). It will only matter once we mock an error.
 						RegisterInstancesWithLoadBalancerFn: func(input *elb.RegisterInstancesWithLoadBalancerInput) (*elb.RegisterInstancesWithLoadBalancerOutput, error) {
 							output := &elb.RegisterInstancesWithLoadBalancerOutput{}
+							return output, nil
+						},
+					}
+				},
+				EFS: func(kube *model.Kube) efsiface.EFSAPI {
+					return &fake_aws_provider.EFS{
+						CreateFileSystemfn: func(input *efs.CreateFileSystemInput) (*efs.FileSystemDescription, error) {
+							output := &efs.FileSystemDescription{
+								FileSystemId: awssdk.String("cheese"),
+							}
+							return output, nil
+						},
+						CreateMountTargetfn: func(input *efs.CreateMountTargetInput) (*efs.MountTargetDescription, error) {
+							output := &efs.MountTargetDescription{
+								FileSystemId: awssdk.String("cheese"),
+							}
+							return output, nil
+						},
+						DescribeMountTargetsfn: func(input *efs.DescribeMountTargetsInput) (*efs.DescribeMountTargetsOutput, error) {
+							output := &efs.DescribeMountTargetsOutput{
+								MountTargets: []*efs.MountTargetDescription{
+									&efs.MountTargetDescription{
+										LifeCycleState: awssdk.String("available"),
+									},
+								},
+							}
+
 							return output, nil
 						},
 					}

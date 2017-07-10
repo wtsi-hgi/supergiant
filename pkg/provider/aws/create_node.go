@@ -19,8 +19,13 @@ import (
 // CreateNode creates a Kubernetes minion.
 func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	m.Name = m.Kube.Name + "-minion-" + util.RandomString(5)
+
+	// For the testzzzz
+	if m.Kube.KubernetesVersion == "" {
+		m.Kube.KubernetesVersion = "1.5.7"
+	}
 	// TODO move to init outside of func
-	userdataTemplate, err := bindata.Asset("config/providers/aws/minion.yaml")
+	userdataTemplate, err := bindata.Asset("config/providers/common/" + m.Kube.KubernetesVersion + "/minion.yaml")
 	if err != nil {
 		return err
 	}
