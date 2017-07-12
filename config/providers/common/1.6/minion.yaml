@@ -2,30 +2,20 @@
 
 hostname: "{{ .Name }}"
 ssh_authorized_keys:
-  - "{{ .Kube.DigitalOceanConfig.SSHPubKey }}"
+  - "{{ .Kube.SSHPubKey }}"
 write_files:
   - path: "/opt/bin/download-k8s-binary"
     permissions: "0755"
     content: |
       #!/bin/bash
-      K8S_VERSION=v{{ .Kube.DigitalOceanConfig.KubernetesVersion }}
+      source /etc/environment
+      K8S_VERSION=v{{ .Kube.KubernetesVersion }}
       mkdir -p /opt/bin
       mkdir /etc/multipath/
       touch /etc/multipath/bindings
-      FILE=$1
-      if [ ! -f /opt/bin/$FILE ]; then
-        curl -sSL -o /opt/bin/$FILE https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/$FILE
-        chmod +x /opt/bin/$FILE
-      else
-        # we check the version of the binary
-        INSTALLED_VERSION=$(/opt/bin/$FILE --version)
-        MATCH=$(echo "${INSTALLED_VERSION}" | grep -c "${K8S_VERSION}")
-        if [ $MATCH -eq 0 ]; then
-          # the version is different
-          curl -sSL -o /opt/bin/$FILE https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/$FILE
-          chmod +x /opt/bin/$FILE
-        fi
-      fi
+      curl -sSL -o /opt/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl
+      chmod +x /opt/bin/$FILE
+      chmod +x /opt/bin/kubectl
 
       curl -sSL -o /opt/bin/cni.tar.gz https://storage.googleapis.com/kubernetes-release/network-plugins/cni-07a8a28637e97b22eb8dfe710eeae1344f69d16e.tar.gz
       tar xzf "/opt/bin/cni.tar.gz" -C "/opt/bin" --overwrite
@@ -43,6 +33,8 @@ write_files:
       wget https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz
       tar xf /tmp/doctl-1.4.0-linux-amd64.tar.gz
       sudo mv /tmp/doctl /opt/bin/
+      sudo mkdir -p /root/.config/doctl/
+      sudo touch /root/.config/doctl/config.yaml
   - path: "/etc/kubernetes/manifests/kube-proxy.yaml"
     permissions: "0644"
     owner: "root"
@@ -56,11 +48,11 @@ write_files:
         hostNetwork: true
         containers:
         - name: kube-proxy
-          image: gcr.io/google_containers/hyperkube:v{{ .Kube.DigitalOceanConfig.KubernetesVersion }}
+          image: gcr.io/google_containers/hyperkube:v{{ .Kube.KubernetesVersion }}
           command:
           - /hyperkube
           - proxy
-          - --master=https://{{ .Kube.DigitalOceanConfig.MasterPrivateIP }}
+          - --master=https://{{ .Kube.MasterPrivateIP }}
           - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
           - --proxy-mode=iptables
           securityContext:
@@ -84,6 +76,7 @@ write_files:
           - name: "etc-kube-ssl"
             hostPath:
               path: "/etc/kubernetes/ssl"
+{{- .Kube.CustomFiles }}
   - path: "/etc/kubernetes/worker-kubeconfig.yaml"
     permissions: "0644"
     owner: "root"
@@ -109,7 +102,7 @@ coreos:
     reboot-strategy: off
   flannel:
     iface: $COREOS_PRIVATE_IPV4
-    etcd_endpoints: http://{{ .Kube.DigitalOceanConfig.MasterPrivateIP }}:2379
+    etcd_endpoints: http://{{ .Kube.MasterPrivateIP }}:2379
 
   units:
     - name: "flanneld.service"
@@ -129,6 +122,7 @@ coreos:
             [Unit]
             Requires=flanneld.service
             After=flanneld.service
+{{- .Kube.ServiceString }}
     - name: iscsid.service
       enable: true
       command: start
@@ -139,7 +133,7 @@ coreos:
         [Unit]
         Description=Kubernetes Kubelet
         [Service]
-        Environment=KUBELET_VERSION=v{{ .Kube.DigitalOceanConfig.KubernetesVersion }}_coreos.0
+        Environment=KUBELET_VERSION=v{{ .Kube.KubernetesVersion }}_coreos.0
         Environment="RKT_RUN_ARGS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm \
           --mount volume=iscsiadm,target=/usr/sbin/iscsiadm \
           --volume multipathcmd,kind=host,source=/usr/sbin/multipath \
@@ -148,17 +142,20 @@ coreos:
           --mount volume=multipath,target=/etc/multipath/ \
           --volume packet,kind=host,source=/opt/bin/packet-block-storage/ \
           --mount volume=packet,target=/opt/bin/packet-block-storage/ \
+          --volume doconfig,kind=host,source=/root/.config/doctl/config.yaml \
+          --mount volume=doconfig,target=/root/.config/doctl/config.yaml \
           --uuid-file-save=/var/run/kubelet-pod.uuid"
         ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStartPre=/bin/bash -c "/opt/bin/download-k8s-binary kubelet"
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
           --allow-privileged=true \
-          --api_servers=https://{{ .Kube.DigitalOceanConfig.MasterPrivateIP }} \
+          --api_servers=https://{{ .Kube.MasterPrivateIP }} \
           --cluster-dns=10.3.0.10 \
           --cluster_domain=cluster.local \
           --pod-manifest-path=/etc/kubernetes/manifests \
           --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
           --volume-plugin-dir=/etc/kubernetes/volumeplugins \
+          {{- .Kube.KubeProviderString }}
           --register-node=true
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
         Restart=on-failure

@@ -19,7 +19,8 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 
 	name := m.Kube.Name + "-node" + "-" + strings.ToLower(util.RandomString(5))
 	// Build template
-	minionUserdataTemplate, err := bindata.Asset("config/providers/digitalocean/minion.yaml")
+	mversion := strings.Split(m.Kube.KubernetesVersion, ".")
+	minionUserdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/minion.yaml")
 	if err != nil {
 		return err
 	}
@@ -41,17 +42,20 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 		return err
 	}
 
+	var fingers []godo.DropletCreateSSHKey
+	for _, ssh := range m.Kube.DigitalOceanConfig.SSHKeyFingerprint {
+		fingers = append(fingers, godo.DropletCreateSSHKey{
+			Fingerprint: ssh,
+		})
+	}
+
 	dropletRequest := &godo.DropletCreateRequest{
 		Name:              name,
 		Region:            m.Kube.DigitalOceanConfig.Region,
 		Size:              m.Size,
 		PrivateNetworking: true,
 		UserData:          string(minionUserdata.Bytes()),
-		SSHKeys: []godo.DropletCreateSSHKey{
-			{
-				Fingerprint: m.Kube.DigitalOceanConfig.SSHKeyFingerprint,
-			},
-		},
+		SSHKeys:           fingers,
 		Image: godo.DropletCreateImage{
 			Slug: "coreos-stable",
 		},

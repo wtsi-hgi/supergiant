@@ -309,7 +309,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 		m.ETCDDiscoveryURL = url
 
-		userdataTemplate, err := bindata.Asset("config/providers/common/" + m.KubernetesVersion + "/master.yaml")
+		mversion := strings.Split(m.KubernetesVersion, ".")
+		userdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/master.yaml")
 		if err != nil {
 			return err
 		}
@@ -762,7 +763,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			return nil
 		}
 
-		userdataTemplate, err := bindata.Asset("config/providers/common/" + m.KubernetesVersion + "/bootstrap.yaml")
+		mversion := strings.Split(m.KubernetesVersion, ".")
+		userdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/bootstrap.yaml")
 		if err != nil {
 			return err
 		}

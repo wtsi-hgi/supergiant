@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"strings"
 	"text/template"
 	"time"
 
@@ -25,7 +26,8 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 		m.Kube.KubernetesVersion = "1.5.7"
 	}
 	// TODO move to init outside of func
-	userdataTemplate, err := bindata.Asset("config/providers/common/" + m.Kube.KubernetesVersion + "/minion.yaml")
+	mversion := strings.Split(m.Kube.KubernetesVersion, ".")
+	userdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/minion.yaml")
 	if err != nil {
 		return err
 	}

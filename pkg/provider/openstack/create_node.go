@@ -2,6 +2,7 @@ package openstack
 
 import (
 	"bytes"
+	"strings"
 	"text/template"
 	"time"
 
@@ -31,7 +32,8 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	}
 	m.Name = m.Kube.Name + "-node"
 	// Build template
-	minionUserdataTemplate, err := bindata.Asset("config/providers/common/" + m.Kube.KubernetesVersion + "/minion.yaml")
+	mversion := strings.Split(m.Kube.KubernetesVersion, ".")
+	minionUserdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/minion.yaml")
 	if err != nil {
 		return err
 	}

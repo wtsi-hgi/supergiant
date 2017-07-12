@@ -33,6 +33,8 @@ write_files:
       wget https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz
       tar xf /tmp/doctl-1.4.0-linux-amd64.tar.gz
       sudo mv /tmp/doctl /opt/bin/
+      sudo mkdir -p /root/.config/doctl/
+      sudo touch /root/.config/doctl/config.yaml
   - path: "/etc/kubernetes/manifests/kube-proxy.yaml"
     permissions: "0644"
     owner: "root"
@@ -140,6 +142,8 @@ coreos:
           --mount volume=multipath,target=/etc/multipath/ \
           --volume packet,kind=host,source=/opt/bin/packet-block-storage/ \
           --mount volume=packet,target=/opt/bin/packet-block-storage/ \
+          --volume doconfig,kind=host,source=/root/.config/doctl/config.yaml \
+          --mount volume=doconfig,target=/root/.config/doctl/config.yaml \
           --uuid-file-save=/var/run/kubelet-pod.uuid"
         ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStartPre=/bin/bash -c "/opt/bin/download-k8s-binary kubelet"
