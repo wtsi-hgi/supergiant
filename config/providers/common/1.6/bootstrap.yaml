@@ -1,7 +1,7 @@
 #cloud-config
 
 ssh_authorized_keys:
-  - "{{ .AWSConfig.SSHPubKey }}"
+  - "{{ .SSHPubKey }}"
 write_files:
   - path: "/opt/bin/oneshot"
     permissions: "0755"

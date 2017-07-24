@@ -27,7 +27,9 @@ func TestDigitalOceanProviderValidateAccount(t *testing.T) {
 			// A successful example
 			{
 				// Input
-				cloudAccount: &model.CloudAccount{},
+				cloudAccount: &model.CloudAccount{
+					Credentials: map[string]string{"token": "my-special-token"},
+				},
 			},
 		}
 
@@ -71,8 +73,11 @@ func TestDigitalOceanProviderCreateKube(t *testing.T) {
 		}{
 			// A successful example
 			{
-				// Input
 				kube: &model.Kube{
+					CloudAccount: &model.CloudAccount{
+						Credentials: map[string]string{"token": "my-special-token"},
+					},
+					KubernetesVersion:  "1.5.7",
 					NodeSizes:          []string{"2gb"},
 					DigitalOceanConfig: &model.DOKubeConfig{},
 				},
@@ -157,10 +162,10 @@ func TestDigitalOceanProviderDeleteKube(t *testing.T) {
 			{
 				// Input
 				kube: &model.Kube{
-					NodeSizes: []string{"2gb"},
-					DigitalOceanConfig: &model.DOKubeConfig{
-						MasterID: 16678899,
-					},
+					NodeSizes:          []string{"2gb"},
+					MasterID:           "cheese",
+					KubernetesVersion:  "1.5.7",
+					DigitalOceanConfig: &model.DOKubeConfig{},
 				},
 			},
 		}
@@ -213,6 +218,7 @@ func TestDigitalOceanProviderCreateNode(t *testing.T) {
 						CloudAccount: &model.CloudAccount{
 							Credentials: map[string]string{"token": "my-special-token"},
 						},
+						KubernetesVersion:  "1.5.7",
 						DigitalOceanConfig: &model.DOKubeConfig{},
 					},
 				},

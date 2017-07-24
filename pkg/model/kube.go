@@ -104,17 +104,8 @@ type AWSKubeConfig struct {
 
 // DOKubeConfig holds do specific information about DO based KUbernetes clusters.
 type DOKubeConfig struct {
-	Region            string `json:"region" validate:"nonzero"`
-	SSHKeyFingerprint string `json:"ssh_key_fingerprint" validate:"nonzero"`
-	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.7"`
-	SSHPubKey         string `json:"ssh_pub_key"`
-	MasterName        string `json:"master_name" sg:"readonly"`
-	ETCDDiscoveryURL  string `json:"etcd_discovery_url" sg:"readonly"`
-	MasterPrivateIP   string `json:"master_private_ip" sg:"readonly"`
-	KubeMasterCount   int    `json:"kube_master_count"`
-	MasterNodes       []int  `json:"master_nodes" sg:"readonly"`
-
-	MasterID int `json:"master_id" sg:"readonly"`
+	Region            string   `json:"region" validate:"nonzero"`
+	SSHKeyFingerprint []string `json:"ssh_key_fingerprint" validate:"nonzero"`
 }
 
 // OSKubeConfig holds do specific information about Open Stack based KUbernetes clusters.

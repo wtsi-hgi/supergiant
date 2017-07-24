@@ -198,7 +198,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 			m.MasterName = name
 
-			masterUserdataTemplate, err := bindata.Asset("config/providers/common/" + m.KubernetesVersion + "/master.yaml")
+			mversion := strings.Split(m.KubernetesVersion, ".")
+			masterUserdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/master.yaml")
 			if err != nil {
 				return err
 			}

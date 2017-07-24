@@ -1,6 +1,7 @@
 package digitalocean
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/supergiant/supergiant/pkg/core"
@@ -19,16 +20,20 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	}
 
 	procedure.AddStep("deleting master", func() error {
-		if m.DigitalOceanConfig.MasterID == 0 {
+		if m.MasterID == "" {
 			return nil
 		}
-		for _, master := range m.DigitalOceanConfig.MasterNodes {
-			if _, err := client.Droplets.Delete(master); err != nil && !strings.Contains(err.Error(), "404") {
+		for _, master := range m.MasterNodes {
+			imaster, err := strconv.Atoi(master)
+			if err != nil {
+				return err
+			}
+			if _, err := client.Droplets.Delete(imaster); err != nil && !strings.Contains(err.Error(), "404") {
 				return err
 			}
 		}
 
-		m.DigitalOceanConfig.MasterID = 0
+		m.MasterID = ""
 		return nil
 	})
 

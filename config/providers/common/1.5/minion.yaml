@@ -10,9 +10,9 @@ write_files:
       #!/bin/bash
       source /etc/environment
       K8S_VERSION=v{{ .Kube.KubernetesVersion }}
-      mkdir -p /opt/bin
-      mkdir /etc/multipath/
-      touch /etc/multipath/bindings
+      mkdir -p /opt/bin >/dev/null 2>&1
+      mkdir /etc/multipath/ >/dev/null 2>&1
+      touch /etc/multipath/bindings >/dev/null 2>&1
       curl -sSL -o /opt/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl
       chmod +x /opt/bin/$FILE
       chmod +x /opt/bin/kubectl
@@ -24,10 +24,12 @@ write_files:
       rm -f "/opt/bin/cni.tar.gz"
 
       cd /opt/bin/
-      git clone https://github.com/packethost/packet-block-storage.git
+      git clone https://github.com/packethost/packet-block-storage.git >/dev/null 2>&1
       cd packet-block-storage
       chmod 755 ./*
       /opt/bin/packet-block-storage/packet-block-storage-attach
+
+      mkdir -p /var/log/containers
 
       cd /tmp
       wget https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz
@@ -140,6 +142,8 @@ coreos:
           --mount volume=multipath,target=/etc/multipath/ \
           --volume packet,kind=host,source=/opt/bin/packet-block-storage/ \
           --mount volume=packet,target=/opt/bin/packet-block-storage/ \
+          --volume log,kind=host,source=/var/log/containers/ \
+          --mount volume=log,target=/var/log/containers/ \
           --uuid-file-save=/var/run/kubelet-pod.uuid"
         ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStartPre=/bin/bash -c "/opt/bin/download-k8s-binary kubelet"
