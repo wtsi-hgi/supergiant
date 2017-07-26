@@ -338,7 +338,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	procedure.AddStep("creating VPC", func() error {
 		if m.AWSConfig.VPCID != "" {
+
 			m.AWSConfig.VPCMANAGED = true
+
 			err := p.Core.DB.Save(m)
 			if err != nil {
 				return err
@@ -346,6 +348,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			procedure.Core.Log.Info("This VPC is not managed. Using VPC ID supplied by user.")
 			return nil
 		}
+
 		input := &ec2.CreateVpcInput{
 			CidrBlock: aws.String(m.AWSConfig.VPCIPRange),
 		}
@@ -358,6 +361,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("tagging VPC", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		return tagAWSResource(ec2S, m.AWSConfig.VPCID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-vpc",
@@ -376,6 +382,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	// Create Internet Gateway
 
 	procedure.AddStep("creating Internet Gateway", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		if m.AWSConfig.InternetGatewayID != "" {
 			return nil
 		}
@@ -388,6 +397,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("tagging Internet Gateway", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		return tagAWSResource(ec2S, m.AWSConfig.InternetGatewayID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-ig",
@@ -395,6 +407,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("attaching Internet Gateway to VPC", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		input := &ec2.AttachInternetGatewayInput{
 			VpcId:             aws.String(m.AWSConfig.VPCID),
 			InternetGatewayId: aws.String(m.AWSConfig.InternetGatewayID),
@@ -408,6 +423,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	// Create Subnet
 
 	procedure.AddStep("creating Subnet", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		for idx, subnet := range m.AWSConfig.PublicSubnetIPRange {
 			if m.AWSConfig.PublicSubnetIPRange[idx]["subnet_id"] != "" {
 				continue
@@ -439,7 +457,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("tagging Subnet", func() error {
-
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		for _, subnet := range m.AWSConfig.PublicSubnetIPRange {
 			if subnet["subnet_id"] != "" {
 				err := tagAWSResource(ec2S, subnet["subnet_id"], map[string]string{
@@ -474,7 +494,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	// Route Table
 
 	procedure.AddStep("creating Route Table", func() error {
-		if m.AWSConfig.RouteTableID != "" {
+		if m.AWSConfig.RouteTableID != "" || m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 
@@ -489,6 +509,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("tagging Route Table", func() error {
+		if m.AWSConfig.VPCMANAGED == true {
+			return nil
+		}
 		return tagAWSResource(ec2S, m.AWSConfig.RouteTableID, map[string]string{
 			"KubernetesCluster": m.Name,
 			"Name":              m.Name + "-rt",
@@ -496,7 +519,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	procedure.AddStep("associating Route Table with Subnet", func() error {
-		if len(m.AWSConfig.RouteTableSubnetAssociationID) != 0 {
+		if len(m.AWSConfig.RouteTableSubnetAssociationID) != 0 || m.AWSConfig.VPCMANAGED == true {
 			return nil
 		}
 
@@ -528,6 +551,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			GatewayId:            aws.String(m.AWSConfig.InternetGatewayID),
 		})
 		if err != nil && !strings.Contains(err.Error(), "InvalidPermission.Duplicate") {
+			if strings.Contains(err.Error(), "already exists") {
+				return nil
+			}
 			return err
 		}
 		return nil
