@@ -14,7 +14,8 @@ type HeapsterMetric struct {
 }
 
 type HeapsterMetrics struct {
-	Metrics []*HeapsterMetric `json:"metrics"`
+	MetricName string            `json:"metric_name"`
+	Metrics    []*HeapsterMetric `json:"metrics"`
 }
 
 type Metadata struct {
@@ -194,7 +195,7 @@ type ContainerStatus struct {
 	Ready        bool           `json:"ready"`
 	RestartCount int            `json:"restartCount"`
 	State        ContainerState `json:"state"`
-	LastState    ContainerState `json:"state"`
+	LastState    ContainerState `json:"Last_state"`
 }
 
 type PodStatusCondition struct {

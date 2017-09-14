@@ -1,0 +1,20 @@
+<app-cloud-accounts-header></app-cloud-accounts-header>
+<div id="item_list_container">
+  <table id="item_list" class="table table-hover">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Name</th>
+        <th>Provider</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr app-cloud-account *ngFor="let cloudAccount of cloudAccounts | Search:cloudAccountsService.searchString | paginate: { itemsPerPage: 10, currentPage: p[i], id: id }" [cloudAccount]="cloudAccount">
+      </tr>
+    </tbody>
+  </table>
+  <nav aria-label="Page navigation">
+    <pagination-controls (pageChange)="p[i] = $event" [id]="id"></pagination-controls>
+  </nav>
+</div>
