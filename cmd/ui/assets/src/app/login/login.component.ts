@@ -4,6 +4,8 @@ import { CookieMonster } from '../shared/cookies/cookies.service';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs/Observable';
 import { Subscription } from 'rxjs/Subscription';
+import { SessionModel } from './session.model';
+import { Notifications } from '../shared/notifications/notifications.service';
 
 @Component({
   selector: 'app-login',
@@ -19,11 +21,13 @@ export class LoginComponent implements OnDestroy {
   private previousUrl: string;
   private refresh: boolean;
   private subscriptions = new Subscription();
+  public status: string;
 
   constructor(
     private supergiant: Supergiant,
     private router: Router,
     private cookieMonster: CookieMonster,
+    private notifications: Notifications,
   ) { }
 
   validateUser() {
@@ -40,19 +44,47 @@ export class LoginComponent implements OnDestroy {
     return Observable.of(false);
   }
 
+  error(msg) {
+    this.notifications.display(
+      'error',
+      'Login Error',
+      'Error:' + msg);
+  }
+
   onSubmit() {
-    const creds = '{"user":{"username":"' + this.username + '", "password":"' + this.password + '"}}';
-    this.subscriptions.add(this.supergiant.Sessions.create(JSON.parse(creds)).subscribe(
+    this.status = 'status status-transitioning';
+    const creds = new SessionModel;
+    creds.session.model.user.username = this.username;
+    creds.session.model.user.password = this.password;
+
+    this.subscriptions.add(this.supergiant.Sessions.create(creds.session.model).subscribe(
       (session) => {
-        console.log('session');
         this.session = session;
         this.supergiant.UtilService.sessionToken = 'SGAPI session="' + this.session.id + '"';
         this.supergiant.sessionID = this.session.id;
         this.cookieMonster.setCookie({ name: 'session', value: this.session.id, secure: true });
-        this.supergiant.loginSuccess = true;
-        this.router.navigate(['/kubes']);
+
+        const countdown = Observable
+          .interval(100)
+          .take(50) // 5 seconds
+          .subscribe(y => {
+            if (this.cookieMonster.getCookie('session') === this.session.id) {
+              this.supergiant.loginSuccess = true;
+              this.router.navigate(['/kubes']);
+              countdown.unsubscribe();
+            }
+
+            if (!this.supergiant.loginSuccess && y === 49) {
+              this.status = 'status status-danger';
+              this.error('No Login Cookie Found');
+            }
+          });
+
       },
-      (err) => { console.log('error:', err); }
+      (err) => {
+        this.status = 'status status-danger';
+        this.error('Invalid Login');
+      }
     ));
   }
 
