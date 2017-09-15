@@ -27,6 +27,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	}
 
 	procedure.AddStep("deleting master(s)", func() error {
+
 		if len(m.MasterNodes) == 0 {
 			return nil
 		}

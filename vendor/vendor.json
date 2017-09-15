@@ -238,6 +238,12 @@
 			"revisionTime": "2016-08-22T20:44:01Z"
 		},
 		{
+			"checksumSHA1": "40Ns85VYa4smQPcewZ7SOdfLnKU=",
+			"path": "github.com/fatih/structs",
+			"revision": "7e5a8eef611ee84dd359503f3969f80df4c50723",
+			"revisionTime": "2017-06-12T12:55:44Z"
+		},
+		{
 			"checksumSHA1": "17vYJDDMJO63/G/tRFIUuSlMCbE=",
 			"origin": "k8s.io/helm/vendor/github.com/ghodss/yaml",
 			"path": "github.com/ghodss/yaml",
@@ -451,6 +457,12 @@
 			"path": "github.com/gorilla/context",
 			"revision": "1ea25387ff6f684839d82767c1733ff4d4d15d0a",
 			"revisionTime": "2016-02-26T21:46:23Z"
+		},
+		{
+			"checksumSHA1": "/lWfaq/Ok+El1amGaf3wPY5JpUc=",
+			"path": "github.com/gorilla/handlers",
+			"revision": "a4d79d4487c2430a17d9dc8a1f74d1a6ed6908ca",
+			"revisionTime": "2017-06-02T15:16:48Z"
 		},
 		{
 			"checksumSHA1": "4sogM1XFIgIHNturWtVh1XrTzas=",

@@ -1,0 +1,20 @@
+<app-pods-header></app-pods-header>
+<div id="item_list_container">
+  <table id="item_list" class="table table-hover">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Name</th>
+        <th>Kube Name</th>
+        <th>Namespace</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr app-pod *ngFor="let pod of pods | Search:podsService.searchString | paginate: { itemsPerPage: 10, currentPage: p[i], id: id }" [pod]="pod"></tr>
+    </tbody>
+  </table>
+  <nav aria-label="Page navigation">
+    <pagination-controls (pageChange)="p[i] = $event" [id]="id"></pagination-controls>
+  </nav>
+</div>
