@@ -10,4 +10,5 @@
   <a routerLink="/kubes"><button type="submit" class="btn btn-primary" (click)="onSubmit()">
     Login
   </button></a>
+  <div *ngIf="status" [class]="status"></div>
 </form>

@@ -128,7 +128,7 @@ export class LoadBalancersHeaderComponent implements OnDestroy, AfterViewInit {
       this.notifications.display('warn', 'Warning:', 'No Load Balancer Selected.');
     } else {
       for (const provider of selectedItems) {
-        this.subscriptions.add(this.supergiant.LoadBalancers.delete(provider.id).subscribe(
+        this.subscriptions.add(this.supergiant.KubeResources.delete(provider.id).subscribe(
           (data) => {
             this.notifications.display('success', 'Load Balancer: ' + provider.name, 'Deleted...');
             this.loadBalancersService.resetSelected();
