@@ -11,6 +11,7 @@ export class LoadBalancerComponent {
   constructor(public loadBalancersService: LoadBalancersService) { }
 
   status(loadBalancer) {
+    console.log(loadBalancer);
     if (loadBalancer.status && loadBalancer.status.error && loadBalancer.status.retries === loadBalancer.status.max_retries) {
       return 'status status-danger';
     } else if (loadBalancer.status) {
