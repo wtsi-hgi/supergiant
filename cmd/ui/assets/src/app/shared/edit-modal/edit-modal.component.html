@@ -14,16 +14,9 @@
       </ngb-tab>
       <ngb-tab title="Advanced" [disabled]="isDisabled" select="setModel(value)">
         <ng-template ngbTabContent>
-<<<<<<< HEAD
           <div class="form-group">
             <textarea rows=20 [className]="textStatus" name="json_input" (keyup)="convertToObj($event.target.value)" (keypress)="convertToObj($event.target.value)" (keydown)="convertToObj($event.target.value)">
 {{model | json}}
-=======
-          <form>
-            <div class="form-group">
-              <textarea rows=20 [className]="textStatus" name="json_input" (keypress)="convertToObj($event.target.value)" (keyup)="convertToObj($event.target.value)" (keydown)="convertToObj($event.target.value)">
-{{value | json}}
->>>>>>> origin/master
           </textarea> {{ badString }}
           </div>
           <div class="modal-footer">
