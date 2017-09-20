@@ -67,12 +67,12 @@ export class EditModalComponent implements OnInit, AfterViewInit, OnDestroy {
       JSON.parse(json);
     } catch (e) {
       this.textStatus = 'form-control badTextarea';
-      this.badString = 'Not Valid JSON: May god have mercy on your soul...';
+      this.badString = e;
       this.isDisabled = true;
       return;
     }
     this.textStatus = 'form-control goodTextarea';
-    this.badString = 'Nice Looking JSON Dude!';
+    this.badString = 'Valid JSON';
     this.isDisabled = false;
     this.model = JSON.parse(json);
   }
