@@ -72,7 +72,7 @@ export class UsersHeaderComponent implements OnDestroy, AfterViewInit {
   success(model) {
     this.notifications.display(
       'success',
-      'User: ' + model.name,
+      'User: ' + model.username,
       'Created...',
     );
   }
@@ -80,7 +80,7 @@ export class UsersHeaderComponent implements OnDestroy, AfterViewInit {
   error(model, data) {
     this.notifications.display(
       'error',
-      'User: ' + model.name,
+      'User: ' + model.username,
       'Error:' + data.statusText);
   }
 
