@@ -76,7 +76,7 @@ export class AppsHeaderComponent implements OnDestroy, AfterViewInit {
               // TODO: Note - we need to add a sniffer here to look for a schema file
               // and any icon images in the chart. If they exist, we should use them instead of the generated one.
               this.appsModel.app.schema = GenerateSchema.json(this.appsModel.app.model);
-              (this.appsModel.app.schema as any).properties = this.setDescriptions((this.appsModel.app.schema as any).properties);
+              // (this.appsModel.app.schema as any).properties = this.setDescriptions((this.appsModel.app.schema as any).properties);
               this.editModalService.open('Save', 'app', this.appsModel);
               this.appsService.resetSelected();
             } else {

@@ -1,8 +1,8 @@
 export class UsersModel {
   user = {
     'model': {
-      'username': '',
-      'password': '',
+      'username': 'username',
+      'password': 'password',
       'role': 'user'
     },
     'schema': {
@@ -14,17 +14,11 @@ export class UsersModel {
         'password': {
           'description': 'Password',
           'type': 'string',
-          'widget': 'password'
         },
         'role': {
           'description': 'User Role',
           'type': 'string',
-          'widget': 'select',
-          'oneOf': [{
-            'description': 'Admin', 'enum': ['admin']
-          }, {
-            'description': 'User', 'enum': ['user']
-          }],
+          'enum': ['user', 'admin'],
           'default': 'user'
         }
       }
