@@ -11,7 +11,6 @@ import { JsonSchemaFormModule } from 'angular2-json-schema-form';
 import { AppRoutingModule } from './app-routing.module';
 import { ChartsModule } from 'ng2-charts';
 import { NgxPaginationModule } from 'ngx-pagination';
-import { AceEditorDirective } from 'ng2-ace-editor';
 
 // Components
 import { AppComponent } from './app.component';
@@ -181,7 +180,6 @@ import { Http } from '@angular/http';
     AppDetailsComponent,
     AppsListComponent,
     DeploymentDetailsComponent,
-    AceEditorDirective,
   ],
   imports: [
     BrowserModule,
