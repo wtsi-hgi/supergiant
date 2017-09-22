@@ -7,6 +7,7 @@ import { HttpModule } from '@angular/http';
 import { SimpleNotificationsModule } from 'angular2-notifications';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SchemaFormModule, WidgetRegistry, DefaultWidgetRegistry } from 'angular2-schema-form';
+import { JsonSchemaFormModule } from 'angular2-json-schema-form';
 import { AppRoutingModule } from './app-routing.module';
 import { ChartsModule } from 'ng2-charts';
 import { NgxPaginationModule } from 'ngx-pagination';
@@ -192,7 +193,8 @@ import { Http } from '@angular/http';
     ReactiveFormsModule,
     SchemaFormModule,
     ChartsModule,
-    NgxPaginationModule
+    NgxPaginationModule,
+    JsonSchemaFormModule,
   ],
   providers: [
     // Component Services

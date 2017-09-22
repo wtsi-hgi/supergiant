@@ -15,6 +15,7 @@ export class EditModalComponent implements OnInit, AfterViewInit, OnDestroy {
   private subscription: Subscription;
   private schema: any;
   private model: any;
+  private value: any;
   private item: any;
   private schemaBlob: any;
   private action: string;
@@ -22,6 +23,12 @@ export class EditModalComponent implements OnInit, AfterViewInit, OnDestroy {
   private textStatus = 'form-control';
   private badString: string;
   private isDisabled: boolean;
+  aceEditorOptions: any = {
+    highlightActiveLine: true,
+    maxLines: 1000,
+    printMargin: false,
+    autoScrollEditorIntoView: true,
+  };
   @ViewChild('editModal') content: ElementRef;
 
 
@@ -62,6 +69,12 @@ export class EditModalComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  setModel(model, event) {
+    console.log('I ran...', model);
+    if (event.activeId === 'ngb-tab-0') {
+      this.model = model;
+    }
+  }
   convertToObj(json) {
     try {
       JSON.parse(json);
@@ -93,7 +106,10 @@ export class EditModalComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  onSubmit() {
+  onSubmit(value?) {
+    if (value) {
+      this.model = value;
+    }
     this.modalRef.close();
     this.editModalService.editModalResponse.next([this.action, this.item, this.model]);
   }

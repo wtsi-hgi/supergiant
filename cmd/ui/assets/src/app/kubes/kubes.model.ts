@@ -45,7 +45,9 @@ export class KubesModel {
         },
         'name': {
           'description': 'Name (a-z,0-9)',
-          'type': 'string'
+          'type': 'string',
+          'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
+          'maxLength': 12
         },
         'kube_master_count': {
           'description': 'Kube Master Count',
@@ -117,7 +119,9 @@ export class KubesModel {
         },
         'name': {
           'description': 'Name',
-          'type': 'string'
+          'type': 'string',
+          'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
+          'maxLength': 12
         },
         'kube_master_count': {
           'description': 'Kube Master Count',
@@ -181,7 +185,9 @@ export class KubesModel {
         },
         'name': {
           'description': 'Name',
-          'type': 'string'
+          'type': 'string',
+          'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
+          'maxLength': 12
         },
         'kube_master_count': {
           'description': 'Kube Master Count',
@@ -231,7 +237,9 @@ export class KubesModel {
         },
         'name': {
           'description': 'Name',
-          'type': 'string'
+          'type': 'string',
+          'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
+          'maxLength': 12
         },
         'node_sizes': {
           'description': 'Node Sizes',
@@ -305,7 +313,9 @@ export class KubesModel {
         },
         'name': {
           'description': 'Name',
-          'type': 'string'
+          'type': 'string',
+          'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
+          'maxLength': 12
         },
         'node_sizes': {
           'description': 'Node Sizes',
