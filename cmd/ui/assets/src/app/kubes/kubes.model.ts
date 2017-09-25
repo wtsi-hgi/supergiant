@@ -220,6 +220,7 @@ export class KubesModel {
       'openstack_config': {
         'image_name': 'CoreOS',
         'region': 'RegionOne',
+        'public_gateway_id': '',
         'ssh_key_fingerprint': ''
       },
       'ssh_pub_key': ''
@@ -260,6 +261,10 @@ export class KubesModel {
             'region': {
               'default': 'RegionOne',
               'description': 'Region',
+              'type': 'string'
+            },
+            'public_gateway_id': {
+              'description': 'public_gateway_id',
               'type': 'string'
             },
             'kube_master_count': {
