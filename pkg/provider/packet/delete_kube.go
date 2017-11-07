@@ -23,7 +23,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	}
 	// Delete all master nodes.
 	procedure.AddStep("Destroying Kubernetes Master(s)...", func() error {
-		for _, master := range m.PACKConfig.MasterNodes {
+		for _, master := range m.MasterNodes {
 
 			deviceID, err := getDevice(m, client, master)
 			if err != nil {

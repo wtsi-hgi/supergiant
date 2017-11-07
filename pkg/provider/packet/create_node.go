@@ -35,15 +35,25 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 	if err != nil {
 		return err
 	}
-	plan, err := getPlan(m.Kube, client, m.Kube.MasterNodeSize)
+	plan, err := getPlan(m.Kube, client, m.Size)
 	if err != nil {
 		return err
 	}
 	procedure.AddStep("Creating Kubernetes Minion Node...", func() error {
 
 		m.Name = m.Kube.Name + "-minion" + "-" + strings.ToLower(util.RandomString(5))
+
+		mversion := strings.Split(m.Kube.KubernetesVersion, ".")
+
+		userDatatemplate := "config/providers/common/" + mversion[0] + "." + mversion[1] + "/minion.yaml"
+		oS := "coreos_stable"
+
+		if m.Size == "Type 2A" {
+			userDatatemplate = "config/providers/common/" + mversion[0] + "." + mversion[1] + "/arm/ubuntu/minion.yaml"
+			oS = "ubuntu_17_04"
+		}
 		// Build template
-		masterUserdataTemplate, err := bindata.Asset("config/providers/packet/minion.yaml")
+		masterUserdataTemplate, err := bindata.Asset(userDatatemplate)
 		if err != nil {
 			return err
 		}
@@ -70,7 +80,7 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 			HostName:     m.Name,
 			Plan:         plan,
 			Facility:     m.Kube.PACKConfig.Facility,
-			OS:           "coreos_stable",
+			OS:           oS,
 			BillingCycle: "hourly",
 			ProjectID:    project,
 			UserData:     userData,
@@ -84,7 +94,7 @@ func (p *Provider) CreateNode(m *model.Node, action *core.Action) error {
 			return err
 		}
 
-		return action.CancellableWaitFor("Kubernetes Minion Launch", 10*time.Minute, 3*time.Second, func() (bool, error) {
+		return action.CancellableWaitFor("Kubernetes Minion Launch", 30*time.Minute, 3*time.Second, func() (bool, error) {
 			resp, _, serr := client.Devices.Get(server.ID)
 			if serr != nil {
 				return false, serr

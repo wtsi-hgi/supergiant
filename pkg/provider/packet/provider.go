@@ -91,7 +91,7 @@ func getPlan(m *model.Kube, client *packngo.Client, name string) (string, error)
 	}
 
 	for _, plan := range plans {
-		if plan.Name == m.MasterNodeSize && plan.Line == "baremetal" {
+		if plan.Name == name && plan.Line == "baremetal" {
 			planID = plan.ID
 		}
 	}

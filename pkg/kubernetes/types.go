@@ -165,6 +165,7 @@ type ImagePullSecret struct {
 type PodSpec struct {
 	Volumes                       []Volume          `json:"volumes"`
 	Containers                    []Container       `json:"containers"`
+	NodeSelector                  map[string]string `json:"nodeSelector"`
 	ImagePullSecrets              []ImagePullSecret `json:"imagePullSecrets"`
 	TerminationGracePeriodSeconds int               `json:"terminationGracePeriodSeconds"`
 	RestartPolicy                 string            `json:"restartPolicy"`

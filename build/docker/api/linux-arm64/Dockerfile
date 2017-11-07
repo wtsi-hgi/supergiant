@@ -1,3 +1,4 @@
 from scratch
-COPY ./supergiant-server-linux-arm64 /supergiant-server
-CMD ["/supergiant-server"]
+ADD ./supergiant-server-linux-arm64 /supergiant-api
+ADD ./config.json /
+CMD ["/supergiant-api"]

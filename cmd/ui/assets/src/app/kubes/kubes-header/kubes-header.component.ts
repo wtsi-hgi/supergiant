@@ -113,8 +113,9 @@ export class KubesHeaderComponent implements OnDestroy, AfterViewInit {
     } else if (selectedItems.length > 1) {
       this.notifications.display('warn', 'Warning:', 'You cannot edit more than one Kube at a time.');
     } else {
-      this.kubesModel.providers[selectedItems[0].provider].model = selectedItems[0];
-      this.editModalService.open('Edit', selectedItems[0].provider, this.kubesModel);
+      console.log(selectedItems[0]);
+      // this.kubesModel.providers[selectedItems[0].provider].model = selectedItems[0];
+      this.editModalService.open('Edit', selectedItems[0].provider, selectedItems[0]);
     }
   }
 

@@ -31,25 +31,25 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	}
 
 	// Default master count to 1
-	if m.PACKConfig.KubeMasterCount == 0 {
-		m.PACKConfig.KubeMasterCount = 1
+	if m.KubeMasterCount == 0 {
+		m.KubeMasterCount = 1
 	}
 
 	// provision an etcd token
-	url, err := etcdToken(strconv.Itoa(m.PACKConfig.KubeMasterCount))
+	url, err := etcdToken(strconv.Itoa(m.KubeMasterCount))
 	if err != nil {
 		return err
 	}
 
 	// save the token
-	m.PACKConfig.ETCDDiscoveryURL = url
+	m.ETCDDiscoveryURL = url
 
 	err = p.Core.DB.Save(m)
 	if err != nil {
 		return err
 	}
 
-	for i := 1; i <= m.PACKConfig.KubeMasterCount; i++ {
+	for i := 1; i <= m.KubeMasterCount; i++ {
 		// Create master(s)
 		count := strconv.Itoa(i)
 
@@ -68,9 +68,10 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			// Master name
 			name := m.Name + "-master" + "-" + strings.ToLower(util.RandomString(5))
 
-			m.PACKConfig.MasterName = name
+			m.MasterName = name
 			// Build template
-			masterUserdataTemplate, err := bindata.Asset("config/providers/packet/master.yaml")
+			mversion := strings.Split(m.KubernetesVersion, ".")
+			masterUserdataTemplate, err := bindata.Asset("config/providers/common/" + mversion[0] + "." + mversion[1] + "/master.yaml")
 			if err != nil {
 				return err
 			}
@@ -108,9 +109,9 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 				// Save Master info when ready
 				if resp.State == "active" {
-					m.PACKConfig.MasterNodes = append(m.PACKConfig.MasterNodes, resp.Hostname)
+					m.MasterNodes = append(m.MasterNodes, resp.Hostname)
 					m.MasterPublicIP = resp.Network[0].Address
-					m.PACKConfig.MasterPrivateIP = resp.Network[2].Address
+					m.MasterPrivateIP = resp.Network[2].Address
 					if serr := p.Core.DB.Save(m); serr != nil {
 						return false, serr
 					}
