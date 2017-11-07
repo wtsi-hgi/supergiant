@@ -236,6 +236,9 @@ func execHelmCmd(c *Core, kube *model.Kube, cmd string) (out string, err error) 
 			},
 		},
 		Spec: kubernetes.PodSpec{
+			NodeSelector: map[string]string{
+				"beta.kubernetes.io/arch": "amd64",
+			},
 			Containers: []kubernetes.Container{
 				{
 					Name:  "helm-worker",

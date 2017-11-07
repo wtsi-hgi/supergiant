@@ -291,18 +291,19 @@ export class KubesModel {
     'model': {
       'cloud_account_name': '',
       'master_node_size': 'Type 0',
+      'kube_master_count': 1,
+      'ssh_pub_key': '',
       'name': '',
       'node_sizes': [
         'Type 0',
         'Type 1',
         'Type 2',
-        'Type 3'
+        'Type 3',
+        'Type 2A'
       ],
       'packet_config': {
         'facility': 'ewr1',
-        'kube_master_count': 1,
         'project': '',
-        'ssh_pub_key': ''
       }
     },
     'schema': {
@@ -316,6 +317,16 @@ export class KubesModel {
           'description': 'Master Node Size',
           'type': 'string'
         },
+        'kube_master_count': {
+          'description': 'Kube Master Count',
+          'type': 'number',
+          'widget': 'number',
+        },
+        'ssh_pub_key': {
+          'description': 'SSH Public Key',
+          'type': 'string',
+          'widget': 'textarea',
+        },
         'name': {
           'description': 'Name',
           'type': 'string',
@@ -324,9 +335,7 @@ export class KubesModel {
         },
         'node_sizes': {
           'description': 'Node Sizes',
-          'id': '/properties/node_sizes',
           'items': {
-            'id': '/properties/node_sizes/items',
             'type': 'string'
           },
           'type': 'array'
@@ -338,19 +347,9 @@ export class KubesModel {
               'description': 'Facility',
               'type': 'string'
             },
-            'kube_master_count': {
-              'description': 'Kube Master Count',
-              'type': 'number',
-              'widget': 'number',
-            },
             'project': {
               'description': 'Project',
               'type': 'string'
-            },
-            'ssh_pub_key': {
-              'description': 'SSH Public Key',
-              'type': 'string',
-              'widget': 'textarea',
             }
           },
           'type': 'object'

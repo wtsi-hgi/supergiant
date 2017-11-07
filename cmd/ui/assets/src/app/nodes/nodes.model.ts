@@ -7,14 +7,12 @@ export class NodesModel {
     'schema': {
       'properties': {
         'kube_name': {
-          'description': 'Kube Name',
           'type': 'string'
         },
         'size': {
-          'description': 'Size',
           'type': 'string',
           'widget': 'select',
-          'oneOf': [],
+          'enum': [],
           'default': '',
         }
       }

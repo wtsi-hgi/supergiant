@@ -148,13 +148,4 @@ type PACKKubeConfig struct {
 	Project   string `json:"project" validate:"nonzero"`
 	ProjectID string `json:"project_id" sg:"readonly"`
 	Facility  string `json:"facility" validate:"nonzero"`
-
-	MasterNodes      []string `json:"master_nodes" sg:"readonly"`
-	MasterName       string   `json:"master_name" sg:"readonly"`
-	KubeMasterCount  int      `json:"kube_master_count"`
-	MasterPrivateIP  string   `json:"master_private_ip" sg:"readonly"`
-	ETCDDiscoveryURL string   `json:"etcd_discovery_url" sg:"readonly"`
-	SSHPubKey        string   `json:"ssh_pub_key" validate:"nonzero"`
-
-	KubernetesVersion string `json:"kubernetes_version" validate:"nonzero" sg:"default=1.5.1"`
 }

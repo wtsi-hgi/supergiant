@@ -52,10 +52,7 @@ export class NodesHeaderComponent implements OnDestroy, AfterViewInit {
           const kube = this.kubes.filter(resource => resource.name === option)[0];
           this.nodesModel.node.model.kube_name = kube.name;
           for (const size of kube.node_sizes) {
-            this.nodesModel.node.schema.properties.size.oneOf = this.nodesModel.node.schema.properties.size.oneOf.concat({
-              'enum': [size],
-              'description': size,
-            }, );
+            this.nodesModel.node.schema.properties.size.enum.push(size);
           }
           this.nodesModel.node.schema.properties.size.default = kube.node_sizes[0];
           this.editModalService.open('Save', 'node', this.nodesModel.providers);
@@ -90,7 +87,7 @@ export class NodesHeaderComponent implements OnDestroy, AfterViewInit {
   success(model) {
     this.notifications.display(
       'success',
-      'Node: ' + model.provider_id,
+      'Node: ' + model.kube_name,
       'Created...',
     );
   }
@@ -98,7 +95,7 @@ export class NodesHeaderComponent implements OnDestroy, AfterViewInit {
   error(model, data) {
     this.notifications.display(
       'error',
-      'Node: ' + model.provider_id,
+      'Node: ' + model.kube_name,
       'Error:' + data.statusText);
   }
 
