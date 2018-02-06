@@ -1,0 +1,85 @@
+/*
+  Theme
+  =====
+
+  Similar to state rules in that they describe how modules or layouts might
+  look. Most sites don’t require a layer of theming but it is good to be aware
+  of it.
+*/
+
+.app-login-container {
+  @extend ._app-container-marquee;
+
+  h2 {
+    &::before {
+      background-image: $brand-image-data;
+      background-position: 50% 50%;
+      background-repeat: no-repeat;
+      background-size: contain;
+      content: "Supergiant";
+      display: block;
+      height: 4rem;
+      margin-bottom: 2rem;
+      text-align: left;
+      text-indent: -5000px;
+    }
+  }
+}
+
+
+.app-dashboard-container {
+  @extend ._app-container-default;
+
+  section {
+    &.app-dashboard-primary {}
+
+    &.app-dashboard-secondary {
+      .app-dashboard-events,
+      .app-dashboard-news {
+        @extend .col-lg-6;
+      }
+
+      .app-dashboard-events {
+        @include media-breakpoint-up(lg) {
+          border-right: 1px solid rgba(0,0,0,0.1);
+        }
+      }
+    }
+  }
+}
+
+.app-apps-container {
+  @extend ._app-container-default;
+}
+
+.app-clusters-container {
+  @extend ._app-container-default;
+}
+.clusters-index-empty {
+  background-position: 50% 0;
+  background-repeat: no-repeat;
+  background-size: auto 200px;
+  padding-top: 200px;
+  text-align: center;
+
+  &.no-clusters {
+    background-image: url(assets/img/supergiant-cloud-autoscaling.svg);
+  }
+  
+  &.no-cloud-account {
+    background-image: url(assets/img/supergiant-cloud-providers.svg);
+  }
+}
+
+
+.app-accounts-container {
+  @extend ._app-container-default;
+}
+
+.app-sessions-container {
+  @extend ._app-container-default;
+}
+
+.app-system-container {
+  @extend ._app-container-default;
+}

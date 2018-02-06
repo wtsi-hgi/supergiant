@@ -14,16 +14,17 @@ type Kube struct {
 	CloudAccountName string        `json:"cloud_account_name" validate:"nonzero" gorm:"not null;index" sg:"immutable"`
 
 	// has_many Nodes
-	Nodes []*Node `json:"nodes,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name"`
-
+	Nodes     []*Node `json:"nodes,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name" sg:"store_as_json_in=NodesJSON"`
+	NodesJSON []byte  `json:"-"`
 	// has_many LoadBalancers
-	LoadBalancers []*LoadBalancer `json:"load_balancers,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name"`
-
+	LoadBalancers     []*LoadBalancer `json:"load_balancers,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name" sg:"store_as_json_in=LoadBalancersJSON"`
+	LoadBalancersJSON []byte          `json:"-"`
 	// has_many KubeResources
-	KubeResources []*KubeResource `json:"kube_resources,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name"`
-
+	KubeResources     []*KubeResource `json:"kube_resources,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name" sg:"store_as_json_in=KubeResourcesJSON"`
+	KubeResourcesJSON []byte          `json:"-"`
 	// has_many HelmReleases
-	HelmReleases []*HelmRelease `json:"helm_releases,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name"`
+	HelmReleases     []*HelmRelease `json:"helm_releases,omitempty" gorm:"ForeignKey:KubeName;AssociationForeignKey:Name" sg:"store_as_json_in=HelmReleasesJSON"`
+	HelmReleasesJSON []byte         `json:"-"`
 
 	Name string `json:"name" validate:"nonzero,max=12,regexp=^[a-z]([-a-z0-9]*[a-z0-9])?$" gorm:"not null;unique_index" sg:"immutable"`
 	// Kubernetes

@@ -1,0 +1,17 @@
+<div class="subcontext-form">
+  <header>
+    <button type="button" class="back-button" [routerLink]="['/system/cloud-accounts']"></button>
+
+    <h3><i class="fa fa-cloud"></i> Create a Cloud Account</h3>
+  </header>
+
+  <p *ngIf="!schema">Select a Cloud</p>
+
+  <div *ngIf="!schema" class="btn-group" role="group">
+    <button *ngFor="let provider of providers" type="button" class="btn btn-light" (click)="sendChoice(provider)">{{ provider }}</button>
+  </div>
+
+  <div *ngIf="schema">
+    <json-schema-form framework="bootstrap-3" [schema]="schema" [data]="model" (onSubmit)="create(value)" (onChanges)="value=$event"></json-schema-form>
+  </div>
+</div>

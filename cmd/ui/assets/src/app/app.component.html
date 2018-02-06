@@ -1,10 +1,23 @@
-<app-dropdown-modal></app-dropdown-modal>
-<app-system-modal></app-system-modal>
-<app-edit-modal></app-edit-modal>
-<div id="container" class="row no-gutters">
-  <app-navigation class="col-md-2"></app-navigation>
-<div class="col-md-10" id="content">
+<header class="app-header">
+  <app-navigation></app-navigation>
+</header>
+
+<simple-notifications [options]="options"></simple-notifications>
+
+<div class="app-body">
+  <!--   
+  <div class="app-assist-toggles">
+    <label for="app-assist-toggle-status">
+      <i class="fa fa-magic"></i>
+    </label>
+
+    <label for="app-assist-toggle-status">
+      <i class="fa fa-question"></i>
+    </label>
+  </div>
+  -->
+  
   <router-outlet></router-outlet>
 </div>
-</div>
-<simple-notifications [options]="options"></simple-notifications>
+
+<footer class="app-footer"></footer>

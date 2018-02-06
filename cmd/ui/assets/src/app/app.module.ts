@@ -11,15 +11,15 @@ import { JsonSchemaFormModule } from 'angular2-json-schema-form';
 import { AppRoutingModule } from './app-routing.module';
 import { ChartsModule } from 'ng2-charts';
 import { NgxPaginationModule } from 'ngx-pagination';
+import { TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
+import {ContextMenuModule} from 'ngx-contextmenu';
 
 // Components
 import { AppComponent } from './app.component';
 import { NavigationComponent } from './navigation/navigation.component';
 import { UsersComponent } from './users/users.component';
-import { KubesComponent } from './kubes/kubes.component';
 import { NotificationsComponent } from './shared/notifications/notifications.component';
-import { KubeComponent } from './kubes/kube/kube.component';
-import { KubesHeaderComponent } from './kubes/kubes-header/kubes-header.component';
 import { SessionsComponent } from './sessions/sessions.component';
 import { CloudAccountsComponent } from './cloud-accounts/cloud-accounts.component';
 import { LoadBalancersComponent } from './load-balancers/load-balancers.component';
@@ -49,13 +49,8 @@ import { EditModalComponent } from './shared/edit-modal/edit-modal.component';
 import { LoginComponent } from './login/login.component';
 import { CookiesComponent } from './shared/cookies/cookies.component';
 import { AppsComponent } from './apps/apps.component';
-import { AppsHeaderComponent } from './apps/apps-header/apps-header.component';
 import { Search } from './shared/search-pipe/search-pipe';
 import { HelmAppComponent } from './apps/app/helm-app.component';
-import { DeploymentComponent } from './apps/deployment/deployment.component';
-import { RepoModalComponent } from './apps/repo-modal/repo-modal.component';
-import { KubeDetailsComponent } from './kubes/kube-details/kube-details.component';
-import { KubesListComponent } from './kubes/kubes-list/kubes-list.component';
 import { NodeDetailsComponent } from './nodes/node-details/node-details.component';
 import { NodesListComponent } from './nodes/nodes-list/nodes-list.component';
 import { PodDetailsComponent } from './pods/pod-details/pod-details.component';
@@ -72,12 +67,9 @@ import { ServiceDetailsComponent } from './services/service-details/service-deta
 import { ServicesListComponent } from './services/services-list/services-list.component';
 import { SupergiantComponent } from './shared/supergiant/supergiant.component';
 import { AppsListComponent } from './apps/apps-list/apps-list.component';
-import { AppDetailsComponent } from './apps/app-details/app-details.component';
-import { DeploymentDetailsComponent } from './apps/deployment-details/deployment-details.component';
 // Component Services
 import { SessionsService } from './sessions/sessions.service';
 import { CloudAccountsService } from './cloud-accounts/cloud-accounts.service';
-import { KubesService } from './kubes/kubes.service';
 import { UsersService } from './users/users.service';
 import { NodesService } from './nodes/nodes.service';
 import { PodsService } from './pods/pods.service';
@@ -90,7 +82,6 @@ import { SystemModalService } from './shared/system-modal/system-modal.service';
 import { DropdownModalService } from './shared/dropdown-modal/dropdown-modal.service';
 import { EditModalService } from './shared/edit-modal/edit-modal.service';
 import { CookieMonster } from './shared/cookies/cookies.service';
-import { RepoModalService } from './apps/repo-modal/repo-modal.service';
 
 // Supergiant API Services
 import { Supergiant } from './shared/supergiant/supergiant.service';
@@ -109,7 +100,36 @@ import { Logs } from './shared/supergiant/logs/logs.service';
 import { AuthenticatedHttpService } from './shared/auth/authenticated-http-service.service';
 import { Http } from '@angular/http';
 
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/switchMap';
+import 'rxjs/add/observable/of';
+import 'rxjs/add/observable/timer';
+import 'rxjs/add/observable/interval';
+import 'rxjs/add/operator/take';
 
+// ui2000
+import { SystemComponent } from './system/system.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { ClustersComponent } from './clusters/clusters.component';
+import { NewCloudAccountComponent } from './system/cloud-accounts/new-cloud-account/new-cloud-account.component';
+import { NgxDatatableModule } from '@swimlane/ngx-datatable';
+// temporary 2000 name hack because of conflict
+import { CloudAccount2000Component } from './system/cloud-accounts/cloud-account/cloud-account.component';
+import { CloudAccounts2000Component } from './system/cloud-accounts/cloud-accounts.component';
+import { Users2000Component } from './system/users/users.component';
+import { EditCloudAccountComponent } from './system/cloud-accounts/edit-cloud-account/edit-cloud-account.component';
+import { MainComponent } from './system/main/main.component';
+import { HelmReposComponent } from './system/main/helm-repos/helm-repos.component';
+import { NewClusterComponent } from './clusters/new-cluster/new-cluster.component';
+import { ClusterComponent } from './clusters/cluster/cluster.component';
+import { ClustersListComponent } from './clusters/clusters-list/clusters-list.component';
+import { ListCloudAccountsComponent } from './system/cloud-accounts/list-cloud-accounts/list-cloud-accounts.component';
+import { DashboardTutorialComponent } from './tutorials/dashboard-tutorial/dashboard-tutorial.component';
+import { ClustersTutorialComponent } from './tutorials/clusters-tutorial/clusters-tutorial.component';
+import { SystemTutorialComponent } from './tutorials/system-tutorial/system-tutorial.component';
+import { AppsTutorialComponent } from './tutorials/apps-tutorial/apps-tutorial.component';
+import { NewAppListComponent } from './apps/new-app-list/new-app-list.component';
+import { NewAppComponent } from './apps/new-app/new-app.component';
 
 
 
@@ -125,9 +145,6 @@ import { Http } from '@angular/http';
     VolumesHeaderComponent,
     NavigationComponent,
     UsersComponent,
-    KubesComponent,
-    KubeComponent,
-    KubesHeaderComponent,
     SessionsComponent,
     CloudAccountsComponent,
     LoadBalancersComponent,
@@ -155,12 +172,7 @@ import { Http } from '@angular/http';
     LoginComponent,
     CookiesComponent,
     AppsComponent,
-    AppsHeaderComponent,
     HelmAppComponent,
-    DeploymentComponent,
-    RepoModalComponent,
-    KubeDetailsComponent,
-    KubesListComponent,
     NodeDetailsComponent,
     NodesListComponent,
     PodDetailsComponent,
@@ -177,17 +189,41 @@ import { Http } from '@angular/http';
     ServicesListComponent,
     Search,
     SupergiantComponent,
-    AppDetailsComponent,
     AppsListComponent,
-    DeploymentDetailsComponent,
+    DashboardComponent,
+    ClustersComponent,
+    NewCloudAccountComponent,
+    EditCloudAccountComponent,
+    MainComponent,
+    HelmReposComponent,
+    NewClusterComponent,
+    ClusterComponent,
+    CloudAccount2000Component,
+    CloudAccounts2000Component,
+    SystemComponent,
+    HelmReposComponent,
+    Users2000Component,
+    ClustersListComponent,
+    ListCloudAccountsComponent,
+    DashboardTutorialComponent,
+    ClustersTutorialComponent,
+    SystemTutorialComponent,
+    AppsTutorialComponent,
+    NewAppListComponent,
+    NewAppComponent,
   ],
   imports: [
     BrowserModule,
+    CommonModule,
+    ContextMenuModule,
+    // ContextMenuModule.forRoot({
+    //   autoFocus: true,
+    //   useBootstrap4: true,
+    // }),
     NgbModule.forRoot(),
     AppRoutingModule,
     HttpModule,
     FormsModule,
-    BrowserModule,
     BrowserAnimationsModule,
     SimpleNotificationsModule.forRoot(),
     ReactiveFormsModule,
@@ -195,21 +231,20 @@ import { Http } from '@angular/http';
     ChartsModule,
     NgxPaginationModule,
     JsonSchemaFormModule,
+    NgxDatatableModule,
   ],
   providers: [
+    TitleCasePipe,
     // Component Services
-    KubesService,
     CloudAccountsService,
     SessionsService,
     UsersService,
-    KubesService,
     NodesService,
     LoadBalancersService,
     PodsService,
     ServicesService,
     VolumesService,
     AppsService,
-    RepoModalService,
     // Supergiant API Services
     Supergiant,
     UtilService,

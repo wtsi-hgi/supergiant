@@ -1,55 +1,59 @@
-<app-repo-modal></app-repo-modal>
-<app-apps-header></app-apps-header>
-<ngb-tabset type="pills" justify="center">
-  <ngb-tab title="Apps">
-    <ng-template ngbTabContent>
-      <div id="item_list_container">
-        <table id="item_list" class="table table-hover">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Apps</th>
-              <th>Repo Name</th>
-              <th>Version</th>
-              <th>Description</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr app-helm-app *ngFor="let app of apps | Search:appsService.searchString | paginate: { itemsPerPage: 10, currentPage: pApps[i], id: id }" [app]="app"></tr>
-          </tbody>
-        </table>
-        <nav aria-label="Page navigation">
-          <pagination-controls (pageChange)="pApps[i] = $event" [id]="id"></pagination-controls>
-        </nav>
+<div class="app-apps-container">
+  <section class="app-apps-index">
+    <div class="app-context-header-panel">
+      <h2>
+        <i class="fa fa-puzzle-piece"></i>
+        Running Apps
+      </h2>
+
+      <div class="context-search-layout">
+        <input (keyup)="keyUpFilter($event.target.value)" name="search" placeholder="Search" type="search">
       </div>
-    </ng-template>
-  </ngb-tab>
-  <ngb-tab title="Deployments">
-    <ng-template ngbTabContent>
-      <div id="item_list_container">
-        <table id="item_list" class="table table-hover">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Name</th>
-              <th>Kube Name</th>
-              <th>Chart Name</th>
-              <th>Chart Version</th>
-              <th>Revision</th>
-              <th>Updated</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr app-deployment *ngFor="let deployment of deployments | Search:appsService.searchString | paginate: { itemsPerPage: 10, currentPage: pDeployments[i], id: id }" [deployment]="deployment"></tr>
-          </tbody>
-        </table>
-        <nav aria-label="Page navigation">
-          <pagination-controls (pageChange)="pDeployments[i] = $event" [id]="id"></pagination-controls>
-        </nav>
+
+      <div class="context-secondary-panel">
+        <button type="button" class="btn btn-primary" [routerLink]="['/apps/new']">Deploy New App</button>
+        <button [disabled]="selected.length === 0" type="button" class="btn btn-primary" (click)="deleteApp()">Delete Selected App</button>
       </div>
+    </div>
+
+    <ngx-datatable class="material expandable"
+      [rows]="rows"
+      [columnMode]="'force'"
+      [columns]="columns"
+      [headerHeight]="50"
+      [footerHeight]="50"
+      [rowHeight]="'auto'"
+      [limit]="20"
+      [selected]="selected"
+      (select)='onSelect($event)'
+      (activate)='onActivate($event)'
+      [selectionType]="'checkbox'"
+      [selectAllRowsOnPage]="true"
+      [displayCheck]="displayCheck"
+      (tableContextmenu)="onTableContextMenu($event)">
+      <ngx-datatable-column
+          name="checkbox"
+          [width]="30"
+          [sortable]="false"
+          [canAutoResize]="false"
+          [draggable]="false"
+          [resizeable]="false"
+          [headerCheckboxable]="true"
+          [checkboxable]="true"
+          >
+      </ngx-datatable-column>
+      <ngx-datatable-column name="Name" prop="name"></ngx-datatable-column>
+      <ngx-datatable-column name="Cluster" prop="kube_name"></ngx-datatable-column>
+      <ngx-datatable-column name="Revision" prop="Revision"></ngx-datatable-column>
+      <ngx-datatable-column name="App Name" prop="chart_name"></ngx-datatable-column>
+      <ngx-datatable-column name="App Version" prop="chart_version"></ngx-datatable-column>
+      <ngx-datatable-column name="Updated" prop="updated_value"></ngx-datatable-column>
+      <ngx-datatable-column name="Status" prop="status_value"></ngx-datatable-column>
+  </ngx-datatable>
+  <context-menu #basicMenu>
+    <ng-template contextMenuItem let-item (execute)="contextDelete($event.item)">
+      Delete {{item?.name}}
     </ng-template>
-  </ngb-tab>
-</ngb-tabset>
+  </context-menu>
+  </section>
+</div>

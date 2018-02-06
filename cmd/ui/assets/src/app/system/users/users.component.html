@@ -1,0 +1,32 @@
+<div class="subcontext">
+
+  <div class="subcontext-actions">
+    <div *ngIf="selected.length === 0" class="form-group row">
+      <div class="col-3">
+        <label>Username</label>
+        <input [(ngModel)]="username" type="text" class="form-control" aria-describedby="Repo URL" placeholder="Username">
+      </div>
+      <div class="col-3">
+        <label>Password</label>
+        <input [(ngModel)]="password" type="password" class="form-control" aria-describedby="Repo URL" placeholder="Password">
+      </div>
+      <div class="col-3">
+        <label>Role</label>
+        <select [(ngModel)]="role" class="form-control">
+          <option>user</option>
+          <option>admin</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn btn-primary btn-block" (click)="save()">Add New User</button>
+      </div>
+    </div>
+
+    <div *ngIf="selected.length > 0">
+      <button type="button" class="btn btn-danger" (click)="delete()">Delete Selected User</button>
+    </div>
+  </div>
+
+  <ngx-datatable class="material" [rows]="rows" [columnMode]="'force'" [columns]="columns" [headerHeight]="50" [footerHeight]="50" [rowHeight]="'auto'" [limit]="5" [selected]="selected" [selectionType]="'multiClick'" (select)='onSelect($event)'></ngx-datatable>
+</div>
