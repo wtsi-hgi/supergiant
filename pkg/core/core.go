@@ -17,6 +17,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/creasty/defaults"
 )
 
 type NodeSize struct {
@@ -33,8 +34,8 @@ type Settings struct {
 	PsqlUser               string `json:"psql_user"`
 	PsqlPass               string `json:"psql_pass"`
 	SQLiteFile             string `json:"sqlite_file"`
-	PublishHost            string `json:"publish_host"`
-	HTTPPort               string `json:"http_port"`
+	PublishHost            string `json:"publish_host" default:"localhost"`
+	HTTPPort               string `json:"http_port" default:"8080"`
 	HTTPSPort              string `json:"https_port"`
 	SSLCertFile            string `json:"ssl_cert_file"`
 	SSLKeyFile             string `json:"ssl_key_file"`
@@ -129,9 +130,12 @@ func (c *Core) InitializeForeground() error {
 		if err := mergo.Merge(&c.Settings, configFileSettings); err != nil {
 			return err
 		}
+		// Set Default Settings with struct tags
+		if err := defaults.Set(&c.Settings); err!= nil {
+			return err
+		}
 	}
 
-	// TODO use struct tags on settings; can set defaults as well
 	requiredFlags := map[string]string{
 		"publish-host": c.PublishHost,
 		"http-port":    c.HTTPPort,
