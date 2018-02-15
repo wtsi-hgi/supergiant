@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -x
 
 # Travis deployment script. After test success actions go here.
 
@@ -6,7 +6,7 @@ TAG=${TRAVIS_BRANCH:-unstable}
 
 
 echo "Tag Name: ${TAG}"
-if [[ "$TAG" =~ ^v[0-100]. ]]; then
+if [[ "$TAG" =~ ^v[0-9]. ]]; then
   echo "release"
 
   docker login -u $DOCKER_USER -p $DOCKER_PASS
@@ -15,7 +15,7 @@ if [[ "$TAG" =~ ^v[0-100]. ]]; then
   REPO=supergiant/supergiant-ui
   cp dist/supergiant-ui-linux-amd64 build/docker/ui/linux-amd64/
   cp dist/supergiant-ui-linux-arm64 build/docker/ui/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 -t $REPO:latest  build/docker/ui/linux-amd64/
+  docker build -t $REPO:$TAG-linux-x64 build/docker/ui/linux-amd64/
   docker build -t $REPO:$TAG-linux-arm64 build/docker/ui/linux-arm64/
   docker push $REPO
 
@@ -30,6 +30,8 @@ if [[ "$TAG" =~ ^v[0-100]. ]]; then
   docker manifest annotate $REPO:$TAG \
   $REPO:$TAG-linux-arm64 --os linux --arch arm64
 
+  docker manifest push $REPO:$TAG
+
   ## Multi Arch Latest
   docker manifest create $REPO:latest \
   $REPO:$TAG-linux-x64 \
@@ -41,8 +43,7 @@ if [[ "$TAG" =~ ^v[0-100]. ]]; then
   docker manifest annotate $REPO:latest \
   $REPO:$TAG-linux-arm64 --os linux --arch arm64
 
-   docker manifest push $REPO:$TAG
-   docker manifest push $REPO:latest
+  docker manifest push $REPO:latest
 
 ###############################
 
@@ -50,7 +51,7 @@ if [[ "$TAG" =~ ^v[0-100]. ]]; then
   REPO=supergiant/supergiant-api
   cp dist/supergiant-server-linux-amd64 build/docker/api/linux-amd64/
   cp dist/supergiant-server-linux-arm64 build/docker/api/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 -t $REPO:latest build/docker/api/linux-amd64/
+  docker build -t $REPO:$TAG-linux-x64 build/docker/api/linux-amd64/
   docker build -t $REPO:$TAG-linux-arm64 build/docker/api/linux-arm64/
   docker push $REPO
 
