@@ -77,7 +77,7 @@
       {"name": "s-16vcpu-64gb", "ram_gib": 64, "cpu_cores": 16},
       {"name": "s-20vcpu-96gb", "ram_gib": 96, "cpu_cores": 20},
       {"name": "s-24vcpu-128gb", "ram_gib": 128, "cpu_cores": 24},
-      {"name": "s-32vcpu-192gb", "ram_gib": 192, "cpu_cores": 32},
+      {"name": "s-32vcpu-192gb", "ram_gib": 192, "cpu_cores": 32}
     ],
     "gce": [
       {"name": "n1-standard-1", "ram_gib": 3.75, "cpu_cores": 1},
