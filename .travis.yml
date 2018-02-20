@@ -24,7 +24,7 @@ before_install:
   - echo '{"experimental": "enabled"}' | tee ~/.docker/config.json
   - sudo service docker restart
   - docker version
-  - exit 1
+  - dfsafsdfsdf
 
 install:
   - wget https://releases.hashicorp.com/packer/1.0.0/packer_1.0.0_linux_amd64.zip
