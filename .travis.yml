@@ -21,6 +21,9 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install docker-ce
   - echo '{\"experimental\":true}' | sudo tee /etc/docker/daemon.json
+  - cat /etc/systemd/system/docker.service.d/docker.conf
+  - cat /etc/docker/daemon.json
+  - ls -lrta ~/
   - docker version
 
 install:
