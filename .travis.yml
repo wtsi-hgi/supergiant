@@ -18,6 +18,8 @@ go:
 go_import_path: github.com/supergiant/supergiant
 
 before_install:
+  - echo '{\"experimental\":true}' | sudo tee /etc/docker/daemon.json
+  - sudo service docker restart
   - docker version
 
 install:
