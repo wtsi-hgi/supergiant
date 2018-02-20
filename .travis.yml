@@ -21,12 +21,8 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install docker-ce
   - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
-  - sudo cat /etc/docker/daemon.json
-  - sudo cat /etc/bash_completion.d/docker
-  - ls -lrta ~/
   - sudo service docker restart
   - docker version
-  - cat /etc/systemd/system/docker.service.d/docker.conf
 
 install:
   - wget https://releases.hashicorp.com/packer/1.0.0/packer_1.0.0_linux_amd64.zip
