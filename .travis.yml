@@ -18,9 +18,7 @@ go:
 go_import_path: github.com/supergiant/supergiant
 
 before_install:
-  - sudo apt-get update
-  - sudo apt-get install docker-ce
-  - echo 'DOCKER_OPTS="--experimental=true"' | sudo tee --append /etc/default/docker
+  - echo '{\"experimental\":true}' | sudo tee /etc/docker/daemon.json
   - sudo service docker restart
 
 install:
