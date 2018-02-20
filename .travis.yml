@@ -23,7 +23,8 @@ before_install:
   - echo '{\"experimental\":true}' | sudo tee /etc/docker/daemon.json
   - sudo cat /etc/docker/daemon.json
   - ls -lrta ~/
-  - docker --config /etc/docker/daemon.json version
+  - sudo service docker restart
+  - docker version
   - cat /etc/systemd/system/docker.service.d/docker.conf
 
 install:
