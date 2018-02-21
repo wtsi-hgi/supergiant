@@ -20,8 +20,11 @@ go_import_path: github.com/supergiant/supergiant
 before_install:
   - sudo apt-get update
   - sudo apt-get install docker-ce
-  - echo 'DOCKER_OPTS="--experimental=true"' | sudo tee --append /etc/default/docker
+  - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
+  - mkdir ~/.docker
+  - echo '{"experimental":"enabled"}' | tee ~/.docker/config.json
   - sudo service docker restart
+  - docker version
 
 install:
   - wget https://releases.hashicorp.com/packer/1.0.0/packer_1.0.0_linux_amd64.zip
@@ -57,8 +60,8 @@ script:
   - goveralls -coverprofile=.coverprofile -service=travis-ci
 
   # Cross compile
-  - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -o dist/supergiant-server-linux-arm64 -ldflags '-extldflags "-static"' ./cmd/server
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o dist/supergiant-server-linux-amd64 -ldflags '-extldflags "-static"' ./cmd/server
+  - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -o dist/supergiant-api-linux-arm64 -ldflags '-extldflags "-static"' ./cmd/server
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o dist/supergiant-api-linux-amd64 -ldflags '-extldflags "-static"' ./cmd/server
   - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -o dist/supergiant-ui-linux-arm64 -ldflags '-extldflags "-static"' ./cmd/ui
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o dist/supergiant-ui-linux-amd64 -ldflags '-extldflags "-static"' ./cmd/ui
 

@@ -14,6 +14,6 @@ RUN apk add --update curl && \
   rm -rf glibc.apk glibc-bin.apk /var/cache/apk/*
 
 RUN apk add --no-cache ca-certificates
-ADD ./supergiant-server-linux-amd64 /supergiant-api
+ADD ./supergiant-api-linux-amd64 /supergiant-api
 ADD ./config.json /
 CMD ["/supergiant-api"]
