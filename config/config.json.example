@@ -64,15 +64,20 @@
       {"name": "i2.8xlarge", "ram_gib": 244, "cpu_cores": 32}
     ],
     "digitalocean": [
-      {"name": "512mb", "ram_gib": 0.5, "cpu_cores": 1},
-      {"name": "1gb", "ram_gib": 1, "cpu_cores": 1},
-      {"name": "2gb", "ram_gib": 2, "cpu_cores": 2},
-      {"name": "4gb", "ram_gib": 4, "cpu_cores": 2},
-      {"name": "8gb", "ram_gib": 8, "cpu_cores": 4},
-      {"name": "16gb", "ram_gib": 16, "cpu_cores": 8},
-      {"name": "32gb", "ram_gib": 32, "cpu_cores": 12},
-      {"name": "48gb", "ram_gib": 48, "cpu_cores": 16},
-      {"name": "64gb", "ram_gib": 64, "cpu_cores": 20}
+      {"name": "s-1vcpu-1gb", "ram_gib": 1, "cpu_cores": 1},
+      {"name": "s-1vcpu-2gb", "ram_gib": 2, "cpu_cores": 1},
+      {"name": "s-1vcpu-3gb", "ram_gib": 3, "cpu_cores": 1},
+      {"name": "s-2vcpu-2gb", "ram_gib": 2, "cpu_cores": 2},
+      {"name": "s-3vcpu-1gb", "ram_gib": 1, "cpu_cores": 3},
+      {"name": "s-2vcpu-4gb", "ram_gib": 4, "cpu_cores": 2},
+      {"name": "s-4vcpu-8gb", "ram_gib": 8, "cpu_cores": 4},
+      {"name": "s-6vcpu-16gb", "ram_gib": 16, "cpu_cores": 6},
+      {"name": "s-8vcpu-32gb", "ram_gib": 32, "cpu_cores": 8},
+      {"name": "s-12vcpu-48gb", "ram_gib": 48, "cpu_cores": 12},
+      {"name": "s-16vcpu-64gb", "ram_gib": 64, "cpu_cores": 16},
+      {"name": "s-20vcpu-96gb", "ram_gib": 96, "cpu_cores": 20},
+      {"name": "s-24vcpu-128gb", "ram_gib": 128, "cpu_cores": 24},
+      {"name": "s-32vcpu-192gb", "ram_gib": 192, "cpu_cores": 32}
     ],
     "gce": [
       {"name": "n1-standard-1", "ram_gib": 3.75, "cpu_cores": 1},
