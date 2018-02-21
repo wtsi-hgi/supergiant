@@ -1,84 +1,73 @@
-#!/bin/bash -x
+#!/bin/bash
 
-# Travis deployment script. After test success actions go here.
 
+## Global Vars
 TAG=${TRAVIS_BRANCH:-unstable}
+ARCHLIST="linux-amd64 linux-arm64"
 
+## Functions
+build_and_push() {
+  REPO=$1
+  ARCH=$2
+  BUILDTAG=$3
+  BUILDDIR=$4
 
+  echo "Building and pushing Repository: supergiant/$REPO-$ARCH, TAG: $BUILDTAG"
+  cp dist/supergiant-$BUILDDIR-$ARCH build/docker/$BUILDDIR/$ARCH/
+  docker build -t supergiant/$REPO-$ARCH:$TAG build/docker/$BUILDDIR/$ARCH/
+  docker push supergiant/$REPO-$ARCH
+}
+
+build_manifest() {
+  REPO=$1
+  ARCH=$2
+  BUILDTAG=$3
+  REPOTAG=$4
+
+  docker manifest create supergiant/$REPO:$BUILDTAG --amend \
+  supergiant/$REPO-$ARCH:$REPOTAG
+
+  docker manifest annotate supergiant/$REPO:$BUILDTAG \
+  supergiant/$REPO-$ARCH:$REPOTAG --os linux --arch $(echo $ARCH | sed 's/linux-//g')
+}
+
+### MAIN
+## Build Release
 echo "Tag Name: ${TAG}"
 if [[ "$TAG" =~ ^v[0-9]. ]]; then
   echo "release"
 
   docker login -u $DOCKER_USER -p $DOCKER_PASS
+
 ###############################
   ## UI Docker Build
-  REPO=supergiant/supergiant-ui
-  cp dist/supergiant-ui-linux-amd64 build/docker/ui/linux-amd64/
-  cp dist/supergiant-ui-linux-arm64 build/docker/ui/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 build/docker/ui/linux-amd64/
-  docker build -t $REPO:$TAG-linux-arm64 build/docker/ui/linux-arm64/
-  docker push $REPO
 
-  ## Multi Arch Release
-  docker manifest create $REPO:$TAG \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
+  COMP="ui"
+  for ARCH in $ARCHLIST; do
+    build_and_push "supergiant-${COMP}" $ARCH $TAG $COMP
 
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
+    build_manifest "supergiant-${COMP}" $ARCH $TAG $TAG
+    build_manifest "supergiant-${COMP}" $ARCH 'latest' $TAG
+  done
 
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
+  docker manifest push --purge supergiant/supergiant-$COMP:latest
+  docker manifest push --purge supergiant/supergiant-$COMP:$TAG
 
-  docker manifest push $REPO:$TAG
-
-  ## Multi Arch Latest
-  docker manifest create $REPO:latest \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
-
-  docker manifest annotate $REPO:latest \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
-
-  docker manifest annotate $REPO:latest \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
-
-  docker manifest push $REPO:latest
 
 ###############################
 
-  ## API Docker Build
-  REPO=supergiant/supergiant-api
-  cp dist/supergiant-server-linux-amd64 build/docker/api/linux-amd64/
-  cp dist/supergiant-server-linux-arm64 build/docker/api/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 build/docker/api/linux-amd64/
-  docker build -t $REPO:$TAG-linux-arm64 build/docker/api/linux-arm64/
-  docker push $REPO
+  # ## API Docker Build
 
-  ## Multi Arch Release
-  docker manifest create $REPO:$TAG \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
+  COMP="api"
+  for ARCH in $ARCHLIST; do
+    build_and_push "supergiant-${COMP}" $ARCH $TAG $COMP
 
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
+    build_manifest "supergiant-${COMP}" $ARCH $TAG $TAG
+    build_manifest "supergiant-${COMP}" $ARCH 'latest' $TAG
+  done
 
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
-
-  ## Multi Arch Latest
-  docker manifest create $REPO:latest \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
-
-  docker manifest annotate $REPO:latest \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
-
-  docker manifest annotate $REPO:latest \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
-
-   docker manifest push $REPO:$TAG
-   docker manifest push $REPO:latest
+  docker manifest push --purge supergiant/supergiant-$COMP:latest
+  docker manifest push --purge supergiant/supergiant-$COMP:$TAG
 
 ###############################
 
@@ -92,46 +81,19 @@ else
   docker login -u $DOCKER_USER -p $DOCKER_PASS
 
   ## UI Docker Build
-  REPO=supergiant/supergiant-ui
-  cp dist/supergiant-ui-linux-amd64 build/docker/ui/linux-amd64/
-  cp dist/supergiant-ui-linux-arm64 build/docker/ui/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 build/docker/ui/linux-amd64/
-  docker build -t $REPO:$TAG-linux-arm64 build/docker/ui/linux-arm64/
-  docker push $REPO
-
-  ## Multi Arch Release
-  docker manifest create $REPO:$TAG \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
-
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
-
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
-
-  docker manifest push $REPO:$TAG
+  COMP="ui"
+  for ARCH in $ARCHLIST; do
+    build_and_push "supergiant-${COMP}" $ARCH $TAG $COMP
+  done
 
   ## API Docker Build
-  REPO=supergiant/supergiant-api
-  cp dist/supergiant-server-linux-amd64 build/docker/api/linux-amd64/
-  cp dist/supergiant-server-linux-arm64 build/docker/api/linux-arm64/
-  docker build -t $REPO:$TAG-linux-x64 build/docker/api/linux-amd64/
-  docker build -t $REPO:$TAG-linux-arm64 build/docker/api/linux-arm64/
-  docker push $REPO
+  COMP="api"
+  for ARCH in $ARCHLIST; do
+    build_and_push "supergiant-${COMP}" $ARCH $TAG $COMP
 
-  ## Multi Arch Release
-  docker manifest create $REPO:$TAG \
-  $REPO:$TAG-linux-x64 \
-  $REPO:$TAG-linux-arm64 \
-
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-x64 --os linux --arch amd64
-
-  docker manifest annotate $REPO:$TAG \
-  $REPO:$TAG-linux-arm64 --os linux --arch arm64
-
-  docker manifest push $REPO:$TAG
+    build_manifest "supergiant-${COMP}" $ARCH $TAG $TAG
+    build_manifest "supergiant-${COMP}" $ARCH 'latest' $TAG
+  done
 
   ## Maybe a flag to build a test AMI? Just takes a long time...
   # ./packer build build/build_branch.json
