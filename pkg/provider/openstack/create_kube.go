@@ -120,8 +120,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	procedure.AddStep("Creating key pair...", func() error {
 		err := err
 		keypair, err := keypairs.Create(computeClient, keypairs.CreateOpts{
-			Name:      fmt.Sprintf("%-key", m.Name),
-			PublicKey: m.SSHPubKey,
+			Name:      fmt.Sprintf("%s-key", m.Name),
+			PublicKey: m.OpenStackConfig.SSHPubKey,
 		}).Extract()
 		if err != nil {
 			return err
@@ -240,7 +240,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				},
 				Metadata: map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
 			}
-			createOpts := keypairs.CreateOpts{
+			createOpts := keypairs.CreateOptsExt{
 				CreateOptsBuilder: serverCreateOpts,
 				KeyName:           m.OpenStackConfig.KeyPair,
 			}
