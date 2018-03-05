@@ -11,6 +11,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	floatingip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -182,6 +183,44 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			SubnetID: m.OpenStackConfig.SubnetID,
 		})
 		m.OpenStackConfig.RouterID = router.ID
+		return nil
+	})
+
+	// Create Security Group
+	procedure.AddStep("Creating security group...", func() error {
+		opts := secgroups.CreateOpts{
+			Name:        m.Name + "-security-group",
+			Description: "Security group for " + m.Name,
+		}
+		group, err := secgroups.Create(client, opts).Extract()
+		if err != nil {
+			return err
+		}
+
+		// TODO: It would be better if there was a single set of rules that each provider could use without excessive duplication!
+		opts := secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      22,
+			ToPort:        22,
+			IPProtocol:    "TCP",
+			CIDR:          "0.0.0.0/0",
+		}
+		rule, err := secgroups.CreateRule(client, opts).Extract()
+		if err != nil {
+			return err
+		}
+		opts := secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      443,
+			ToPort:        443,
+			IPProtocol:    "TCP",
+			CIDR:          "0.0.0.0/0",
+		}
+		rule, err := secgroups.CreateRule(client, opts).Extract()
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 
