@@ -115,6 +115,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		}
 		return nil
 	})
+
 	// Network
 	procedure.AddStep("Creating Kubernetes Network...", func() error {
 		err := err
@@ -188,35 +189,35 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Create Security Group
 	procedure.AddStep("Creating security group...", func() error {
-		opts := secgroups.CreateOpts{
+		secGroupOpts := secgroups.CreateOpts{
 			Name:        m.Name + "-security-group",
 			Description: "Security group for " + m.Name,
 		}
-		group, err := secgroups.Create(client, opts).Extract()
+		group, err := secgroups.Create(computeClient, secGroupOpts).Extract()
 		if err != nil {
 			return err
 		}
 
 		// TODO: It would be better if there was a single set of rules that each provider could use without excessive duplication!
-		opts := secgroups.CreateRuleOpts{
+		ruleOpts := secgroups.CreateRuleOpts{
 			ParentGroupID: group.ID,
 			FromPort:      22,
 			ToPort:        22,
 			IPProtocol:    "TCP",
 			CIDR:          "0.0.0.0/0",
 		}
-		rule, err := secgroups.CreateRule(client, opts).Extract()
+		rule, err := secgroups.CreateRule(computeClient, ruleOpts).Extract()
 		if err != nil {
 			return err
 		}
-		opts := secgroups.CreateRuleOpts{
+		ruleOpts = secgroups.CreateRuleOpts{
 			ParentGroupID: group.ID,
 			FromPort:      443,
 			ToPort:        443,
 			IPProtocol:    "TCP",
 			CIDR:          "0.0.0.0/0",
 		}
-		rule, err := secgroups.CreateRule(client, opts).Extract()
+		rule, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
 		if err != nil {
 			return err
 		}
@@ -250,8 +251,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			if err = masterTemplate.Execute(&masterUserdata, m); err != nil {
 				return err
 			}
-			// Create Server
 
+			// Create Server
 			serverCreateOpts := servers.CreateOpts{
 				ServiceClient: computeClient,
 				Name:          name,
