@@ -187,8 +187,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		return nil
 	})
 
-	// Create Security Group
-	procedure.AddStep("Creating security group...", func() error {
+	// Create Security Groups
+	procedure.AddStep("Creating security groups...", func() error {
 		secGroupOpts := secgroups.CreateOpts{
 			Name:        m.Name + "-security-group",
 			Description: "Security group for " + m.Name,
@@ -207,7 +207,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			IPProtocol:    "TCP",
 			CIDR:          "0.0.0.0/0",
 		}
-		rule, err := secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
 		if err != nil {
 			return err
 		}
@@ -218,7 +218,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			IPProtocol:    "TCP",
 			CIDR:          "0.0.0.0/0",
 		}
-		rule, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
 		if err != nil {
 			return err
 		}
@@ -267,6 +267,12 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 			}
 			p.Core.Log.Debug(m.OpenStackConfig.ImageName)
 			masterServer, err := servers.Create(computeClient, serverCreateOpts).Extract()
+			if err != nil {
+				return err
+			}
+
+			// Associate security group to server
+			err := secgroups.AddServer(computeClient, masterServer.ID, m.OpenStackConfig.NodeSecurityGroupID).ExtractErr()
 			if err != nil {
 				return err
 			}
