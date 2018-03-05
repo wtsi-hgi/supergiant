@@ -152,5 +152,17 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 		})
 	})
 
+	procedure.AddStep("Destroying security groups...", func() error {
+		err := secgroups.Delete(computeClient, m.OpenStackConfig.NodeSecurityGroupID).ExtractErr()
+		if err != nil {
+			if ignoreErrors(err) {
+				return nil
+			}
+			return err
+		}
+
+		return nil
+	})
+
 	return procedure.Run()
 }

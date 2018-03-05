@@ -197,6 +197,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		if err != nil {
 			return err
 		}
+		m.OpenStackConfig.NodeSecurityGroupID = group.ID
 
 		// TODO: It would be better if there was a single set of rules that each provider could use without excessive duplication!
 		ruleOpts := secgroups.CreateRuleOpts{
