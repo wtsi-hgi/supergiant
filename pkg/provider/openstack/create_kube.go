@@ -263,16 +263,11 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				Networks: []servers.Network{
 					servers.Network{UUID: m.OpenStackConfig.NetworkID},
 				},
-				Metadata: map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
+				SecurityGroups: []string{m.OpenStackConfig.NodeSecurityGroupID},
+				Metadata:       map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
 			}
 			p.Core.Log.Debug(m.OpenStackConfig.ImageName)
 			masterServer, err := servers.Create(computeClient, serverCreateOpts).Extract()
-			if err != nil {
-				return err
-			}
-
-			// Associate security group to server
-			err := secgroups.AddServer(computeClient, masterServer.ID, m.OpenStackConfig.NodeSecurityGroupID).ExtractErr()
 			if err != nil {
 				return err
 			}
