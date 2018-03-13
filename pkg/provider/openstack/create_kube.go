@@ -188,16 +188,16 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	})
 
 	// Create Security Groups
-	procedure.AddStep("Creating security groups...", func() error {
+	procedure.AddStep("Creating master security group...", func() error {
 		secGroupOpts := secgroups.CreateOpts{
-			Name:        m.Name + "-security-group",
-			Description: "Security group for " + m.Name,
+			Name:        m.Name + "-master-security-group",
+			Description: "Security group for masters in Supergiant cluster " + m.Name,
 		}
 		group, err := secgroups.Create(computeClient, secGroupOpts).Extract()
 		if err != nil {
 			return err
 		}
-		m.OpenStackConfig.NodeSecurityGroupID = group.ID
+		m.OpenStackConfig.MasterSecurityGroupID = group.ID
 
 		// TODO: It would be better if there was a single set of rules that each provider could use without excessive duplication!
 		ruleOpts := secgroups.CreateRuleOpts{
@@ -222,7 +222,66 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		if err != nil {
 			return err
 		}
+		return nil
+	})
 
+	procedure.AddStep("Creating node security group...", func() error {
+		// TODO: Refactor out duplication...
+		secGroupOpts := secgroups.CreateOpts{
+			Name:        m.Name + "-node-security-group",
+			Description: "Security group for nodes in Supergiant cluster " + m.Name,
+		}
+		group, err := secgroups.Create(computeClient, secGroupOpts).Extract()
+		if err != nil {
+			return err
+		}
+		m.OpenStackConfig.NodeSecurityGroupID = group.ID
+
+		// TODO: It would be better if there was a single set of rules that each provider could use without excessive duplication!
+		ruleOpts := secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      22,
+			ToPort:        22,
+			IPProtocol:    "TCP",
+			CIDR:          m.OpenStackConfig.PrivateSubnetRange,
+		}
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		if err != nil {
+			return err
+		}
+		ruleOpts = secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      443,
+			ToPort:        443,
+			IPProtocol:    "TCP",
+			CIDR:          m.OpenStackConfig.PrivateSubnetRange,
+		}
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		if err != nil {
+			return err
+		}
+		ruleOpts = secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      10250,
+			ToPort:        10250,
+			IPProtocol:    "TCP",
+			CIDR:          m.OpenStackConfig.PrivateSubnetRange,
+		}
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		if err != nil {
+			return err
+		}
+		ruleOpts = secgroups.CreateRuleOpts{
+			ParentGroupID: group.ID,
+			FromPort:      30000,
+			ToPort:        40000,
+			IPProtocol:    "TCP",
+			CIDR:          m.OpenStackConfig.PrivateSubnetRange,
+		}
+		_, err = secgroups.CreateRule(computeClient, ruleOpts).Extract()
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -263,7 +322,7 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				Networks: []servers.Network{
 					servers.Network{UUID: m.OpenStackConfig.NetworkID},
 				},
-				SecurityGroups: []string{m.OpenStackConfig.NodeSecurityGroupID},
+				SecurityGroups: []string{m.OpenStackConfig.MasterSecurityGroupID},
 				Metadata:       map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
 			}
 			p.Core.Log.Debug(m.OpenStackConfig.ImageName)
