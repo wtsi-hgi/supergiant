@@ -12,6 +12,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 	floatingip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
@@ -113,6 +114,20 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		if err != nil {
 			return err
 		}
+		return nil
+	})
+
+	// Key Pair
+	procedure.AddStep("Creating key pair...", func() error {
+		err := err
+		keypair, err := keypairs.Create(computeClient, keypairs.CreateOpts{
+			Name:      fmt.Sprintf("%s-key", m.Name),
+			PublicKey: m.OpenStackConfig.SSHPubKey,
+		}).Extract()
+		if err != nil {
+			return err
+		}
+		m.OpenStackConfig.KeyPair = keypair.Name
 		return nil
 	})
 
@@ -325,8 +340,12 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 				SecurityGroups: []string{m.OpenStackConfig.MasterSecurityGroupID},
 				Metadata:       map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
 			}
+			createOpts := keypairs.CreateOptsExt{
+				CreateOptsBuilder: serverCreateOpts,
+				KeyName:           m.OpenStackConfig.KeyPair,
+			}
 			p.Core.Log.Debug(m.OpenStackConfig.ImageName)
-			masterServer, err := servers.Create(computeClient, serverCreateOpts).Extract()
+			masterServer, err := servers.Create(computeClient, createOpts).Extract()
 			if err != nil {
 				return err
 			}

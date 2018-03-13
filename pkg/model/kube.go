@@ -131,6 +131,8 @@ type OSKubeConfig struct {
 	ImageName             string `json:"image_name" validate:"nonzero"`
 	MasterSecurityGroupID string `json:"master_security_group_id" sg:"readonly"`
 	NodeSecurityGroupID   string `json:"node_security_group_id" sg:"readonly"`
+	KeyPair               string `json:"key_pair" sg:"readonly"`
+	SSHPubKey             string `json:"ssh_pub_key" validate:"nonzero"`
 }
 
 // GCEKubeConfig holds do specific information about DO based KUbernetes clusters.
