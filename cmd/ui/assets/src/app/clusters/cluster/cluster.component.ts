@@ -162,6 +162,19 @@ export class ClusterComponent implements OnInit, OnDestroy {
     }
   }
 
+  onActivate(activated) {
+    console.log(activated);
+    if (activated.type === 'click' && activated.column.name !== 'checkbox') {
+      this.router.navigate(['/clusters', activated.row.id]);
+    }
+  }
+   onAppActivate(activated) {
+    console.log(activated);
+    if (activated.type === 'click' && activated.column.name !== 'checkbox') {
+      this.router.navigate(['/clusters', activated.row.id]);
+    }
+  }
+
   getKube() {
     this.subscriptions.add(Observable.timer(0, 20000)
       .switchMap(() => this.supergiant.Kubes.get(this.id)).subscribe(

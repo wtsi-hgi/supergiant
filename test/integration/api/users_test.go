@@ -49,7 +49,7 @@ func TestUsersCreate(t *testing.T) {
 	user, admin := createUserAndAdmin(srv.Core)
 
 	newUser := &model.User{
-		Username: "my-new-freind",
+		Username: "my-new-friend",
 		Password: "password",
 	}
 
@@ -168,7 +168,7 @@ func TestUsersUpdate(t *testing.T) {
 			updatedUser.Role = "admin"
 			err := sg.Users.Update(user.ID, &updatedUser)
 
-			Convey("The Update should be succesful, but the role unchanged", func() {
+			Convey("The Update should be successful, but the role unchanged", func() {
 				So(err, ShouldBeNil)
 				So(updatedUser.Role, ShouldEqual, "user")
 			})
@@ -211,7 +211,7 @@ func TestUsersUpdate(t *testing.T) {
 			updatedUser.Role = "admin"
 			err := sg.Users.Update(user.ID, &updatedUser)
 
-			Convey("The Update should be succesful, and the role changed", func() {
+			Convey("The Update should be successful, but the role unchanged", func() {
 				So(err, ShouldBeNil)
 				So(updatedUser.Role, ShouldEqual, "admin")
 			})
