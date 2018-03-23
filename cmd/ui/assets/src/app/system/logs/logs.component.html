@@ -1,0 +1,31 @@
+<div>
+  <ngb-tabset type="pills" justify="center">
+    <ngb-tab title="Logs">
+      <ng-template ngbTabContent>
+        <div class="container" id="log" [innerHTML]="logData" (scroll)="onScroll($event)"></div>
+      </ng-template>
+    </ngb-tab>
+    <ngb-tab title="Notifications">
+      <ng-template ngbTabContent>
+        <div id="item_list_container">
+          <table id="item_list" class="table table-hover">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              <div id="system-container">
+                <tr *ngFor="let notificationItem of notificationItems">
+                  <td>{{ notificationItem[0] }}
+                    <td>{{ notificationItem[1] }}
+                </tr>
+              </div>
+            </tbody>
+          </table>
+        </div>
+      </ng-template>
+    </ngb-tab>
+  </ngb-tabset>
+</div>

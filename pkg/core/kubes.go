@@ -1,6 +1,8 @@
 package core
 
 import (
+	"strings"
+
 	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 )
@@ -69,7 +71,8 @@ func (c *Kubes) Delete(id *int64, m *model.Kube) ActionInterface {
 			}
 			// Delete nodes first to get rid of any potential hanging volumes
 			for _, node := range m.Nodes {
-				if err := c.Core.Nodes.Delete(node.ID, node).Now(); err != nil {
+				err := c.Core.Nodes.Delete(node.ID, node).Now()
+				if err != nil && !strings.Contains("record not found", err.Error()) {
 					return err
 				}
 			}

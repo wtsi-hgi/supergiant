@@ -20,7 +20,7 @@ export class ClusterAWSModel {
     'schema': {
       'properties': {
         'name': {
-          'description': 'Name (a-z,0-9)',
+          'description': 'The desired name of the kube. Max length of 12 characters.',
           'type': 'string',
           'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
           'maxLength': 12
@@ -29,38 +29,38 @@ export class ClusterAWSModel {
           'properties': {
             'region': {
               'default': 'us-east-1',
-              'description': 'Region',
+              'description': 'The AWS region the kube will be created in.',
               'type': 'string'
             },
             'vpc_ip_range': {
               'default': '172.20.0.0/16',
-              'description': 'VPC IP Range',
+              'description': 'The range of IP addresses you want available to the kube.',
               'type': 'string'
             }
           },
           'type': 'object'
         },
         'cloud_account_name': {
-          'description': 'Cloud Account Name',
+          'description': 'The Supergiant cloud account you created for use with AWS.',
           'type': 'string'
         },
         'master_node_size': {
           'default': 'm4.large',
-          'description': 'Master Node Size',
+          'description': 'The size of the server the master will live on.',
           'type': 'string'
         },
         'kube_master_count': {
-          'description': 'Kube Master Count',
+          'description': 'The number of masters desired--for High Availability.',
           'type': 'number',
           'widget': 'number',
         },
         'ssh_pub_key': {
-          'description': 'SSH Public Key',
+          'description': 'The public key that will be used to SSH into the kube.',
           'type': 'string',
           'widget': 'textarea',
         },
         'node_sizes': {
-          'description': 'Node Sizes',
+          'description': 'The sizes you want to be available to Supergiant when scaling.',
           'widget': 'array',
           'items': {
             'type': 'string'

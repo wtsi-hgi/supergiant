@@ -20,22 +20,22 @@ export class ClusterOpenStackModel {
     'schema': {
       'properties': {
         'cloud_account_name': {
-          'description': 'Cloud Account Name',
+          'description': 'The Supergiant cloud account you created for use with Openstack.',
           'type': 'string'
         },
         'master_node_size': {
           'default': 'm1.smaller',
-          'description': 'Master Node Size',
+          'description': 'The size of the server the master will live on.',
           'type': 'string'
         },
         'name': {
-          'description': 'Name',
+          'description': 'The desired name of the kube. Max length of 12 characters.',
           'type': 'string',
           'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
           'maxLength': 12
         },
         'node_sizes': {
-          'description': 'Node Sizes',
+          'description': 'The sizes you want to be available to Supergiant when scaling.',
           'id': '/properties/node_sizes',
           'items': {
             'id': '/properties/node_sizes/items',
@@ -47,32 +47,32 @@ export class ClusterOpenStackModel {
           'properties': {
             'image_name': {
               'default': 'CoreOS',
-              'description': 'Image Name',
+              'description': 'The image the servers created will use.',
               'type': 'string'
             },
             'region': {
               'default': 'RegionOne',
-              'description': 'Region',
+              'description': 'The OpenStack region the kube will be created in.',
               'type': 'string'
             },
             'public_gateway_id': {
-              'description': 'public_gateway_id',
+              'description': 'The gateway ID for your OpenStack public gateway.',
               'type': 'string'
             },
             'kube_master_count': {
-              'description': 'Kube Master Count',
+              'description': 'The number of masters desired--for High Availability.',
               'type': 'number',
               'widget': 'number',
             },
             'ssh_key_fingerprint': {
-              'description': 'SSH Key Fingerprint',
+              'description': 'The fingerprint of the public key that you uploaded to your OpenStack account.',
               'type': 'string'
             }
           },
           'type': 'object'
         },
         'ssh_pub_key': {
-          'description': 'SSH Public Key',
+          'description': 'The public key that will be used to SSH into the kube.',
           'type': 'string'
         }
       }
