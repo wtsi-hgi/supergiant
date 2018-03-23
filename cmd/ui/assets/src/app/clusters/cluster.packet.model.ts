@@ -21,32 +21,32 @@ export class ClusterPacketModel {
     'schema': {
       'properties': {
         'cloud_account_name': {
-          'description': 'Cloud Account Name',
+          'description': 'The Supergiant cloud account you created for use with Packet.',
           'type': 'string'
         },
         'master_node_size': {
           'default': 'Type 0',
-          'description': 'Master Node Size',
+          'description': 'The size of the server the master will live on.',
           'type': 'string'
         },
         'kube_master_count': {
-          'description': 'Kube Master Count',
+          'description': 'The number of masters desired--for High Availability.',
           'type': 'number',
           'widget': 'number',
         },
         'ssh_pub_key': {
-          'description': 'SSH Public Key',
+          'description': 'The public key that will be used to SSH into the kube.',
           'type': 'string',
           'widget': 'textarea',
         },
         'name': {
-          'description': 'Name',
+          'description': 'The desired name of the kube. Max length of 12 characters.',
           'type': 'string',
           'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
           'maxLength': 12
         },
         'node_sizes': {
-          'description': 'Node Sizes',
+          'description': 'The sizes you want to be available to Supergiant when scaling.',
           'items': {
             'type': 'string'
           },
@@ -56,11 +56,11 @@ export class ClusterPacketModel {
           'properties': {
             'facility': {
               'default': 'ewr1',
-              'description': 'Facility',
+              'description': 'The Packet facility (region) the kube will be created in.',
               'type': 'string'
             },
             'project': {
-              'description': 'Project',
+              'description': 'The Packet project the kube will be created in.',
               'type': 'string'
             }
           },

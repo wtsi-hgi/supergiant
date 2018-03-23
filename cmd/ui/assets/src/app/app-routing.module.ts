@@ -44,13 +44,13 @@ import { HelmReposComponent } from './system/main/helm-repos/helm-repos.componen
 import { NewClusterComponent } from './clusters/new-cluster/new-cluster.component';
 import { ClusterComponent } from './clusters/cluster/cluster.component';
 import { ClustersListComponent } from './clusters/clusters-list/clusters-list.component';
-import {DashboardTutorialComponent} from './tutorials/dashboard-tutorial/dashboard-tutorial.component';
-import {ClustersTutorialComponent} from './tutorials/clusters-tutorial/clusters-tutorial.component';
-import {SystemTutorialComponent} from './tutorials/system-tutorial/system-tutorial.component';
-import {AppsTutorialComponent} from './tutorials/apps-tutorial/apps-tutorial.component';
-import {NewAppListComponent} from './apps/new-app-list/new-app-list.component';
-import {NewAppComponent} from './apps/new-app/new-app.component';
-
+import { DashboardTutorialComponent } from './tutorials/dashboard-tutorial/dashboard-tutorial.component';
+import { ClustersTutorialComponent } from './tutorials/clusters-tutorial/clusters-tutorial.component';
+import { SystemTutorialComponent } from './tutorials/system-tutorial/system-tutorial.component';
+import { AppsTutorialComponent } from './tutorials/apps-tutorial/apps-tutorial.component';
+import { NewAppListComponent } from './apps/new-app-list/new-app-list.component';
+import { NewAppComponent } from './apps/new-app/new-app.component';
+import { LogsComponent } from './system/logs/logs.component';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -76,17 +76,17 @@ export class AuthGuard implements CanActivate {
   }
 }
 const appRoutes: Routes = [
-  {path: '', component: LoginComponent },
+  { path: '', component: LoginComponent },
   {
     path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard], children: [
-      {path: '', component: DashboardTutorialComponent, outlet: 'tutorial' },
+      { path: '', component: DashboardTutorialComponent, outlet: 'tutorial' },
     ]
   },
   {
     path: 'apps', component: AppsComponent, canActivate: [AuthGuard], children: [
       { path: '', component: AppsTutorialComponent, outlet: 'tutorial' },
       { path: '', component: AppsListComponent },
-      { path: 'new', component: NewAppListComponent},
+      { path: 'new', component: NewAppListComponent },
       { path: 'new/:id', component: NewAppComponent },
       // { path: ':id', component: AppDetailsComponent },
       // { path: 'deployable/:id', component: DeploymentDetailsComponent },
@@ -102,7 +102,12 @@ const appRoutes: Routes = [
   },
   {
     path: 'system', component: SystemComponent, canActivate: [AuthGuard], children: [
-      {path: '', component: SystemTutorialComponent, outlet: 'tutorial' },
+      { path: '', component: SystemTutorialComponent, outlet: 'tutorial' },
+      {
+        path: 'logs', component: LogsComponent, children: [
+          { path: '', component: LogsComponent },
+        ],
+      },
       {
         path: 'cloud-accounts', component: CloudAccounts2000Component, children: [
           { path: '', component: ListCloudAccountsComponent },
@@ -118,10 +123,10 @@ const appRoutes: Routes = [
           { path: ':id', component: CloudAccount2000Component },
         ]
       },
-      {path: 'main', component: MainComponent},
-      {path: '', component: MainComponent },
-      ]
-    },
+      { path: 'main', component: MainComponent },
+      { path: '', component: MainComponent },
+    ]
+  },
   // {
   //   path: 'kubes', component: KubesComponent, canActivate: [AuthGuard], children: [
   //     { path: '', component: KubesListComponent },

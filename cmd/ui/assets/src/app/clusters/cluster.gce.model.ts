@@ -19,18 +19,18 @@ export class ClusterGCEModel {
     'schema': {
       'properties': {
         'cloud_account_name': {
-          'description': 'Cloud Account Name',
+          'description': 'The Supergiant cloud account you created for use with GCE.',
           'type': 'string'
         },
         'gce_config': {
           'properties': {
             'ssh_pub_key': {
-              'description': 'SSH Public Key',
+              'description': 'The public key that will be used to SSH into the kube.',
               'type': 'string'
             },
             'zone': {
               'default': 'us-east1-b',
-              'description': 'Zone',
+              'description': 'The GCE zone the kube will be created in.',
               'type': 'string'
             }
           },
@@ -38,22 +38,22 @@ export class ClusterGCEModel {
         },
         'master_node_size': {
           'default': 'n1-standard-1',
-          'description': 'Master Node Size',
+          'description': 'The size of the server the master will live on.',
           'type': 'string'
         },
         'name': {
-          'description': 'Name',
+          'description': 'The desired name of the kube. Max length of 12 characters.',
           'type': 'string',
           'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
           'maxLength': 12
         },
         'kube_master_count': {
-          'description': 'Kube Master Count',
+          'description': 'The number of masters desired--for High Availability.',
           'type': 'number',
           'widget': 'number',
         },
         'node_sizes': {
-          'description': 'Node Sizes',
+          'description': 'The sizes you want to be available to Supergiant when scaling.',
           'id': '/properties/node_sizes',
           'items': {
             'id': '/properties/node_sizes/items',

@@ -50,7 +50,7 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 			}
 			waitErr := util.WaitFor("Kubernetes master termination", 5*time.Minute, 3*time.Second, func() (bool, error) { // TODO --------- use server() method
 				resp, err := ec2S.DescribeInstances(descinput)
-				if err != nil {
+				if err != nil && isErrAndNotAWSNotFound(err) {
 					return false, err
 				}
 				if len(resp.Reservations) == 0 || len(resp.Reservations[0].Instances) == 0 {

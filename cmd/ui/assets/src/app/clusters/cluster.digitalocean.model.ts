@@ -23,46 +23,46 @@ export class ClusterDigitalOceanModel {
     'schema': {
       'properties': {
         'cloud_account_name': {
-          'description': 'Cloud Account Name',
+          'description': 'The Supergiant cloud account you created for use with Packet.',
           'type': 'string'
         },
         'digitalocean_config': {
           'properties': {
             'region': {
               'default': 'nyc1',
-              'description': 'Region',
+              'description': 'The Digital Ocean region the kube will be created in.',
               'type': 'string'
             },
-           'ssh_key_fingerprint': {
-             'description': 'SSH Key Fingerprint',
-             'id': '/properties/ssh_key_fingerprint',
-             'items': {
-               'id': '/properties/ssh_key_fingerprint/items',
-               'type': 'string'
-             },
-             'type': 'array'
-           }
+            'ssh_key_fingerprint': {
+              'description': 'The fingerprint of the public key that you uploaded to your OpenStack account.',
+              'id': '/properties/ssh_key_fingerprint',
+              'items': {
+                'id': '/properties/ssh_key_fingerprint/items',
+                'type': 'string'
+              },
+              'type': 'array'
+            }
           },
           'type': 'object'
         },
         'master_node_size': {
           'default': '1gb',
-          'description': 'Master Node Size',
+          'description': 'The size of the server the master will live on.',
           'type': 'string'
         },
         'name': {
-          'description': 'Name',
+          'description': 'The desired name of the kube. Max length of 12 characters.',
           'type': 'string',
           'pattern': '^[a-z]([-a-z0-9]*[a-z0-9])?$',
           'maxLength': 12
         },
         'kube_master_count': {
-          'description': 'Kube Master Count',
+          'description': 'The number of masters desired--for High Availability.',
           'type': 'number',
           'widget': 'number',
         },
         'node_sizes': {
-          'description': 'Node Sizes',
+          'description': 'The sizes you want to be available to Supergiant when scaling.',
           'id': '/properties/node_sizes',
           'items': {
             'id': '/properties/node_sizes/items',

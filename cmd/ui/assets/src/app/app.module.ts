@@ -130,6 +130,7 @@ import { SystemTutorialComponent } from './tutorials/system-tutorial/system-tuto
 import { AppsTutorialComponent } from './tutorials/apps-tutorial/apps-tutorial.component';
 import { NewAppListComponent } from './apps/new-app-list/new-app-list.component';
 import { NewAppComponent } from './apps/new-app/new-app.component';
+import { LogsComponent } from './system/logs/logs.component';
 
 
 
@@ -211,6 +212,7 @@ import { NewAppComponent } from './apps/new-app/new-app.component';
     AppsTutorialComponent,
     NewAppListComponent,
     NewAppComponent,
+    LogsComponent,
   ],
   imports: [
     BrowserModule,
