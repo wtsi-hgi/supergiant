@@ -14,9 +14,9 @@ type RecurringService struct {
 	core *Core
 
 	// can provide function directly (which takes priority), or Service interface
-	fn      func() error
-	service Service
-
+	fn       func() error
+	service  Service
+	tag      string
 	interval time.Duration
 }
 
@@ -30,7 +30,8 @@ func (s *RecurringService) Run() {
 func (s *RecurringService) tick() {
 	defer s.recover()
 	if err := s.perform(); err != nil {
-		s.core.Log.Error("Error in RecurringService "+s.name()+": ", err)
+
+		s.core.Log.Error("Error in RecurringService ["+s.tag+"] : ", err)
 	}
 }
 
