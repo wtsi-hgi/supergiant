@@ -54,7 +54,11 @@ export class NewAppComponent implements OnInit, OnDestroy {
         // TODO: Note - we need to add a sniffer here to look for a schema file
         // and any icon images in the chart. If they exist, we should use them instead of the generated one.
         this.schema = GenerateSchema.json(this.appsModel.app.model);
-        this.schema.properties.kube_name.enum = this.clusters;
+        if (this.clusters.length) {
+          this.schema.properties.kube_name.enum = this.clusters;
+        } else {
+          this.schema.properties.kube_name.enum = [ 'No Kubes found' ]
+        }
         this.model = this.appsModel.app.model;
         this.loaded = true;
       },
@@ -89,10 +93,13 @@ export class NewAppComponent implements OnInit, OnDestroy {
     this.subscriptions.add(this.supergiant.Kubes.get().subscribe(
       (kubes) => {
         const clusters: Array<any> = [];
+
         for (const kube of kubes.items) {
           clusters.push(kube.name);
         }
+
         this.clusters = clusters;
+        
         this.get(this.id);
       },
       (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
