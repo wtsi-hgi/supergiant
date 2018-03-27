@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 
 
@@ -11,14 +11,13 @@ import {ActivatedRoute} from '@angular/router';
 })
 export class AppComponent {
   title = 'app';
-  public location = '' ;
+  public location = '';
   public options = {
     position: ['top', 'left'],
     timeOut: 2000,
     lastOnBottom: true,
   };
-  constructor(private  _router: ActivatedRoute) {
-    console.log(_router);
+  constructor(private _router: ActivatedRoute) {
     this.location = _router.snapshot.url.join('');
   }
 }

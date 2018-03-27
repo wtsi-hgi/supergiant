@@ -109,22 +109,21 @@ export class ClustersListComponent implements OnInit, OnDestroy {
   }
 
   onTableContextMenu(contextMenuEvent) {
-      this.rawEvent = contextMenuEvent.event;
-      if (contextMenuEvent.type === 'body') {
-        console.log(contextMenuEvent);
-        this.contextmenuColumn = undefined;
-        this.contextMenuService.show.next({
+    this.rawEvent = contextMenuEvent.event;
+    if (contextMenuEvent.type === 'body') {
+      this.contextmenuColumn = undefined;
+      this.contextMenuService.show.next({
         contextMenu: this.basicMenu,
         item: contextMenuEvent.content,
         event: contextMenuEvent.event,
-        });
-      } else {
-        this.contextmenuColumn = contextMenuEvent.content;
-        this.contextmenuRow = undefined;
-      }
+      });
+    } else {
+      this.contextmenuColumn = contextMenuEvent.content;
+      this.contextmenuRow = undefined;
+    }
 
-      contextMenuEvent.event.preventDefault();
-      contextMenuEvent.event.stopPropagation();
+    contextMenuEvent.event.preventDefault();
+    contextMenuEvent.event.stopPropagation();
   }
 
   // public onContextMenu($event: MouseEvent, item: any): void {
@@ -144,7 +143,6 @@ export class ClustersListComponent implements OnInit, OnDestroy {
   }
 
   onActivate(activated) {
-    console.log(activated);
     if (activated.type === 'click' && activated.column.name !== 'checkbox') {
       this.router.navigate(['/clusters', activated.row.id]);
     }
@@ -164,11 +162,11 @@ export class ClustersListComponent implements OnInit, OnDestroy {
     } else {
       return progobj.status.description;
     }
-   }
+  }
 
   usageOrZeroCPU(usage) {
     if (usage == null) {
-      return( [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] );
+      return ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     } else {
       return usage.cpu_usage_rate.map((data) => data.value);
     }
@@ -177,7 +175,7 @@ export class ClustersListComponent implements OnInit, OnDestroy {
   getCloudAccounts() {
     this.subscriptions.add(this.supergiant.CloudAccounts.get().subscribe(
       (cloudAccounts) => {
-        if (Object.keys(cloudAccounts).length > 0) {this.hasCloudAccount = true; }
+        if (Object.keys(cloudAccounts).length > 0) { this.hasCloudAccount = true; }
       })
     );
   }
@@ -190,7 +188,6 @@ export class ClustersListComponent implements OnInit, OnDestroy {
           // this.lineChartData[0]['data'].length = 0;
           // this.lineChartData[0]['data'].length = 0;
           for (const cluster of clusters.items) {
-            console.log(cluster.id);
             // this.getKubes(cluster.id);
             this.getKubes();
           }
@@ -204,7 +201,6 @@ export class ClustersListComponent implements OnInit, OnDestroy {
     this.subscriptions.add(this.supergiant.HelmReleases.get().subscribe(
       (deployments) => {
         if (Object.keys(deployments.items).length > 0) {
-          console.log(deployments);
           this.hasApp = true;
           this.appCount = Object.keys(deployments.items).length;
         }
@@ -215,42 +211,41 @@ export class ClustersListComponent implements OnInit, OnDestroy {
   getKubes() {
     this.subscriptions.add(Observable.timer(0, 5000)
       .switchMap(() => this.supergiant.Kubes.get()).subscribe(
-      (kubes) => {
+        (kubes) => {
 
-        const rows = kubes.items.map(kube => ({
-          id: kube.id,
-          name: kube.name,
-          version: kube.kubernetes_version,
-          cloudaccount: kube.cloud_account_name,
-          nodes: this.lengthOrZero(kube.nodes),
-          apps: this.lengthOrZero(kube.helmreleases),
-          status: this.titleCase.transform(this.progressOrDone(kube)),
-          kube: kube,
-          chartData: [
-            { label: 'CPU Usage', data: this.usageOrZeroCPU(kube.extra_data) },
-            // this should be set to the length of largest array.
-          ],
-        }));
-        // Copy over any kubes that happen to be currently selected.
-        const selected: Array<any> = [];
-        this.selected.forEach((kube, index) => {
-          for (const row of rows) {
-            if (row.id === kube.id) {
-              selected.push(row);
-              break;
+          const rows = kubes.items.map(kube => ({
+            id: kube.id,
+            name: kube.name,
+            version: kube.kubernetes_version,
+            cloudaccount: kube.cloud_account_name,
+            nodes: this.lengthOrZero(kube.nodes),
+            apps: this.lengthOrZero(kube.helmreleases),
+            status: this.titleCase.transform(this.progressOrDone(kube)),
+            kube: kube,
+            chartData: [
+              { label: 'CPU Usage', data: this.usageOrZeroCPU(kube.extra_data) },
+              // this should be set to the length of largest array.
+            ],
+          }));
+          // Copy over any kubes that happen to be currently selected.
+          const selected: Array<any> = [];
+          this.selected.forEach((kube, index) => {
+            for (const row of rows) {
+              if (row.id === kube.id) {
+                selected.push(row);
+                break;
+              }
             }
-          }
-        });
-        this.unfilteredRows = rows;
-        if (Object.keys(rows).length > 0) {this.hasCluster = true; }
-        this.rows = this.filterRows(rows, this.filterText);
-        this.selected = selected;
-      },
-      (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
+          });
+          this.unfilteredRows = rows;
+          if (Object.keys(rows).length > 0) { this.hasCluster = true; }
+          this.rows = this.filterRows(rows, this.filterText);
+          this.selected = selected;
+        },
+        (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
   }
 
   contextDelete(item) {
-    console.log(item);
     for (const row of this.rows) {
       if (row.id === item.id) {
         this.selected.push(row);
