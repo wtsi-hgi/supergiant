@@ -5,7 +5,7 @@ import { Notifications } from '../../shared/notifications/notifications.service'
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppsModel } from '../apps.model';
 import * as GenerateSchema from 'generate-schema';
-import {Location} from '@angular/common';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-new-app',
@@ -17,7 +17,7 @@ export class NewAppComponent implements OnInit, OnDestroy {
   private appsModel = new AppsModel;
   private clusters = [];
   private chart: any;
-  private model: any;
+  public model: any;
   public schema: any;
   private id: number;
   public loaded = false;

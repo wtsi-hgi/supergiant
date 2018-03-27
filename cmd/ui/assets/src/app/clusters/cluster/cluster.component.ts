@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ViewContainerRef, ViewEncapsulation } from '@angular/core';
 import { Subscription } from 'rxjs/Subscription';
-import {Location} from '@angular/common';
+import { Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs/Observable';
 import { Supergiant } from '../../shared/supergiant/supergiant.service';
@@ -21,6 +21,7 @@ export class ClusterComponent implements OnInit, OnDestroy {
   public showRaw = false;
   public hasApps = false;
   public hasLB = false;
+  public nodecolumns: Array<any> = [];
   id: number;
   subscriptions = new Subscription();
   public kube: any;
@@ -156,7 +157,7 @@ export class ClusterComponent implements OnInit, OnDestroy {
 
   usageOrZeroCPU(usage) {
     if (usage == null) {
-      return( [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] );
+      return ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     } else {
       return usage.cpu_usage_rate.map((data) => data.value);
     }
@@ -168,7 +169,7 @@ export class ClusterComponent implements OnInit, OnDestroy {
       this.router.navigate(['/clusters', activated.row.id]);
     }
   }
-   onAppActivate(activated) {
+  onAppActivate(activated) {
     console.log(activated);
     if (activated.type === 'click' && activated.column.name !== 'checkbox') {
       this.router.navigate(['/clusters', activated.row.id]);
@@ -178,104 +179,111 @@ export class ClusterComponent implements OnInit, OnDestroy {
   getKube() {
     this.subscriptions.add(Observable.timer(0, 20000)
       .switchMap(() => this.supergiant.Kubes.get(this.id)).subscribe(
-      (kube) => {
-        this.kube = kube;
-        if (this.kube.extra_data &&
-          this.kube.extra_data.cpu_usage_rate &&
-          this.kube.extra_data.kube_cpu_capacity) {
-          this.isDataAvailable = true;
-          this.cpuChartLabels.length = 0;
-          let tempArray = this.kube.extra_data.cpu_usage_rate.map((data) => data.timestamp);
-          for (const row of tempArray) {
-            this.cpuChartLabels.push(row);
+        (kube) => {
+          this.kube = kube;
+          if (this.kube.extra_data &&
+            this.kube.extra_data.cpu_usage_rate &&
+            this.kube.extra_data.kube_cpu_capacity) {
+            this.isDataAvailable = true;
+            this.cpuChartLabels.length = 0;
+            let tempArray = this.kube.extra_data.cpu_usage_rate.map((data) => data.timestamp);
+            for (const row of tempArray) {
+              this.cpuChartLabels.push(row);
+            }
+            this.cpuChartData = [
+              {
+                label: 'CPU Usage',
+                data: this.kube.extra_data.cpu_usage_rate.map((data) => data.value)
+              },
+              {
+                label: 'CPU Capacity',
+                data: this.kube.extra_data.kube_cpu_capacity.map((data) => data.value)
+              },
+              // this should be set to the length of largest array.
+            ];
+            this.ramChartLabels.length = 0;
+            tempArray = this.kube.extra_data.memory_usage.map((data) => data.timestamp);
+            for (const row of tempArray) {
+              this.ramChartLabels.push(row);
+            }
+            this.ramChartData = [
+              {
+                label: 'RAM Usage',
+                data: this.kube.extra_data.memory_usage.map((data) => data.value / 1073741824)
+              },
+              {
+                label: 'RAM Capacity',
+                data: this.kube.extra_data.kube_memory_capacity.map((data) => data.value / 1073741824)
+              },
+              // this should be set to the length of largest array.
+            ];
           }
-          this.cpuChartData = [
-            { label: 'CPU Usage',
-              data: this.kube.extra_data.cpu_usage_rate.map((data) => data.value) },
-            { label: 'CPU Capacity',
-              data: this.kube.extra_data.kube_cpu_capacity.map((data) => data.value) },
-            // this should be set to the length of largest array.
-          ];
-          this.ramChartLabels.length = 0;
-          tempArray = this.kube.extra_data.memory_usage.map((data) => data.timestamp);
-          for (const row of tempArray) {
-            this.ramChartLabels.push(row);
+
+          this.noderows = kube.nodes.map(node => ({
+            id: node.id,
+            name: node.name,
+            size: node.size,
+            ip: node.external_ip,
+            chartData: [
+              { label: 'CPU Usage', data: this.usageOrZeroCPU(node.extra_data) },
+              // this should be set to the length of largest array.
+            ],
+          }));
+          // // FAKEDATA
+          // this.noderows.push({id: 12345, name: 'fake-node', size: 'fake.size.5', ip: '1.2.3.4',
+          //   chartData: [
+          //     { label: 'CPU Usage', data: ['20', '80', '1', '99', '0'] },
+          //     // this should be set to the length of largest array.
+          //   ]
+          // });
+
+          this.hasApps = false;
+          if (kube.helm_releases) {
+            this.hasApps = true;
+            this.approws = kube.helm_releases.map(app => ({
+              id: app.id,
+              name: app.name,
+              version: app.revision,
+              appname: app.chart_name,
+              appversion: app.chart_version,
+              statusvalue: app.status_value,
+            }));
           }
-          this.ramChartData = [
-            { label: 'RAM Usage',
-              data: this.kube.extra_data.memory_usage.map((data) => data.value / 1073741824) },
-            { label: 'RAM Capacity',
-              data: this.kube.extra_data.kube_memory_capacity.map((data) => data.value / 1073741824)
-            },
-            // this should be set to the length of largest array.
-          ];
-        }
 
-        this.noderows = kube.nodes.map(node => ({
-          id: node.id,
-          name: node.name,
-          size: node.size,
-          ip: node.external_ip,
-          chartData: [
-            { label: 'CPU Usage', data: this.usageOrZeroCPU(node.extra_data) },
-            // this should be set to the length of largest array.
-          ],
-        }));
-        // // FAKEDATA
-        // this.noderows.push({id: 12345, name: 'fake-node', size: 'fake.size.5', ip: '1.2.3.4',
-        //   chartData: [
-        //     { label: 'CPU Usage', data: ['20', '80', '1', '99', '0'] },
-        //     // this should be set to the length of largest array.
-        //   ]
-        // });
+          // // FAKEDATA
+          // this.hasApps = true;
+          // this.approws.push({id: '12345', name: 'fake-app', version: '1.2.3', appname: 'fake-wordpress',
+          //   appversion: '3.4.5', statusvalue: 'A OK'});
 
-        this.hasApps = false;
-        if (kube.helm_releases) {
-          this.hasApps = true;
-          this.approws = kube.helm_releases.map(app => ({
-            id: app.id,
-            name: app.name,
-            version: app.revision,
-            appname: app.chart_name,
-            appversion: app.chart_version,
-            statusvalue: app.status_value,
-          }));
-        }
+          this.hasLB = false;
+          if (kube.load_balancers) {
+            this.hasLB = true;
+            this.lbrows = kube.load_balancers.map(lb => ({
+              id: lb.id,
+              name: lb.name,
+              ip: lb.ip,
+            }));
+          }
 
-        // // FAKEDATA
-        // this.hasApps = true;
-        // this.approws.push({id: '12345', name: 'fake-app', version: '1.2.3', appname: 'fake-wordpress',
-        //   appversion: '3.4.5', statusvalue: 'A OK'});
-
-        this.hasLB = false;
-        if (kube.load_balancers) {
-          this.hasLB = true;
-          this.lbrows = kube.load_balancers.map(lb => ({
-            id: lb.id,
-            name: lb.name,
-            ip: lb.ip,
-          }));
-        }
-
-        // // FAKEDATA
-        // this.hasLB = true;
-        // this.lbrows.push({id: '12345', name: 'fake-lb', ip: '1.2.3.4'});
-      },
-      (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
+          // // FAKEDATA
+          // this.hasLB = true;
+          // this.lbrows.push({id: '12345', name: 'fake-lb', ip: '1.2.3.4'});
+        },
+        (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
 
     // Get any planets
     this.subscriptions.add(Observable.timer(0, 20000)
       .switchMap(() => this.supergiant.KubeResources.get()).subscribe(
-      (services) => {
-        this.planets = services.items.filter(
-          planet => {
-            if (planet.resource.metadata.labels) {
-              return planet.resource.metadata.labels['kubernetes.io/cluster-service'] === 'true';
+        (services) => {
+          this.planets = services.items.filter(
+            planet => {
+              if (planet.resource.metadata.labels) {
+                return planet.resource.metadata.labels['kubernetes.io/cluster-service'] === 'true';
+              }
             }
-          }
-        );
-      },
-      (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
+          );
+        },
+        (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));
   }
 
   padArrayWithDefault(arr: any, n: number) {
@@ -330,6 +338,9 @@ export class ClusterComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
+  }
+
+  contextNodeDelete($event) {
   }
 
 }
