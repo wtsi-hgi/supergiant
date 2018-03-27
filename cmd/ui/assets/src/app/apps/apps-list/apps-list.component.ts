@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, Pipe, PipeTransform, TemplateRef, ViewChild } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
+// import { Observable } from 'rxjs/Observable';
+import { timer } from 'rxjs/observable/timer';
 import { Subscription } from 'rxjs/Subscription';
 import { Supergiant } from '../../shared/supergiant/supergiant.service';
 import { AppsService } from '../apps.service';
@@ -41,7 +42,7 @@ export class AppsListComponent implements OnInit, OnDestroy {
   // }
 
   getApps() {
-    this.subscriptions.add(Observable.timer(0, 10000)
+    this.subscriptions.add(timer(0, 10000)
       .switchMap(() => this.supergiant.HelmReleases.get()).subscribe(
         (deployments) => {
           const selected: Array<any> = [];
