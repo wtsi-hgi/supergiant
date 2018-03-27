@@ -72,12 +72,16 @@ export class DashboardComponent implements OnInit {
           for (const row of tempArray) {
             this.lineChartLabels.push(row);
           }
-          console.log(this.lineChartLabels);
+
           tempArray = [
-            { label: 'CPU Usage',
-              data: kube.extra_data.cpu_usage_rate.map((data) => data.value) },
-            { label: 'CPU Capacity',
-              data: kube.extra_data.kube_cpu_capacity.map((data) => data.value) },
+            {
+              label: 'CPU Usage',
+              data: kube.extra_data.cpu_usage_rate.map((data) => data.value)
+            },
+            {
+              label: 'CPU Capacity',
+              data: kube.extra_data.kube_cpu_capacity.map((data) => data.value)
+            },
             // this should be set to the length of largest array.
           ];
           //linter is angry but it works, can change it later
@@ -92,12 +96,13 @@ export class DashboardComponent implements OnInit {
             tempArray[1]['data'][i] = previous + tempArray[1]['data'][i];
           }
           this.lineChartData = [
-            {label: 'CPU Usage', data: tempArray[0]['data']},
-            {label: 'CPU Capacity', data: tempArray[1]['data']}
+            { label: 'CPU Usage', data: tempArray[0]['data'] },
+            { label: 'CPU Capacity', data: tempArray[1]['data'] }
           ];
         }
       }
-    ))}
+    ))
+  }
 
   getCloudAccounts() {
     this.subscriptions.add(this.supergiant.CloudAccounts.get().subscribe(
@@ -106,7 +111,7 @@ export class DashboardComponent implements OnInit {
           this.hasCloudAccount = true;
         }
       }));
-    }
+  }
 
   getClusters() {
     this.subscriptions.add(this.supergiant.Kubes.get().subscribe(
@@ -116,24 +121,22 @@ export class DashboardComponent implements OnInit {
           this.lineChartData[0]['data'].length = 0;
           this.lineChartData[0]['data'].length = 0;
           for (const cluster of clusters.items) {
-            console.log(cluster.id);
             this.getKube(cluster.id);
           }
           this.clusterCount = Object.keys(clusters.items).length;
         }
       }));
-    }
+  }
   getDeployments() {
     this.subscriptions.add(this.supergiant.HelmReleases.get().subscribe(
       (deployments) => {
         if (Object.keys(deployments.items).length > 0) {
-          console.log(deployments);
           this.hasApp = true;
           this.appCount = Object.keys(deployments.items).length;
         }
       }));
-      // this.hasApp = true;
-    }
+    // this.hasApp = true;
+  }
 
   constructor(
     private supergiant: Supergiant,
@@ -141,14 +144,8 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.getCloudAccounts();
-    console.log("Get Cloud");
     this.getClusters();
-    console.log("Get Cluster");
     this.getDeployments();
-    console.log("Get Deps");
-    console.log(this.hasCloudAccount);
-    console.log(this.hasCluster);
-    console.log(this.hasApp);
   }
 
 }
