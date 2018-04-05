@@ -12,16 +12,14 @@ import { ChartsModule, BaseChartDirective } from 'ng2-charts';
   selector: 'app-cluster',
   templateUrl: './cluster.component.html',
   styleUrls: ['./cluster.component.scss'],
-  encapsulation: ViewEncapsulation.None
+  // encapsulation: ViewEncapsulation.None
 })
 export class ClusterComponent implements OnInit, OnDestroy {
-  public noderows = [];
   public approws = [];
   public lbrows = [];
   public showRaw = false;
   public hasApps = false;
   public hasLB = false;
-  public nodecolumns: Array<any> = [];
   id: number;
   subscriptions = new Subscription();
   public kube: any;
@@ -62,9 +60,7 @@ export class ClusterComponent implements OnInit, OnDestroy {
 
 
   // linter is angry about the boolean typing but without it charts
-  public rowChartLegend: boolean = false;
-  public rowChartType: string = 'line';
-  public rowChartLabels: Array<any> = ['', '', '', '', '', '', ''];
+
   constructor(
     private route: ActivatedRoute,
     private location: Location,
@@ -163,12 +159,7 @@ export class ClusterComponent implements OnInit, OnDestroy {
     }
   }
 
-  onActivate(activated) {
-    console.log(activated);
-    if (activated.type === 'click' && activated.column.name !== 'checkbox') {
-      this.router.navigate(['/clusters', activated.row.id]);
-    }
-  }
+
   onAppActivate(activated) {
     console.log(activated);
     if (activated.type === 'click' && activated.column.name !== 'checkbox') {
@@ -218,24 +209,6 @@ export class ClusterComponent implements OnInit, OnDestroy {
               // this should be set to the length of largest array.
             ];
           }
-
-          this.noderows = kube.nodes.map(node => ({
-            id: node.id,
-            name: node.name,
-            size: node.size,
-            ip: node.external_ip,
-            chartData: [
-              { label: 'CPU Usage', data: this.usageOrZeroCPU(node.extra_data) },
-              // this should be set to the length of largest array.
-            ],
-          }));
-          // // FAKEDATA
-          // this.noderows.push({id: 12345, name: 'fake-node', size: 'fake.size.5', ip: '1.2.3.4',
-          //   chartData: [
-          //     { label: 'CPU Usage', data: ['20', '80', '1', '99', '0'] },
-          //     // this should be set to the length of largest array.
-          //   ]
-          // });
 
           this.hasApps = false;
           if (kube.helm_releases) {

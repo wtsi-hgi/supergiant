@@ -11,11 +11,7 @@
       </div>
     </div>
 
-    <json-schema-form *ngIf="loaded" framework="bootstrap-3"
-    [schema]="schema"
-    [data]="model"
-    (onSubmit)="create(value)"
-    (onChanges)="value=$event">
+    <json-schema-form *ngIf="loaded" framework="material-design" [schema]="schema" [data]="model" (onSubmit)="create(value)" (onChanges)="value=$event">
     </json-schema-form>
   </section>
 </div>

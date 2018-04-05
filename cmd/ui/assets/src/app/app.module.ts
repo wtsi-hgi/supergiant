@@ -6,14 +6,24 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { HttpModule } from '@angular/http';
 import { SimpleNotificationsModule } from 'angular2-notifications';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatButtonModule, MatCheckboxModule, MatSelectModule } from '@angular/material';
 import { SchemaFormModule, WidgetRegistry, DefaultWidgetRegistry } from 'angular2-schema-form';
-import { JsonSchemaFormModule } from 'angular2-json-schema-form';
+import {
+  JsonSchemaFormModule,
+  MaterialDesignFrameworkModule,
+  JsonSchemaFormService,
+  FrameworkLibraryService,
+  WidgetLibraryService,
+  Framework,
+  MaterialDesignFramework,
+} from 'angular2-json-schema-form';
 import { AppRoutingModule } from './app-routing.module';
 import { ChartsModule } from 'ng2-charts';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { TitleCasePipe } from '@angular/common';
 import { CommonModule } from '@angular/common';
-import {ContextMenuModule} from 'ngx-contextmenu';
+import { ContextMenuModule } from 'ngx-contextmenu';
+
 
 // Components
 import { AppComponent } from './app.component';
@@ -216,6 +226,9 @@ import { LogsComponent } from './system/logs/logs.component';
   ],
   imports: [
     BrowserModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatCheckboxModule,
     CommonModule,
     ContextMenuModule,
     // ContextMenuModule.forRoot({
@@ -232,7 +245,16 @@ import { LogsComponent } from './system/logs/logs.component';
     SchemaFormModule,
     ChartsModule,
     NgxPaginationModule,
-    JsonSchemaFormModule,
+    BrowserModule, MaterialDesignFrameworkModule,
+    {
+      ngModule: JsonSchemaFormModule,
+      providers: [
+        JsonSchemaFormService,
+        FrameworkLibraryService,
+        WidgetLibraryService,
+        { provide: Framework, useClass: MaterialDesignFramework, multi: true }
+      ]
+    },
     NgxDatatableModule,
   ],
   providers: [

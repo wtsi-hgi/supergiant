@@ -228,7 +228,7 @@ export class ClustersListComponent implements OnInit, OnDestroy {
             ],
           }));
           // Copy over any kubes that happen to be currently selected.
-          const selected: Array<any> = [];
+          const selected = [];
           this.selected.forEach((kube, index) => {
             for (const row of rows) {
               if (row.id === kube.id) {

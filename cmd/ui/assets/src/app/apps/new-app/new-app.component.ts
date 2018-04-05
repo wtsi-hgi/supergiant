@@ -57,8 +57,9 @@ export class NewAppComponent implements OnInit, OnDestroy {
         if (this.clusters.length) {
           this.schema.properties.kube_name.enum = this.clusters;
         } else {
-          this.schema.properties.kube_name.enum = [ 'No Kubes found' ]
+          this.schema.properties.kube_name.enum = ['No Kubes found'];
         }
+        console.log(this.schema);
         this.model = this.appsModel.app.model;
         this.loaded = true;
       },
@@ -99,7 +100,7 @@ export class NewAppComponent implements OnInit, OnDestroy {
         }
 
         this.clusters = clusters;
-        
+
         this.get(this.id);
       },
       (err) => { this.notifications.display('warn', 'Connection Issue.', err); }));

@@ -30,6 +30,7 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
   appCount = 0;
   data: any;
   schema: any;
+  layout: any;
 
   getCloudAccounts() {
     this.subscriptions.add(this.supergiant.CloudAccounts.get().subscribe(
@@ -120,6 +121,7 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'aws': {
         this.data = this.awsModel.aws.data;
         this.schema = this.awsModel.aws.schema;
+        this.layout = this.awsModel.aws.layout;
         this.data.cloud_account_name = choice.name;
         break;
       }
