@@ -68,6 +68,9 @@ export class ClusterAWSModel {
           'type': 'array'
         }
       }
-    }
+    },
+    'layout': [
+      { 'type': 'flex', 'flex-flow': 'row wrap', 'items': ['name', 'region'] },
+    ]
   };
 }
