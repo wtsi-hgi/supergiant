@@ -53,7 +53,7 @@ func (c *HelmCharts) Populate() error {
 					fmt.Println("Chart Config Load Error:", err)
 				}
 
-				if chart.Name == newChart.Name {
+				if chart.Version == newChart.Version {
 					existingChart = chart
 					existingIndex = i
 					break
@@ -73,6 +73,7 @@ func (c *HelmCharts) Populate() error {
 				// }
 			} else {
 				// create new
+				fmt.Println("New Chart Found:", newChart.Name)
 				if err := c.Core.HelmCharts.Create(newChart); err != nil {
 					return err
 				}
@@ -118,9 +119,13 @@ func (c *HelmCharts) loadConfig(m *model.HelmChart) error {
 	if err != nil {
 		return err
 	}
+
 	loadedChart, err := chartutil.Load(chartPath)
 	if err != nil {
 		return err
+	}
+	if m.Name == "rabbitmq" {
+		fmt.Println("LoadedChart:", loadedChart)
 	}
 
 	yamlDefaultConfig := loadedChart.GetValues().Raw
@@ -128,7 +133,10 @@ func (c *HelmCharts) loadConfig(m *model.HelmChart) error {
 	if yamlDefaultConfig == "" {
 		return nil
 	}
-
+	fmt.Println("Name:", m.Name)
+	if m.Name == "rabbitmq" {
+		fmt.Println("yamlDefaultConfig:", yamlDefaultConfig)
+	}
 	if err = yaml.Unmarshal([]byte(yamlDefaultConfig), &m.DefaultConfig); err != nil {
 		return err
 	}

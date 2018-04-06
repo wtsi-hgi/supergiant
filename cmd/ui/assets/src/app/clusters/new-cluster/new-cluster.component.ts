@@ -56,7 +56,6 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.add(this.supergiant.HelmReleases.get().subscribe(
       (deployments) => {
         if (Object.keys(deployments.items).length > 0) {
-          console.log(deployments);
           this.hasApp = true;
           this.appCount = Object.keys(deployments.items).length;
         }
@@ -116,7 +115,6 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   sendChoice(choice) {
-    console.log(choice);
     switch (choice.provider) {
       case 'aws': {
         this.data = this.awsModel.aws.data;
