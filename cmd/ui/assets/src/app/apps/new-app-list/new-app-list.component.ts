@@ -16,7 +16,7 @@ export class NewAppListComponent implements OnInit, OnDestroy {
   public columns: Array<any> = [];
   private subscriptions = new Subscription();
   public unfilteredRows: Array<any> = [];
-  public filterText: string = '';
+  public filterText = '';
   constructor(
     private supergiant: Supergiant,
     private router: Router,

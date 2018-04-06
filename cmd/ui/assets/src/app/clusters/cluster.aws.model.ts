@@ -10,6 +10,7 @@ export class ClusterAWSModel {
       'master_node_size': 'm4.large',
       'ssh_pub_key': '',
       'kube_master_count': 1,
+      'kubernetes_version': '1.5.7',
       'node_sizes': [
         'm4.large',
         'm4.xlarge',
@@ -53,6 +54,12 @@ export class ClusterAWSModel {
           'description': 'The number of masters desired--for High Availability.',
           'type': 'number',
           'widget': 'number',
+        },
+        'kubernetes_version': {
+          'default': '1.5.7',
+          'description': 'The Version of Kubernetes to be deployed.',
+          'type': 'string',
+          'enum': ['1.5.7', '1.6.7', '1.7.7', '1.8.7'] // TODO: <-- Should be dynamically populated.
         },
         'ssh_pub_key': {
           'description': 'The public key that will be used to SSH into the kube.',

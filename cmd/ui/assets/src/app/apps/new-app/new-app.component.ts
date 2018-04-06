@@ -39,12 +39,14 @@ export class NewAppComponent implements OnInit, OnDestroy {
 
   get(id) {
     this.subscriptions.add(this.supergiant.HelmCharts.get(id).subscribe(
-      (data) => {
-        const chart = data;
+      (chart) => {
         if (chart.default_config) {
           // this is our model: the vars file provided by the chart.
           this.appsModel.app.model.config = JSON.parse(JSON.stringify(chart.default_config).replace(/\[\]/g, '["Enter Info"]', ));
+          // this.appsModel.app.model.config = chart.default_config;
+
         }
+
         this.appsModel.app.model.chart_name = chart.name;
         this.appsModel.app.model.chart_version = chart.version;
         // this needs to be called cluster in display
@@ -53,14 +55,21 @@ export class NewAppComponent implements OnInit, OnDestroy {
         // We dynamically generate a schema from the vars file.
         // TODO: Note - we need to add a sniffer here to look for a schema file
         // and any icon images in the chart. If they exist, we should use them instead of the generated one.
-        this.schema = GenerateSchema.json(this.appsModel.app.model);
+
+
+        this.appsModel.app.schema.properties.config = GenerateSchema.json(this.appsModel.app.model.config);
+
         if (this.clusters.length) {
-          this.schema.properties.kube_name.enum = this.clusters;
+          this.appsModel.app.schema.properties.kube_name.enum = this.clusters;
         } else {
-          this.schema.properties.kube_name.enum = ['No Kubes found'];
+          this.appsModel.app.schema.properties.kube_name.enum = ['No Kubes found'];
         }
-        console.log(this.schema);
+
+
+
         this.model = this.appsModel.app.model;
+        this.schema = this.appsModel.app.schema;
+
         this.loaded = true;
       },
       (err) => { console.log(err); }));
@@ -78,7 +87,7 @@ export class NewAppComponent implements OnInit, OnDestroy {
   success(model) {
     this.notifications.display(
       'success',
-      'App: ' + model.name,
+      'App: ' + model.chart_name,
       'Deployed...',
     );
   }
@@ -86,8 +95,8 @@ export class NewAppComponent implements OnInit, OnDestroy {
   error(model, data) {
     this.notifications.display(
       'error',
-      'App: ' + model.name,
-      'Error:' + data.statusText);
+      'App: ' + model.chart_name,
+      'Error:' + data);
   }
 
   getClusters() {

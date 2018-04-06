@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Pipe, PipeTransform, TemplateRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, Pipe, PipeTransform, TemplateRef, ViewChild, Input } from '@angular/core';
 // import { Observable } from 'rxjs/Observable';
 import { timer } from 'rxjs/observable/timer';
 import { Subscription } from 'rxjs/Subscription';
@@ -14,13 +14,14 @@ import { ContextMenuService, ContextMenuComponent } from 'ngx-contextmenu';
 })
 export class AppsListComponent implements OnInit, OnDestroy {
   @ViewChild(ContextMenuComponent) public basicMenu: ContextMenuComponent;
+  @Input() kube: any;
   public selected: Array<any> = [];
   public rows: Array<any> = [];
   public columns: Array<any> = [];
   public displayCheck: boolean;
   private subscriptions = new Subscription();
   public unfilteredRows: Array<any> = [];
-  public filterText: string = '';
+  public filterText = '';
   private rawEvent: any;
   contextmenuRow: any;
   contextmenuColumn: any;

@@ -59,27 +59,7 @@
   </div> -->
 
   <section>
-    <h2>Apps</h2>
-
-    <div *ngIf="hasApps">
-      <ngx-datatable class="material expandable" [rows]="approws" [columnMode]="'force'" [columns]="appcolumns" [headerHeight]="50" [footerHeight]="50" [rowHeight]="'auto'" [limit]="20" (activate)='onAppActivate($event)' [selectAllRowsOnPage]="true" (tableContextmenu)="onAppTableContextMenu($event)">
-        <ngx-datatable-column name="Name" prop="name"></ngx-datatable-column>
-        <ngx-datatable-column name="Version" prop="version"></ngx-datatable-column>
-        <ngx-datatable-column name="App Name" prop="appname"></ngx-datatable-column>
-        <ngx-datatable-column name="App Version" prop="appversion"></ngx-datatable-column>
-        <ngx-datatable-column name="Status" prop="statusvalue"></ngx-datatable-column>
-      </ngx-datatable>
-
-      <context-menu #basicMenu>
-        <ng-template contextMenuItem let-item (execute)="contextAppDelete($event.item)">
-          Delete {{item?.name}}
-        </ng-template>
-      </context-menu>
-    </div>
-
-    <div *ngIf="!hasApps">
-      <p class="badge badge-info">No Apps Deployed</p>
-    </div>
+    <app-apps-list *ngIf="kube" [kube]="kube"></app-apps-list>
   </section>
 
 
