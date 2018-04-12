@@ -53,7 +53,7 @@ func (c *HelmCharts) Populate() error {
 					fmt.Println("Chart Config Load Error:", err)
 				}
 
-				if chart.Version == newChart.Version {
+				if chart.Version == newChart.Version && chart.Name == newChart.Name {
 					existingChart = chart
 					existingIndex = i
 					break
