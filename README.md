@@ -82,7 +82,7 @@ curl https://github.com/supergiant/supergiant/releases/download/v0.15.6/supergia
 sudo chmod +x /usr/bin/supergiant
 ```
 
-3. Download the  [the example config file](https://github.com/supergiant/supergiant/blob/master/config/config.json.example) and customize it: 
+3. Download  [the example config file](https://github.com/supergiant/supergiant/blob/master/config/config.json.example) and customize it: 
 
 ```sh
 curl https://raw.githubusercontent.com/supergiant/supergiant/master/config/config.json.example --create-dirs -o /etc/supergiant/config.json
