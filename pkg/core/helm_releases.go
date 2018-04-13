@@ -114,6 +114,7 @@ func (c *HelmReleases) Create(m *model.HelmRelease) error {
 				cmd += " --namespace " + m.Namespace
 			}
 
+			c.Core.Log.Debug("DEBUG - Chart install cmd:", cmd)
 			_, err := execHelmCmd(c.Core, m.Kube, cmd)
 			return err
 		},
@@ -298,6 +299,10 @@ func releaseConfigAsFlagValue(config map[string]interface{}, parent string) (fv 
 
 	for key, value := range config {
 
+		if value == nil {
+			value = ""
+		}
+
 		fullKey := parent + key
 
 		if fv != "" {
@@ -310,7 +315,7 @@ func releaseConfigAsFlagValue(config map[string]interface{}, parent string) (fv 
 			fv += releaseConfigAsFlagValue(value.(map[string]interface{}), fullKey)
 
 		case reflect.String:
-			fv += fmt.Sprintf(`%s="%v"`, fullKey, value)
+			fv += fmt.Sprintf(`%s='%v'`, fullKey, value)
 
 		default:
 			fv += fmt.Sprintf(`%s=%v`, fullKey, value)
