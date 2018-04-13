@@ -10,7 +10,7 @@ export class ClusterAWSModel {
       'master_node_size': 'm4.large',
       'ssh_pub_key': '',
       'kube_master_count': 1,
-      'kubernetes_version': '1.5.7',
+      'kubernetes_version': '1.8.7',
       'node_sizes': [
         'm4.large',
         'm4.xlarge',
