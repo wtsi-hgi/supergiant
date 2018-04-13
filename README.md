@@ -14,7 +14,7 @@ Supergiantt: Easy container orchestration using Kubernetes
 [Supergiant Contribution Guidelines URL]: http://supergiant.github.io/docs/community/contribution-guidelines.html
 <!-- [Supergiant Swagger Docs URL]: http://swagger.supergiant.io/docs/ -->
 [Tutorial AWS URL]: https://supergiant.io/blog/how-to-install-supergiant-container-orchestration-engine-on-aws-ec2?utm_source=github
-[Tutorial Linux URL]: https://supergiant.io/blog/how-to-start-supergiant-server-as-a-service-on-ubuntu
+[Tutorial Linux URL]: https://supergiant.io/blog/how-to-start-supergiant-server-as-a-service-on-ubuntu?utm_source=github
 [Tutorial MongoDB URL]: https://supergiant.io/blog/deploy-a-mongodb-replica-set-with-docker-and-supergiant?urm_source=github
 [Community and Contributing Anchor]: #community-and-contributing
 <!-- [Swagger URL]: http://swagger.io/ -->
