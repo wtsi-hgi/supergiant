@@ -1,4 +1,4 @@
-Supergiantt: Easy container orchestration using Kubernetes
+Supergiant: Easy container orchestration using Kubernetes
 =========================================================
 
 ---
