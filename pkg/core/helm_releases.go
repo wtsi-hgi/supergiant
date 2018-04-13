@@ -243,7 +243,7 @@ func execHelmCmd(c *Core, kube *model.Kube, cmd string) (out string, err error) 
 			Containers: []kubernetes.Container{
 				{
 					Name:  "helm-worker",
-					Image: "supergiant/helm-worker:v2.6.2",
+					Image: "supergiant/helm-worker:v2.8.2",
 					// ImagePullPolicy: "Always",
 					Command: []string{"/bin/sh", "-c"},
 					Args:    []string{fullCmd},
