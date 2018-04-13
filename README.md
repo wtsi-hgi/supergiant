@@ -152,7 +152,6 @@ Currently, the core team is working on the following:
 - [Tutorials](https://supergiant.io/tutorials)
 - [Slack Support Channel](https://supergiant.io/slack)
 - [Install on AWS][Tutorial AWS URL]
-- [Install on Linux](Tutorial Linux URL)
 
 ## Community and Contributing
 
