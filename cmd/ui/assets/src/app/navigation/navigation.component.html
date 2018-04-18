@@ -10,7 +10,7 @@
           <i class="fa fa-tachometer"></i>
           Dashboard
         </a></li>
-        
+
         <li class="nav-item"><a [routerLink]="['/clusters']" class="nav-link" routerLinkActive="active">
           <i class="fa fa-server"></i>
           Clusters
@@ -39,30 +39,34 @@
           >
           <i class="fa fa-gear"></i>
           <span class="sr-only" aria-hidden="true"> System</span>
-        </button>
+      </button>
 
-        <div ngbDropdownMenu aria-labelledby="app-meta-menu-button" placement="right-bottom">
-          <a class="dropdown-item" [routerLink]="['/system/cloud-accounts']">
+      <div ngbDropdownMenu aria-labelledby="app-meta-menu-button" placement="right-bottom">
+        <a class="dropdown-item" [routerLink]="['/system/logs']">
+            <i class="fa fa-terminal"></i>
+            Logs
+          </a>
+        <a class="dropdown-item" [routerLink]="['/system/cloud-accounts']">
             <i class="fa fa-cloud"></i>
             Cloud Accounts
           </a>
-          <a class="dropdown-item" [routerLink]="['/system/main']">
+        <a class="dropdown-item" [routerLink]="['/system/main']">
             <i class="fa fa-link"></i>
             App &amp; Helm Repositories
           </a>
-          <a class="dropdown-item disabled" [routerLink]="['/system/capacity']">
+        <a class="dropdown-item disabled" [routerLink]="['/system/capacity']">
             <i class="fa fa-expand"></i>
             Capacity
           </a>
-          <a class="dropdown-item" [routerLink]="['/system/users']">
+        <a class="dropdown-item" [routerLink]="['/system/users']">
             <i class="fa fa-key"></i>
             Users &amp; Keys
           </a>
-          <!-- <a class="dropdown-item" [routerLink]="['/sessions']">
+        <!-- <a class="dropdown-item" [routerLink]="['/sessions']">
             <i class="fa fa-users"></i>
             Active Sessions
           </a> -->
-        </div>
+      </div>
       </span>
 
       <span ngbDropdown placement="bottom-right">

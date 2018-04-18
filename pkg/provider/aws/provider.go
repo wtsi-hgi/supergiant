@@ -261,6 +261,12 @@ func getAMI(ec2S ec2iface.EC2API) (string, error) {
 				},
 			},
 			&ec2.Filter{
+				Name: aws.String("name"),
+				Values: []*string{
+					aws.String("*3.0*"),
+				},
+			},
+			&ec2.Filter{
 				Name: aws.String("virtualization-type"),
 				Values: []*string{
 					aws.String("hvm"),

@@ -1,5 +1,6 @@
-import { Component, OnInit, OnDestroy, Pipe, PipeTransform, TemplateRef, ViewChild } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
+import { Component, OnInit, OnDestroy, Pipe, PipeTransform, TemplateRef, ViewChild, Input } from '@angular/core';
+// import { Observable } from 'rxjs/Observable';
+import { timer } from 'rxjs/observable/timer';
 import { Subscription } from 'rxjs/Subscription';
 import { Supergiant } from '../../shared/supergiant/supergiant.service';
 import { AppsService } from '../apps.service';
@@ -13,11 +14,14 @@ import { ContextMenuService, ContextMenuComponent } from 'ngx-contextmenu';
 })
 export class AppsListComponent implements OnInit, OnDestroy {
   @ViewChild(ContextMenuComponent) public basicMenu: ContextMenuComponent;
+  @Input() kube: any;
   public selected: Array<any> = [];
   public rows: Array<any> = [];
+  public columns: Array<any> = [];
+  public displayCheck: boolean;
   private subscriptions = new Subscription();
   public unfilteredRows: Array<any> = [];
-  public filterText: string = '';
+  public filterText = '';
   private rawEvent: any;
   contextmenuRow: any;
   contextmenuColumn: any;
@@ -39,22 +43,43 @@ export class AppsListComponent implements OnInit, OnDestroy {
   // }
 
   getApps() {
-    this.subscriptions.add(Observable.timer(0, 10000)
+
+    this.subscriptions.add(timer(0, 10000)
       .switchMap(() => this.supergiant.HelmReleases.get()).subscribe(
-      (deployments) => {
-        const selected: Array<any> = [];
-        this.selected.forEach((app, index) => {
-          for (const row of deployments.items) {
-            if (row.id === app.id) {
-              selected.push(row);
-              break;
-            }
+        (deployments) => {
+          if (this.kube) {
+            this.rows = deployments.items.filter(
+              deployment =>
+                deployment.kube_name === this.kube.name
+            );
+          } else {
+            this.rows = deployments.items;
           }
-        });
-        this.unfilteredRows = deployments.items;
-        this.rows = this.filterRows(deployments.items, this.filterText);
-      },
-      () => { }));
+
+          this.rows.map(deployment => ({
+            id: deployment.id,
+            name: deployment.name,
+            kube_name: deployment.kube_name,
+            revision: deployment.revision,
+            chart_name: deployment.chart_name,
+            chart_version: deployment.chart_version,
+            updated_value: deployment.updated_value,
+            status_value: deployment.status_value
+          })
+          );
+
+          const selected: Array<any> = [];
+          this.selected.forEach((kube, index) => {
+            for (const row of this.rows) {
+              if (row.id === kube.id) {
+                selected.push(row);
+                break;
+              }
+            }
+          });
+          this.selected = selected;
+        },
+        () => { }));
   }
 
   deleteApp() {
@@ -76,21 +101,21 @@ export class AppsListComponent implements OnInit, OnDestroy {
   }
 
   onTableContextMenu(contextMenuEvent) {
-      this.rawEvent = contextMenuEvent.event;
-      if (contextMenuEvent.type === 'body') {
-        this.contextmenuColumn = undefined;
-        this.contextMenuService.show.next({
+    this.rawEvent = contextMenuEvent.event;
+    if (contextMenuEvent.type === 'body') {
+      this.contextmenuColumn = undefined;
+      this.contextMenuService.show.next({
         contextMenu: this.basicMenu,
         item: contextMenuEvent.content,
         event: contextMenuEvent.event,
-        });
-      } else {
-        this.contextmenuColumn = contextMenuEvent.content;
-        this.contextmenuRow = undefined;
-      }
+      });
+    } else {
+      this.contextmenuColumn = contextMenuEvent.content;
+      this.contextmenuRow = undefined;
+    }
 
-      contextMenuEvent.event.preventDefault();
-      contextMenuEvent.event.stopPropagation();
+    contextMenuEvent.event.preventDefault();
+    contextMenuEvent.event.stopPropagation();
   }
 
   onActivate(activated) {
@@ -106,7 +131,7 @@ export class AppsListComponent implements OnInit, OnDestroy {
     const matchingRows = [];
     for (const row of filterRows) {
       for (const key of Object.keys(row)) {
-        if ( row[key] != null) {
+        if (row[key] != null) {
           const value = row[key].toString().toLowerCase();
           if (value.toString().indexOf(filterText.toLowerCase()) >= 0) {
             matchingRows.push(row);

@@ -53,7 +53,7 @@ func (c *HelmCharts) Populate() error {
 					fmt.Println("Chart Config Load Error:", err)
 				}
 
-				if chart.Name == newChart.Name {
+				if chart.Version == newChart.Version && chart.Name == newChart.Name {
 					existingChart = chart
 					existingIndex = i
 					break
@@ -73,6 +73,7 @@ func (c *HelmCharts) Populate() error {
 				// }
 			} else {
 				// create new
+				c.Core.Log.Info("New Chart Version Detected for Chart:", newChart.Name)
 				if err := c.Core.HelmCharts.Create(newChart); err != nil {
 					return err
 				}
@@ -118,6 +119,7 @@ func (c *HelmCharts) loadConfig(m *model.HelmChart) error {
 	if err != nil {
 		return err
 	}
+
 	loadedChart, err := chartutil.Load(chartPath)
 	if err != nil {
 		return err

@@ -3,7 +3,7 @@ import { Observable } from 'rxjs/Observable';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs/Subscription';
 import { Supergiant } from '../../shared/supergiant/supergiant.service';
-import {Location} from '@angular/common';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-new-app-list',
@@ -13,9 +13,10 @@ import {Location} from '@angular/common';
 export class NewAppListComponent implements OnInit, OnDestroy {
   public selected: Array<any> = [];
   public rows: Array<any> = [];
+  public columns: Array<any> = [];
   private subscriptions = new Subscription();
   public unfilteredRows: Array<any> = [];
-  public filterText: string = '';
+  public filterText = '';
   constructor(
     private supergiant: Supergiant,
     private router: Router,
@@ -35,11 +36,11 @@ export class NewAppListComponent implements OnInit, OnDestroy {
   getCharts() {
     this.subscriptions.add(Observable.timer(0, 30000)
       .switchMap(() => this.supergiant.HelmCharts.get()).subscribe(
-      (apps) => {
-        this.unfilteredRows = apps.items;
-        this.rows = this.filterRows(apps.items, this.filterText);
-      },
-      () => { }));
+        (apps) => {
+          this.unfilteredRows = apps.items;
+          this.rows = this.filterRows(apps.items, this.filterText);
+        },
+        () => { }));
   }
 
   goBack() {
@@ -52,7 +53,7 @@ export class NewAppListComponent implements OnInit, OnDestroy {
     const matchingRows = [];
     for (const row of filterRows) {
       for (const key of Object.keys(row)) {
-        if ( row[key] != null) {
+        if (row[key] != null) {
           const value = row[key].toString().toLowerCase();
           if (value.toString().indexOf(filterText.toLowerCase()) >= 0) {
             matchingRows.push(row);

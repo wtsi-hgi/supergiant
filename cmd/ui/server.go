@@ -1,7 +1,6 @@
 package main
 
 //generate
-
 //go:generate go-bindata -pkg ui -o bindata/ui/bindata.go cmd/ui/assets/dist/...
 
 import (

@@ -1,5 +1,5 @@
 <div class="app-main">
-  <main class="app-context" >
+  <main class="app-context">
     <div class="app-context-content" *ngIf="hasCluster && hasCloudAccount && hasApp">
       <!-- <router-outlet name="primary"></router-outlet> -->
       <div class="app-dashboard-container">
@@ -14,13 +14,7 @@
 
           <div class="row">
             <div class="col-12">
-              <canvas baseChart width="800" height="200"
-                      [datasets]="lineChartData"
-                      [labels]="lineChartLabels"
-                      [options]="lineChartOptions"
-                      [colors]="lineChartColors"
-                      [legend]="lineChartLegend"
-                      [chartType]="lineChartType">
+              <canvas baseChart width="800" height="200" [datasets]="lineChartData" [labels]="lineChartLabels" [options]="lineChartOptions" [colors]="lineChartColors" [legend]="lineChartLegend" [chartType]="lineChartType">
               </canvas>
             </div>
           </div>
@@ -83,9 +77,9 @@
   <input class="app-assist-toggle-status" id="app-assist-toggle-status" type="checkbox" autocomplete="off">
 
   <aside class="app-assist">
-  <div class="app-assist-content">
-    <router-outlet name="tutorial"></router-outlet>
-  </div>
+    <div class="app-assist-content">
+      <router-outlet name="tutorial"></router-outlet>
+    </div>
   </aside>
 </div>
 
@@ -95,41 +89,47 @@
   <input name="tutorial-steps" type="radio" value="app" id="tutorial-steps-app" [checked]="hasCloudAccount && hasCluster && !hasApp">
 
   <style type="text/css">
-    #tutorial-steps-cloudaccount:checked ~ .tutorial-primary ul {
+    #tutorial-steps-cloudaccount:checked~.tutorial-primary ul {
       left: 0;
     }
-      #tutorial-steps-cloudaccount:checked ~ .tutorial-primary li.tutorial-step-cloudaccount {
-        opacity: 1;
-        filter: none;
-        pointer-events: all;
-      }
-        #tutorial-steps-cloudaccount:checked ~ .tutorial-primary li.tutorial-step-cloudaccount label {
-          display: block;
-        }
 
-    #tutorial-steps-cluster:checked ~ .tutorial-primary ul {
+    #tutorial-steps-cloudaccount:checked~.tutorial-primary li.tutorial-step-cloudaccount {
+      opacity: 1;
+      filter: none;
+      pointer-events: all;
+    }
+
+    #tutorial-steps-cloudaccount:checked~.tutorial-primary li.tutorial-step-cloudaccount label {
+      display: block;
+    }
+
+    #tutorial-steps-cluster:checked~.tutorial-primary ul {
       left: -59.333%;
     }
-      #tutorial-steps-cluster:checked ~ .tutorial-primary li.tutorial-step-cluster {
-        opacity: 1;
-        filter: none;
-        pointer-events: all;
-      }
-        #tutorial-steps-cluster:checked ~ .tutorial-primary li.tutorial-step-cluster label {
-          display: block;
-        }
 
-    #tutorial-steps-app:checked ~ .tutorial-primary ul {
+    #tutorial-steps-cluster:checked~.tutorial-primary li.tutorial-step-cluster {
+      opacity: 1;
+      filter: none;
+      pointer-events: all;
+    }
+
+    #tutorial-steps-cluster:checked~.tutorial-primary li.tutorial-step-cluster label {
+      display: block;
+    }
+
+    #tutorial-steps-app:checked~.tutorial-primary ul {
       left: -118.666%;
     }
-      #tutorial-steps-app:checked ~ .tutorial-primary li.tutorial-step-app {
-        opacity: 1;
-        filter: none;
-        pointer-events: all;
-      }
-        #tutorial-steps-app:checked ~ .tutorial-primary li.tutorial-step-app label {
-          display: block;
-        }
+
+    #tutorial-steps-app:checked~.tutorial-primary li.tutorial-step-app {
+      opacity: 1;
+      filter: none;
+      pointer-events: all;
+    }
+
+    #tutorial-steps-app:checked~.tutorial-primary li.tutorial-step-app label {
+      display: block;
+    }
   </style>
 
   <header class="tutorial-primary">

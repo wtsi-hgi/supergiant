@@ -1,20 +1,31 @@
-<app-pods-header></app-pods-header>
-<div id="item_list_container">
-  <table id="item_list" class="table table-hover">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Name</th>
-        <th>Kube Name</th>
-        <th>Namespace</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr app-pod *ngFor="let pod of pods | Search:podsService.searchString | paginate: { itemsPerPage: 10, currentPage: p[i], id: id }" [pod]="pod"></tr>
-    </tbody>
-  </table>
-  <nav aria-label="Page navigation">
-    <pagination-controls (pageChange)="p[i] = $event" [id]="id"></pagination-controls>
-  </nav>
+<h2>Cluster Resources</h2>
+
+<div class="subcontext-actions">
+  <div *ngIf="resouceKinds.length > 0" class="form-group row">
+    <mat-form-field>
+      <mat-select placeholder="Resource Kind" [(ngModel)]="selectedResourceKind" (change)="get()">
+        <mat-option *ngFor="let resourceKind of resouceKinds" [value]="resourceKind">
+          {{ resourceKind }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+  <div *ngIf="selected.length > 0">
+    <button mat-raised-button color="warn" (click)="delete()">Delete Selected {{ selectedResourceKind }}</button>
+  </div>
 </div>
+
+<ngx-datatable class="material expandable" [rows]="resources" [columnMode]="'force'" [columns]="nodecolumns" [headerHeight]="50" [footerHeight]="50" [rowHeight]="'auto'" [limit]="5" [selected]="selected" [selectionType]="'checkbox'" [selectAllRowsOnPage]="false"
+  [displayCheck]="displayCheck" (activate)="onActivate($event)" (select)='onSelect($event)' (tableContextmenu)="onTableContextMenu($event)">
+  <ngx-datatable-column name="checkbox" [width]="30" [sortable]="false" [canAutoResize]="false" [draggable]="false" [resizeable]="false" [headerCheckboxable]="true" [checkboxable]="true">
+  </ngx-datatable-column>
+  <ngx-datatable-column name="Name" prop="name"></ngx-datatable-column>
+  <ngx-datatable-column name="Namespace" prop="namespace"></ngx-datatable-column>
+  <ngx-datatable-column name="Status" prop="passive_status"></ngx-datatable-column>
+</ngx-datatable>
+
+<context-menu #basicMenu>
+  <ng-template contextMenuItem let-item (execute)="contextDelete($event.item)">
+    Delete <i>&quot;{{item?.name}}&quot;</i>
+  </ng-template>
+</context-menu>

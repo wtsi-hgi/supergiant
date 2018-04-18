@@ -30,6 +30,7 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
   appCount = 0;
   data: any;
   schema: any;
+  layout: any;
 
   getCloudAccounts() {
     this.subscriptions.add(this.supergiant.CloudAccounts.get().subscribe(
@@ -55,7 +56,6 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.add(this.supergiant.HelmReleases.get().subscribe(
       (deployments) => {
         if (Object.keys(deployments.items).length > 0) {
-          console.log(deployments);
           this.hasApp = true;
           this.appCount = Object.keys(deployments.items).length;
         }
@@ -115,11 +115,11 @@ export class NewClusterComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   sendChoice(choice) {
-    console.log(choice);
     switch (choice.provider) {
       case 'aws': {
         this.data = this.awsModel.aws.data;
         this.schema = this.awsModel.aws.schema;
+        this.layout = this.awsModel.aws.layout;
         this.data.cloud_account_name = choice.name;
         break;
       }

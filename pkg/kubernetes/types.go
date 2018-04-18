@@ -249,11 +249,11 @@ type ServiceSpec struct {
 }
 
 type ServicePort struct {
-	Name       string `json:"name"`
-	Port       int    `json:"port"`
-	Protocol   string `json:"protocol,omitempty"`
-	NodePort   int    `json:"nodePort,omitempty"`
-	TargetPort int    `json:"targetPort,omitempty"`
+	Name       string      `json:"name"`
+	Port       int         `json:"port"`
+	Protocol   string      `json:"protocol,omitempty"`
+	NodePort   int         `json:"nodePort,omitempty"`
+	TargetPort interface{} `json:"targetPort,omitempty"`
 }
 
 type ServiceStatus struct {

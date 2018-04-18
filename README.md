@@ -1,4 +1,4 @@
-SUPERGIANT: Easy container orchestration using Kubernetes
+Supergiant: Easy container orchestration using Kubernetes
 =========================================================
 
 ---
@@ -14,6 +14,7 @@ SUPERGIANT: Easy container orchestration using Kubernetes
 [Supergiant Contribution Guidelines URL]: http://supergiant.github.io/docs/community/contribution-guidelines.html
 <!-- [Supergiant Swagger Docs URL]: http://swagger.supergiant.io/docs/ -->
 [Tutorial AWS URL]: https://supergiant.io/blog/how-to-install-supergiant-container-orchestration-engine-on-aws-ec2?utm_source=github
+[Tutorial Linux URL]: https://supergiant.io/blog/how-to-start-supergiant-server-as-a-service-on-ubuntu?utm_source=github
 [Tutorial MongoDB URL]: https://supergiant.io/blog/deploy-a-mongodb-replica-set-with-docker-and-supergiant?urm_source=github
 [Community and Contributing Anchor]: #community-and-contributing
 <!-- [Swagger URL]: http://swagger.io/ -->
@@ -47,91 +48,114 @@ SUPERGIANT: Easy container orchestration using Kubernetes
 
 ---
 
+Supergiant is an open-source container orchestration system that lets developers easily deploy and manage apps as Docker containers using Kubernetes.
 
-Supergiant is an open-source container orchestration system that lets developers
-easily deploy and manage apps as Docker containers using Kubernetes.
-
-We want to make Supergiant the easiest way to run Kubernetes in the cloud.
-
-Quick start...
-
-* [How to Install Supergiant Container Orchestration Engine on AWS EC2][Tutorial AWS URL]
-<!-- * [Deploy a MongoDB Replica Set with Docker and Supergiant][Tutorial MongoDB URL]
-  _(Note: this tutorial is out of date, but you can see
-  [the current example here.](examples/deploy_mongo.sh))_ -->
-
----
-
-![Supergiant UI](http://g.recordit.co/EfUk4D863W.gif)
+Supergiant aims to automate installation and simplify management of Kubernetes across different cloud accounts by providing an easy-to-use UI that exposes Kubernetes API. The system implements simple concepts that abstract Kubernetes API for pod and services deployment, storage, load-balancing, hardware auto-scaling, and more. Supergiant uses an efficient packing algorithm to enable seamless auto-scaling of Kubernetes clusters to minimize costs and improve resilience of applications. For a more detailed overview of Supergiant top-level concepts, see  [the docs folder](docs/v0/).
 
 ## Features
 
 * Fully compatible with native Kubernetes (works with existing setups)
-* UI and CLI, both built on top of an API (with importable
-  [Go client lib](pkg/client))
-* Filterable container metrics views (RAM / CPU timeseries graphs)
-* Deploy / Update / Restart containers with a few clicks
+* UI and CLI, both built on top of an API (with importable [Go client lib](pkg/client))
 * Launch and manage multiple Kubes across multiple cloud providers from the UI
-* Works with multiple cloud providers (AWS, DigitalOcean, OpenStack, and
+* Works with multiple cloud providers (AWS, DigitalOcean, OpenStack, Packet.net, and
   _actively_ adding more, in addition to on-premise hardware support)
-* Automatic server management (background server autoscaling, up/down depending
-  on container resource needs)
+* Deploy / Update / Restart containers with a few clicks
+* Get instant access to apps from Helm Repositories
+* Filterable container metrics views (RAM / CPU timeseries graphs)
+* Get a comprehensive view of cluster resources with built-in monitoring and logging
+* Automatic server management (manual addition of new nodes, background server autoscaling, up/down depending on container resource needs)
 * Role-based Users, Session-based login, self-signed SSL, and API tokens for
-  security (OAuth and LDAP support to come)
-
-
-
-## Resources
-
-* [Supergiant Website][Supergiant Website URL]
-* [Docs](docs/v0/)
-* [Tutorials](https://supergiant.io/tutorials)
-* [Slack](https://supergiant.io/slack)
-* [Install][Tutorial AWS URL]
+  security (OAuth and LDAP support soon coming)
 
 
 ## Installation
 
-Checkout the [releases](https://github.com/supergiant/supergiant/releases) page
-for binaries on Windows, Mac, and Linux.
+1. Download the Supergiant server for your system (Windows, Mac, and Linux) and processor architecture from our  [releases](https://github.com/supergiant/supergiant/releases) page. For example, for Linux: 
 
-Copy (and customize if necessary)
-[the example config file](config/config.json.example), and run with:
-
-```shell
-<supergiant-server-binary> --config-file config.json
+```sh
+curl https://github.com/supergiant/supergiant/releases/download/v0.15.6/supergiant-server-linux-amd64 -L -o /usr/bin/supergiant
 ```
 
-If you want to easily install Supergiant on Amazon Web Services EC2, follow the
-[Supergiant Install Tutorial][Tutorial AWS URL].
+2. Make sure to make the downloaded binary executable:
 
+```sh
+sudo chmod +x /usr/bin/supergiant
+```
 
-## Top-Level Concepts
+3. Download  [the example config file](https://github.com/supergiant/supergiant/blob/master/config/config.json.example) and customize it: 
 
-See [the docs folder](docs/v0/).
+```sh
+curl https://raw.githubusercontent.com/supergiant/supergiant/master/config/config.json.example --create-dirs -o /etc/supergiant/config.json
+```
 
-<!-- Supergiant makes use of the [Swagger API framework][Swagger URL] for documenting
-all resources. See the full Supergiant API documentation for the full reference.
+In the configuration file, specify your paths to log and database locations and create corresponding directories for them.
 
-* [![Swagger API Widget] Supergiant Swagger API reference][Supergiant Swagger
-Docs URL] -->
+```json
+{
+ ...
+ "sqlite_file": "/var/lib/supergiant/development.db",
+ ...
+ "log_file": "/var/log/supergiant/development.log",
+ ...
+}
+```
+
+4. Run the binary with a config file and save the user/password for the admin user generated the first time Supergiant runs.
+
+```json
+<supergiant-server-binary> --config-file /etc/supergiant/config.json
+```
+
+5. Access Supergiant on default 8080 port on localhost. 
+
+#### Installing on AWS
+
+![](https://supergiant.io/uploads/blog/sg_aws_step_1@2x.jpg)
+
+If you want to easily install Supergiant on Amazon Web Services EC2 with Supergiant Amazon Machine Image (AMI), follow the [Supergiant AWS Install Tutorial](https://supergiant.io/blog/how-to-install-supergiant-container-orchestration-engine-on-aws-ec2?utm_source=github).
+
+## Usage
+
+#### Deploying Kubernetes Cluster
+
+ Supergiant allows deploying Kubernetes clusters (Kubes) via the easy-to-use interface with the minimal configuration required. The system manages Kubernetes installation and configuration under the hood enabling various master and nodes services and tools. 
+
+![](http://res.cloudinary.com/doj9feked/image/upload/v1523603021/kube-deploy_ibkfcd.gif)
+
+#### Deploying Apps from Helm Repositories
+
+Supergiant provides access to Kubernetes curated helm charts with a broad choice of configured containers installable in one click. 
+
+![](http://res.cloudinary.com/doj9feked/image/upload/v1523603035/app-deploy_nnsy5t.gif)
+
+#### Tracking Cluster Resources
+
+Supergiant UI gives a comprehensive view of computer resources used by the cluster, running applications, services, and attached storages to get insights and simplify cluster administration.
+
+![](http://res.cloudinary.com/doj9feked/image/upload/v1523605692/cluster-resources_ylbset.gif)
+
 
 
 ## Micro-Roadmap
 
 Currently, the core team is working on the following:
 
-* Add LDAP and OAUTH user authentication
-* Add support for additional cloud providers
+* Add LDAP and OAuth user authentication
+* Add support for new cloud providers
 * Add support for local installations
 
 
+## Resources
+
+- [Supergiant Website][Supergiant Website URL]
+- [Top-level concepts](docs/v0/)
+- [Tutorials](https://supergiant.io/tutorials)
+- [Slack Support Channel](https://supergiant.io/slack)
+- [Install on AWS][Tutorial AWS URL]
+
 ## Community and Contributing
 
-We are very grateful of any contribution.
-
-All Supergiant projects require familiarization with our Community and our
-Contribution Guidelines. Please see these links to get started.
+We are grateful for any contribution to the Supergiant project be it in a form of a new GitHub issue, a GitHub feature Pull Request, social media engagement etc. Contributing to Supergiant projects requires familiarization with Community and our Contribution Guidelines. Please see these links to get started.
 
 * [Community Page][Supergiant Community URL]
 * [Contribution Guidelines][Supergiant Contribution Guidelines URL]
@@ -235,8 +259,5 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not
 use this file except in compliance with the License. You may obtain a copy of
 the License at http://www.apache.org/licenses/LICENSE-2.0.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-License for the specific language governing permissions and limitations under
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under
 the License.

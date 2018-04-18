@@ -14,10 +14,10 @@ import (
 	"github.com/supergiant/supergiant/pkg/model"
 	"github.com/supergiant/supergiant/pkg/util"
 
+	"github.com/creasty/defaults"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/creasty/defaults"
 )
 
 type NodeSize struct {
@@ -131,7 +131,7 @@ func (c *Core) InitializeForeground() error {
 			return err
 		}
 		// Set Default Settings with struct tags
-		if err := defaults.Set(&c.Settings); err!= nil {
+		if err := defaults.Set(&c.Settings); err != nil {
 			return err
 		}
 	}
@@ -243,6 +243,7 @@ func (c *Core) InitializeBackground() {
 				WaitBeforeScale: 2 * time.Minute,
 			},
 			interval: 30 * time.Second,
+			tag:      "Capacity Service",
 		}
 		go capacityService.Run()
 	}
@@ -251,6 +252,7 @@ func (c *Core) InitializeBackground() {
 		core:     c,
 		service:  &NodeObserver{c},
 		interval: 30 * time.Second,
+		tag:      "Node Observer",
 	}
 	go nodeObserver.Run()
 
@@ -259,6 +261,7 @@ func (c *Core) InitializeBackground() {
 		core:     c,
 		fn:       c.KubeResources.Populate,
 		interval: 30 * time.Second,
+		tag:      "Kube Resource Populator",
 	}
 	go kubeResourcePopulater.Run()
 
@@ -266,6 +269,7 @@ func (c *Core) InitializeBackground() {
 		core:     c,
 		fn:       c.HelmCharts.Populate,
 		interval: 60 * time.Second,
+		tag:      "Helm Chart Populator",
 	}
 	go helmChartPopulater.Run()
 
@@ -273,6 +277,7 @@ func (c *Core) InitializeBackground() {
 		core:     c,
 		fn:       c.HelmReleases.Populate,
 		interval: 30 * time.Second,
+		tag:      "Helm Release Populator",
 	}
 	go helmReleasePopulater.Run()
 
@@ -280,6 +285,7 @@ func (c *Core) InitializeBackground() {
 		core:     c,
 		service:  &SessionExpirer{c},
 		interval: 15 * time.Second,
+		tag:      "Session Expire",
 	}
 	go sessionExpirer.Run()
 }
